@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Suppstackd"/>
+  <meta name="theme-color" content="#0A0A0A"/>
+  <title>Suppstackd</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #111213; font-family: 'Barlow', sans-serif; color: #F0F0F0; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+    input, select, button { font-family: inherit; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #111213; }
+    ::-webkit-scrollbar-thumb { background: #2A2B2E; border-radius: 2px; }
+
+    /* ── SPLASH ──────────────────────────────────────────────────────── */
+    #splash {
+      position: fixed; inset: 0; z-index: 999;
+      background: #0A0A0A;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      overflow: hidden;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #splash.fade-out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+    .splash-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; animation: bgFadeIn 1s ease 0.2s forwards; }
+    @keyframes bgFadeIn { to { opacity: 1; } }
+    .splash-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; }
+    .splash-wordmark {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(58px, 16.5vw, 96px);
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      color: #FFFFFF;
+      line-height: 1;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: wordmarkIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.5s forwards;
+      text-shadow: 0 0 80px rgba(232,168,48,0.15);
+      padding: 0 32px;
+      text-align: center;
+      width: 100%;
+    }
+    .splash-wordmark span { color: #E8A830; }
+    @keyframes wordmarkIn { to { opacity: 1; transform: translateY(0); } }
+    .splash-tagline {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: #7A7D85;
+      text-transform: uppercase;
+      margin-top: 12px;
+      opacity: 0;
+      animation: taglineIn 0.6s ease 1.1s forwards;
+      text-align: center;
+      padding: 0 28px;
+    }
+    @keyframes taglineIn { to { opacity: 1; } }
+    .splash-line { width: 0; height: 2px; background: linear-gradient(90deg, transparent, #E8A830, transparent); margin-top: 24px; animation: lineIn 0.8s ease 0.9s forwards; }
+    @keyframes lineIn { to { width: 120px; } }
+    .splash-loader { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 48px); left: 50%; transform: translateX(-50%); width: 48px; height: 2px; background: #1C1D1F; border-radius: 2px; overflow: hidden; opacity: 0; animation: loaderAppear 0.4s ease 1.2s forwards; }
+    .splash-loader-fill { height: 100%; background: #E8A830; border-radius: 2px; width: 0; animation: loaderFill 1.2s cubic-bezier(0.4,0,0.2,1) 1.3s forwards; }
+    @keyframes loaderAppear { to { opacity: 1; } }
+    @keyframes loaderFill { to { width: 100%; } }
+
+    /* ── MAIN APP ────────────────────────────────────────────────────── */
+    #root { min-height: 100vh; background: #111213; opacity: 0; transition: opacity 0.5s ease; }
+    #root.visible { opacity: 1; }
+    .shell { max-width: 480px; margin: 0 auto; padding: env(safe-area-inset-top, 44px) 18px 20px; }
+    .card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(4px); }
+    .modal-box { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 18px; padding: 26px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+    .inp { padding: 11px 14px; background: #111213; border: 1px solid #2A2B2E; border-radius: 9px; color: #F0F0F0; font-size: 14px; font-family: 'Space Mono', monospace; outline: none; width: 100%; display: block; transition: border-color 0.2s; }
+    .inp:focus { border-color: rgba(232,168,48,0.4); }
+    .inp.valid { border-color: rgba(91,173,114,0.4); }
+    .inp.error { border-color: #C0392B; }
+    select.inp { cursor: pointer; }
+    .btn-primary { padding: 12px; border: none; background: linear-gradient(135deg, #E8A830, #C88820); color: #111213; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; transition: all 0.2s; }
+    .btn-cancel { padding: 12px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: 13px; }
+    .btn-icon { padding: 9px 11px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 9px; cursor: pointer; font-size: 11px; font-family: 'Space Mono', monospace; }
+    .btn-fab { position: fixed; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); right: 28px; width: 56px; height: 56px; border-radius: 50%; border: none; background: linear-gradient(135deg, #E8A830, #C88820); color: #111213; font-size: 28px; cursor: pointer; box-shadow: 0 4px 24px rgba(232,168,48,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; transition: transform 0.15s; }
+    .btn-fab:active { transform: scale(0.92); }
+    .btn-step { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2B2E; background: #111213; color: #F0F0F0; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; flex-shrink: 0; }
+    .section-label { color: #7A7D85; font-size: 10px; font-family: 'Space Mono', monospace; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
+    .field { margin-bottom: 14px; }
+    .err-msg { color: #C0392B; font-size: 10px; font-family: 'Space Mono', monospace; margin-top: 5px; letter-spacing: 0.5px; }
+    .flex { display: flex; } .flex-1 { flex: 1; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; }
+
+    /* ── FEEDBACK ────────────────────────────────────────────────────── */
+    .feedback-tab { position: fixed; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); right: 0; background: linear-gradient(135deg,#E8A830,#C88820); color: #111213; border: none; border-radius: 10px 0 0 10px; padding: 10px 12px; cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 10px; letter-spacing: 0.8px; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); z-index: 49; box-shadow: -2px 0 12px rgba(232,168,48,0.3); }
+    .star-btn { background: transparent; border: none; cursor: pointer; font-size: 28px; padding: 4px 6px; transition: transform 0.15s; line-height: 1; }
+    .star-btn:active { transform: scale(1.2); }
+    textarea.inp { resize: none; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<!-- ── SPLASH ──────────────────────────────────────────────────────────────── -->
+<div id="splash">
+  <div class="splash-bg">
+    <svg viewBox="0 0 390 844" width="390" height="844" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%">
+      <defs>
+        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#E8A830" stop-opacity="0"/>
+          <stop offset="50%" stop-color="#E8A830" stop-opacity="0.12"/>
+          <stop offset="100%" stop-color="#E8A830" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line x1="500" y1="-50" x2="-100" y2="900" stroke="url(#lineGrad)" stroke-width="80"/>
+      <line x1="600" y1="-50" x2="0" y2="900" stroke="url(#lineGrad)" stroke-width="40"/>
+      <line x1="700" y1="-50" x2="100" y2="900" stroke="url(#lineGrad)" stroke-width="20"/>
+    </svg>
+  </div>
+  <div class="splash-content">
+    <div class="splash-wordmark">SUPP<span>STACKD</span></div>
+    <div class="splash-line"></div>
+    <div class="splash-tagline">KNOW YOUR STACK.</div>
+  </div>
+  <div class="splash-loader"><div class="splash-loader-fill"></div></div>
+</div>
+
+<!-- ── APP ─────────────────────────────────────────────────────────────────── -->
+<div id="root"></div>
+
+<script>
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      const splash = document.getElementById("splash");
+      splash.classList.add("fade-out");
+      document.getElementById("root").classList.add("visible");
+      setTimeout(() => { splash.style.display = "none"; }, 700);
+    }, 2700);
+  });
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Storage keys ──────────────────────────────────────────────────────────────
+const STORAGE_KEY    = "suppstackd_v1_supplements";
+const LOG_KEY        = "suppstackd_v1_logs";
+const FEEDBACK_KEY   = "suppstackd_v1_feedback";
+const ACTIVE_KEY     = "suppstackd_v1_active_days";
+const FB_SHOWN_KEY   = "suppstackd_v1_feedback_shown";
+
+const SUPPLEMENT_TYPES = ["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
+const UNITS = ["g","kg","mg","ml","lb","oz","fl oz","count"];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function load(key, fb) { try { return JSON.parse(localStorage.getItem(key)) || fb; } catch { return fb; } }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+function today() { return new Date().toDateString(); }
+function formatDate(d) { return new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
+function daysFromNow(d) { const now=new Date();now.setHours(0,0,0,0);const t=new Date(d);t.setHours(0,0,0,0);return Math.round((t-now)/86400000); }
+function calcRunOut(s) { const rem=s.totalAmount-s.consumed;if(rem<=0)return new Date();const d=new Date();d.setDate(d.getDate()+Math.ceil(rem/(s.servingSize*s.servingsPerDay)));return d; }
+function urgencyColor(days) { if(days<=7)return"#C0392B";if(days<=21)return"#E8A830";return"#5BAD72"; }
+function urgencyLabel(days) { if(days<=0)return"DEPLETED";if(days<=7)return"CRITICAL";if(days<=21)return"LOW";return"STOCKED"; }
+
+// ── Active day tracking + feedback trigger ────────────────────────────────────
+// Records each unique day the user opens the app.
+// Returns true if user has 3+ consecutive active days and hasn't been shown feedback yet.
+function checkAndTrackActiveDay() {
+  const todayStr = today();
+  const alreadyShown = load(FB_SHOWN_KEY, false);
+  if (alreadyShown) return false;
+
+  let activeDays = load(ACTIVE_KEY, []); // array of dateString entries
+
+  // Add today if not already recorded
+  if (!activeDays.includes(todayStr)) {
+    activeDays = [...activeDays, todayStr].slice(-10); // keep last 10 days max
+    save(ACTIVE_KEY, activeDays);
+  }
+
+  // Check for 3 consecutive days ending today
+  if (activeDays.length < 3) return false;
+  const last3 = activeDays.slice(-3);
+  const d2 = new Date(last3[2]); // today
+  const d1 = new Date(last3[1]);
+  const d0 = new Date(last3[0]);
+  d2.setHours(0,0,0,0); d1.setHours(0,0,0,0); d0.setHours(0,0,0,0);
+  const diff1 = Math.round((d2-d1)/86400000);
+  const diff0 = Math.round((d1-d0)/86400000);
+  return diff1 === 1 && diff0 === 1;
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+async function requestNotifPerm() { if(!("Notification"in window))return false;if(Notification.permission==="granted")return true;return(await Notification.requestPermission())==="granted"; }
+function fireNotif(title,body,delay=500) { if(!("Notification"in window)||Notification.permission!=="granted")return;setTimeout(()=>{try{const n=new Notification(title,{body,tag:"suppstackd"});setTimeout(()=>n.close(),6000);}catch{}},delay); }
+let installPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;});
+
+// ── ProgressRing ──────────────────────────────────────────────────────────────
+function ProgressRing({pct,color,size=58}) {
+  const r=(size-6)/2, circ=2*Math.PI*r, offset=circ-(Math.min(pct,100)/100)*circ;
+  return (
+    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2A2B2E" strokeWidth="5"/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5"
+        strokeDasharray={circ} strokeDashoffset={offset}
+        style={{transition:"stroke-dashoffset 0.7s ease",strokeLinecap:"round"}}/>
+    </svg>
+  );
+}
+
+// ── SupplementCard ────────────────────────────────────────────────────────────
+function SupplementCard({supp,onLog,onEdit,onDelete}) {
+  const runOut=calcRunOut(supp), days=daysFromNow(runOut);
+  const remaining=Math.max(0,supp.totalAmount-supp.consumed);
+  const pct=Math.max(0,Math.min(100,(remaining/supp.totalAmount)*100));
+  const color=urgencyColor(days);
+  const logged=supp.lastLogged===today();
+  return (
+    <div className="card" style={{borderLeft:`3px solid ${color}`}}>
+      <div className="flex" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div style={{flex:1,minWidth:0}}>
+          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace",textTransform:"uppercase",letterSpacing:"1.2px",display:"block",marginBottom:3}}>
+            {supp.type}{supp.brand?` · ${supp.brand}`:""}
+          </span>
+          <h3 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
+          <p style={{margin:"4px 0 0",color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>{supp.servingSize}{supp.unit} × {supp.servingsPerDay}× daily</p>
+        </div>
+        <div style={{position:"relative",flexShrink:0,marginLeft:12}}>
+          <ProgressRing pct={pct} color={color} size={58}/>
+          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:12,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
+          </div>
+        </div>
+      </div>
+      <div style={{marginBottom:14}}>
+        <div className="flex" style={{justifyContent:"space-between",fontSize:11,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginBottom:5}}>
+          <span>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit} left</span>
+          <span style={{color}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
+        </div>
+        <div style={{height:3,background:"#2A2B2E",borderRadius:2}}>
+          <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/>
+        </div>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#111213",borderRadius:8,padding:"8px 12px",marginBottom:14}}>
+        <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>RUNS OUT</span>
+        <span style={{color:"#F0F0F0",fontSize:13,fontWeight:600,fontFamily:"'Space Mono',monospace"}}>{formatDate(runOut)}</span>
+      </div>
+      <div className="flex gap-8">
+        <button onClick={()=>onLog(supp)} style={{flex:1,padding:"9px 0",border:logged?"1px solid #2A2B2E":"1px solid rgba(232,168,48,0.4)",background:logged?"#111213":"rgba(232,168,48,0.07)",color:logged?"#7A7D85":"#E8A830",borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,letterSpacing:"0.5px",transition:"all 0.15s"}}>
+          {logged?"✓  LOGGED":"LOG TODAY"}
+        </button>
+        <button className="btn-icon" onClick={()=>onEdit(supp)}>✏️</button>
+        <button className="btn-icon" onClick={()=>onDelete(supp.id)}>🗑</button>
+      </div>
+    </div>
+  );
+}
+
+// ── LogModal ──────────────────────────────────────────────────────────────────
+function LogModal({supp,onClose,onSave}) {
+  const [taken,setTaken]=useState(true);
+  const [scoops,setScoops]=useState(1);
+  const [customAmt,setCustomAmt]=useState(String(supp.servingSize));
+  const [useCustom,setUseCustom]=useState(false);
+  const [notes,setNotes]=useState("");
+  const amount=taken?(useCustom?parseFloat(customAmt)||0:supp.servingSize*scoops):0;
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box">
+        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Log Dose</h2>
+        <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:22}}>
+          {supp.name} — {new Date().toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
+        </p>
+        <span className="section-label">DID YOU TAKE IT?</span>
+        <div className="flex gap-10" style={{marginBottom:20}}>
+          {[true,false].map(v=>(
+            <button key={String(v)} onClick={()=>setTaken(v)} style={{flex:1,padding:11,borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,border:taken===v?`1px solid ${v?"#5BAD72":"#C0392B"}`:"1px solid #2A2B2E",background:taken===v?(v?"rgba(91,173,114,0.1)":"rgba(192,57,43,0.1)"):"transparent",color:taken===v?(v?"#5BAD72":"#C0392B"):"#7A7D85",transition:"all 0.15s"}}>
+              {v?"YES":"SKIPPED"}
+            </button>
+          ))}
+        </div>
+        {taken&&<>
+          <span className="section-label">AMOUNT</span>
+          <div className="flex gap-8" style={{marginBottom:12}}>
+            {[false,true].map(c=>(
+              <button key={String(c)} onClick={()=>setUseCustom(c)} style={{flex:1,padding:8,borderRadius:8,cursor:"pointer",border:useCustom===c?"1px solid #E8A830":"1px solid #2A2B2E",background:useCustom===c?"rgba(232,168,48,0.07)":"transparent",color:useCustom===c?"#E8A830":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11}}>
+                {c?`CUSTOM (${supp.unit})`:"SCOOPS"}
+              </button>
+            ))}
+          </div>
+          {!useCustom?(
+            <div className="flex" style={{alignItems:"center",gap:20,justifyContent:"center",marginBottom:16}}>
+              <button className="btn-step" onClick={()=>setScoops(Math.max(0.5,scoops-0.5))}>−</button>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:30,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace"}}>{scoops}</div>
+                <div style={{fontSize:11,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>= {(supp.servingSize*scoops).toFixed(1)}{supp.unit}</div>
+              </div>
+              <button className="btn-step" onClick={()=>setScoops(scoops+0.5)}>+</button>
+            </div>
+          ):(
+            <div className="flex" style={{alignItems:"center",gap:10,marginBottom:16}}>
+              <input type="number" value={customAmt} onChange={e=>setCustomAmt(e.target.value)} className="inp" style={{flex:1,fontSize:20,textAlign:"center"}}/>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.unit}</span>
+            </div>
+          )}
+          <div style={{background:"#111213",borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",marginBottom:16}}>
+            <span style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>DEDUCTING</span>
+            <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{amount.toFixed(1)}{supp.unit}</span>
+          </div>
+        </>}
+        <input placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} className="inp" style={{marginBottom:18}}/>
+        <div className="flex gap-10">
+          <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" style={{flex:2}} onClick={()=>onSave({taken,amount,notes})}>SAVE LOG</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── AddEditModal ──────────────────────────────────────────────────────────────
+function AddEditModal({supp,onClose,onSave}) {
+  const isEdit=!!supp;
+  const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"1",consumed:"0",lastLogged:null});
+  const [touched,setTouched]=useState({});
+  const [submitted,setSubmitted]=useState(false);
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const touch=(k)=>setTouched(t=>({...t,[k]:true}));
+  const errors={
+    name:!form.name.trim()?"Supplement name is required":null,
+    totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,
+    servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999)?"Can't exceed total amount":null,
+    servingsPerDay:!form.servingsPerDay?"Required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,
+    consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null,
+  };
+  const reqFields=["name","totalAmount","servingSize","servingsPerDay"];
+  const isValid=reqFields.every(k=>!errors[k]);
+  const completed=reqFields.filter(k=>!errors[k]).length;
+  const progPct=Math.round((completed/reqFields.length)*100);
+  const showErr=k=>(touched[k]||submitted)&&errors[k];
+  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize?Math.ceil((parseFloat(form.totalAmount)-(parseFloat(form.consumed)||0))/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
+  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:parseFloat(form.consumed)||0});};
+  const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box">
+        <div style={{marginBottom:20}}>
+          <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:12}}>{isEdit?"Edit Supplement":"Add Supplement"}</h2>
+          {!isEdit&&<div>
+            <div className="flex" style={{justifyContent:"space-between",marginBottom:5}}>
+              <span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",letterSpacing:1}}>REQUIRED FIELDS</span>
+              <span style={{color:isValid?"#5BAD72":"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{completed}/{reqFields.length}</span>
+            </div>
+            <div style={{height:3,background:"#2A2B2E",borderRadius:2}}>
+              <div style={{height:"100%",borderRadius:2,transition:"width 0.3s ease,background 0.3s",width:`${progPct}%`,background:isValid?"#5BAD72":"#E8A830"}}/>
+            </div>
+          </div>}
+        </div>
+        <div className="field"><span className="section-label">SUPPLEMENT NAME *</span><input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamin C" value={form.name} onChange={e=>set("name",e.target.value)} onBlur={()=>touch("name")}/>{showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}</div>
+        <div className="field"><span className="section-label">BRAND (OPTIONAL)</span><input className="inp" placeholder="e.g. Optimum Nutrition, MyProtein" value={form.brand} onChange={e=>set("brand",e.target.value)}/></div>
+        <div className="flex gap-10">
+          <div className="field flex-1"><span className="section-label">TYPE</span><select className="inp" value={form.type} onChange={e=>set("type",e.target.value)}>{SUPPLEMENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div className="field flex-1"><span className="section-label">UNIT</span><select className="inp" value={form.unit} onChange={e=>set("unit",e.target.value)}>{UNITS.map(u=><option key={u}>{u}</option>)}</select></div>
+        </div>
+        <div className="field"><span className="section-label">TOTAL AMOUNT IN CONTAINER ({form.unit}) *</span><input type="number" className={ic("totalAmount")} placeholder="e.g. 1000" min="0" value={form.totalAmount} onChange={e=>set("totalAmount",e.target.value)} onBlur={()=>touch("totalAmount")}/>{showErr("totalAmount")&&<div className="err-msg">⚠ {errors.totalAmount}</div>}</div>
+        <div className="flex gap-10">
+          <div className="field flex-1"><span className="section-label">SERVING SIZE ({form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder="e.g. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
+          <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
+        </div>
+        {isEdit&&<div className="field"><span className="section-label">ALREADY CONSUMED ({form.unit})</span><input type="number" className={ic("consumed")} min="0" value={form.consumed} onChange={e=>set("consumed",e.target.value)} onBlur={()=>touch("consumed")}/>{showErr("consumed")&&<div className="err-msg">⚠ {errors.consumed}</div>}</div>}
+        {preview!==null&&preview>0&&<div style={{background:"#111213",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>ESTIMATED SUPPLY</span><span style={{color:"#E8A830",fontWeight:800,fontFamily:"'Space Mono',monospace",fontSize:18}}>{preview} days</span></div>}
+        {submitted&&!isValid&&<div style={{background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:10,padding:"11px 14px",marginBottom:16}}><p style={{color:"#C0392B",fontSize:12,fontFamily:"'Space Mono',monospace",margin:0}}>Please fix the highlighted fields above before saving.</p></div>}
+        <div className="flex gap-10">
+          <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
+          <button onClick={handleSave} style={{flex:2,padding:12,borderRadius:10,cursor:isValid?"pointer":"not-allowed",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:isValid?"none":"1px solid #2A2B2E",background:isValid?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:isValid?"#111213":"#7A7D85",opacity:isValid?1:0.5,transition:"all 0.2s"}}>{isEdit?"SAVE CHANGES":"ADD SUPPLEMENT"}</button>
+        </div>
+        {!isValid&&<p style={{textAlign:"center",color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:10,letterSpacing:"0.5px"}}>Fill in all required (*) fields to continue</p>}
+      </div>
+    </div>
+  );
+}
+
+// ── NotifPanel ────────────────────────────────────────────────────────────────
+function NotifPanel({onClose}) {
+  const [perm,setPerm]=useState(typeof Notification!=="undefined"?Notification.permission:"denied");
+  const [testSent,setTestSent]=useState(false);
+  const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
+  const request=async()=>{const ok=await requestNotifPerm();setPerm(ok?"granted":"denied");};
+  const sendTest=()=>{fireNotif("Suppstackd — Log your supplements","Don't forget to log your stack today.",200);setTestSent(true);setTimeout(()=>setTestSent(false),3000);};
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box">
+        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Notifications</h2>
+        <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:22}}>Daily reminders to log your stack</p>
+        {isIOS&&!isPWA&&<div style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.27)",borderRadius:10,padding:14,marginBottom:18}}><p style={{color:"#E8A830",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,margin:0}}>📱 iPhone: Add to Home Screen first:<br/>1. Tap Share in Safari<br/>2. "Add to Home Screen"<br/>3. Open from Home Screen<br/>4. Enable notifications below</p></div>}
+        {!isIOS&&installPrompt&&<div style={{background:"rgba(91,173,114,0.08)",border:"1px solid rgba(91,173,114,0.27)",borderRadius:10,padding:14,marginBottom:18}}><p style={{color:"#5BAD72",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:10}}>Install Suppstackd as an app for reliable daily alerts.</p><button className="btn-primary" style={{width:"100%",padding:10}} onClick={()=>installPrompt.prompt()}>INSTALL APP</button></div>}
+        <div style={{background:"#111213",borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>PERMISSION</span><span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,color:perm==="granted"?"#5BAD72":perm==="denied"?"#C0392B":"#E8A830"}}>{perm==="granted"?"GRANTED":perm==="denied"?"BLOCKED":"NOT SET"}</span></div>
+        {perm!=="granted"&&<button className="btn-primary" style={{width:"100%",marginBottom:10}} onClick={request}>ENABLE NOTIFICATIONS</button>}
+        {perm==="granted"&&<><p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:16}}>Notifications enabled. Suppstackd will remind you each time you open the app and haven't logged today.</p><button className="btn-primary" style={{width:"100%",marginBottom:10,background:testSent?"#5BAD72":undefined}} onClick={sendTest}>{testSent?"✓ TEST SENT":"SEND TEST NOTIFICATION"}</button></>}
+        {perm==="denied"&&<p style={{color:"#C0392B",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.6,marginBottom:16}}>Blocked. Go to browser Settings → Notifications → allow this site.</p>}
+        <button className="btn-cancel" style={{width:"100%"}} onClick={onClose}>Done</button>
+      </div>
+    </div>
+  );
+}
+
+// ── HistoryView ───────────────────────────────────────────────────────────────
+function HistoryView({logs,supplements,onBack}) {
+  const sorted=[...logs].reverse().slice(0,60);
+  return (
+    <div>
+      <button onClick={onBack} style={{background:"transparent",border:"none",color:"#E8A830",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:13,padding:"0 0 22px",letterSpacing:"0.5px"}}>← BACK</button>
+      <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:20}}>Log History</h2>
+      {sorted.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>No logs yet.</p>}
+      {sorted.map((log,i)=>{const s=supplements.find(s=>s.id===log.suppId);return(<div key={i} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><p style={{margin:"0 0 2px",color:"#F0F0F0",fontWeight:600,fontSize:14}}>{s?.name||"Unknown"}</p><p style={{margin:0,color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{log.date}</p>{log.notes&&<p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:11}}>"{log.notes}"</p>}</div><span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,color:log.taken?"#5BAD72":"#C0392B"}}>{log.taken?`-${log.amount.toFixed(1)}${s?.unit||""}`:"SKIPPED"}</span></div>);})}
+    </div>
+  );
+}
+
+// ── FeedbackModal ─────────────────────────────────────────────────────────────
+function FeedbackModal({onClose, isAutoPrompt=false}) {
+  const [step,setStep]=useState("form");
+  const [rating,setRating]=useState(0);
+  const [hovered,setHovered]=useState(0);
+  const [category,setCategory]=useState("");
+  const [message,setMessage]=useState("");
+  const [name,setName]=useState("");
+  const [submitted,setSubmitted]=useState(false);
+  const categories=["Bug / Something broken","Feature request","General feedback","Love it! 🙌"];
+
+  const handleSubmit=()=>{
+    setSubmitted(true);
+    if(!rating||!category||!message.trim())return;
+    const existing=load(FEEDBACK_KEY,[]);
+    save(FEEDBACK_KEY,[...existing,{id:Date.now().toString(),ts:new Date().toISOString(),rating,category,message:message.trim(),name:name.trim()||"Anonymous"}]);
+    save(FB_SHOWN_KEY,true);
+    setStep("thanks");
+  };
+
+  const handleClose=()=>{ save(FB_SHOWN_KEY,true); onClose(); };
+
+  if(step==="thanks") return (
+    <div className="overlay">
+      <div className="modal-box" style={{textAlign:"center",padding:"40px 26px"}}>
+        <div style={{fontSize:52,marginBottom:16}}>🙏</div>
+        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:8}}>Thanks for the feedback!</h2>
+        <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:28}}>Every response goes directly to the team and helps shape where Suppstackd goes next.</p>
+        <button className="btn-primary" style={{width:"100%"}} onClick={handleClose}>CLOSE</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)handleClose();}}>
+      <div className="modal-box">
+        <div style={{marginBottom:20}}>
+          {isAutoPrompt&&<div style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.27)",borderRadius:10,padding:"10px 14px",marginBottom:16}}><p style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",margin:0,letterSpacing:"0.5px"}}>🔥 YOU'VE BEEN STACKD FOR 3 DAYS</p></div>}
+          <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Share Feedback</h2>
+          <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.6}}>Help shape the future of Suppstackd. Takes 60 seconds.</p>
+        </div>
+
+        <div className="field">
+          <span className="section-label">HOW ARE YOU FINDING IT? *</span>
+          <div style={{display:"flex",gap:4,marginBottom:4}}>
+            {[1,2,3,4,5].map(n=>(
+              <button key={n} className="star-btn" onMouseEnter={()=>setHovered(n)} onMouseLeave={()=>setHovered(0)} onClick={()=>setRating(n)} style={{opacity:(hovered||rating)>=n?1:0.3}}>⭐</button>
+            ))}
+          </div>
+          {submitted&&!rating&&<div className="err-msg">⚠ Please give a rating</div>}
+          {rating>0&&<div style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:4}}>{["","Needs work","Could be better","Pretty good","Really good","Love it!"][rating]}</div>}
+        </div>
+
+        <div className="field">
+          <span className="section-label">TYPE OF FEEDBACK *</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {categories.map(c=>(
+              <button key={c} onClick={()=>setCategory(c)} style={{padding:"6px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px",border:category===c?"1px solid #E8A830":"1px solid #2A2B2E",background:category===c?"rgba(232,168,48,0.1)":"transparent",color:category===c?"#E8A830":"#7A7D85",transition:"all 0.15s"}}>{c}</button>
+            ))}
+          </div>
+          {submitted&&!category&&<div className="err-msg" style={{marginTop:6}}>⚠ Please select a type</div>}
+        </div>
+
+        <div className="field">
+          <span className="section-label">YOUR FEEDBACK *</span>
+          <textarea className="inp" rows={4} placeholder="Tell us what's working, what's broken, or what you'd love to see next..." value={message} onChange={e=>setMessage(e.target.value)} style={{resize:"none",lineHeight:1.6,fontSize:13}}/>
+          {submitted&&!message.trim()&&<div className="err-msg">⚠ Please add a message</div>}
+        </div>
+
+        <div className="field">
+          <span className="section-label">YOUR NAME (OPTIONAL)</span>
+          <input className="inp" placeholder="So we know who to thank" value={name} onChange={e=>setName(e.target.value)}/>
+        </div>
+
+        <div className="flex gap-10">
+          <button className="btn-cancel flex-1" onClick={handleClose}>
+            {isAutoPrompt?"Maybe later":"Cancel"}
+          </button>
+          <button onClick={handleSubmit} style={{flex:2,padding:12,borderRadius:10,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:"none",background:(rating&&category&&message.trim())?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:(rating&&category&&message.trim())?"#111213":"#7A7D85",opacity:(rating&&category&&message.trim())?1:0.5,cursor:(rating&&category&&message.trim())?"pointer":"not-allowed",transition:"all 0.2s"}}>SEND FEEDBACK</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FeedbackInbox (your private view) ────────────────────────────────────────
+function FeedbackInbox({onClose}) {
+  const entries=load(FEEDBACK_KEY,[]).reverse();
+  const avgRating=entries.length?(entries.reduce((a,e)=>a+e.rating,0)/entries.length).toFixed(1):null;
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box">
+        <button onClick={onClose} style={{background:"transparent",border:"none",color:"#E8A830",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:13,padding:"0 0 16px",letterSpacing:"0.5px"}}>← BACK</button>
+        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Feedback Inbox</h2>
+        <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:16}}>{entries.length} response{entries.length!==1?"s":""}{avgRating?` · avg ${avgRating}★`:""}</p>
+        {entries.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No feedback yet. Share the app and responses will appear here.</div>}
+        {entries.map(e=>(
+          <div key={e.id} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"14px 16px",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+              <div><span style={{color:"#F0F0F0",fontWeight:700,fontSize:13}}>{e.name}</span><span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",display:"block",marginTop:2}}>{e.category}</span></div>
+              <div style={{textAlign:"right"}}><div style={{color:"#E8A830",fontSize:13}}>{"⭐".repeat(e.rating)}</div><div style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:2}}>{new Date(e.ts).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div></div>
+            </div>
+            <p style={{color:"#C8C9CC",fontSize:13,lineHeight:1.6,margin:0}}>"{e.message}"</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App() {
+  const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]));
+  const [logs,setLogs]=useState(()=>load(LOG_KEY,[]));
+  const [view,setView]=useState("home");
+  const [showAdd,setShowAdd]=useState(false);
+  const [editSupp,setEditSupp]=useState(null);
+  const [logSupp,setLogSupp]=useState(null);
+  const [showNotif,setShowNotif]=useState(false);
+  const [showFeedback,setShowFeedback]=useState(false);
+  const [isAutoFeedback,setIsAutoFeedback]=useState(false);
+  const [showInbox,setShowInbox]=useState(false);
+  const [filter,setFilter]=useState("all");
+  const [sortBy,setSortBy]=useState("runout");
+
+  useEffect(()=>save(STORAGE_KEY,supplements),[supplements]);
+  useEffect(()=>save(LOG_KEY,logs),[logs]);
+
+  // On mount: track today as active day, fire notifications, check 3-day trigger
+  useEffect(()=>{
+    // Notifications
+    if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
+      const unlogged=supplements.filter(s=>s.lastLogged!==today());
+      const todayLogs=logs.filter(l=>l.date===today());
+      if(supplements.length>0&&unlogged.length>0&&todayLogs.length===0)
+        fireNotif("Suppstackd — Log your supplements",`${unlogged.length} supplement${unlogged.length>1?"s":""} not logged today.`,1500);
+    }
+    // 3-day feedback trigger
+    const shouldPrompt=checkAndTrackActiveDay();
+    if(shouldPrompt){
+      setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
+    }
+  },[]);
+
+  const addOrUpdate=s=>{setSupplements(prev=>{const ex=prev.find(p=>p.id===s.id);return ex?prev.map(p=>p.id===s.id?s:p):[...prev,s];});setShowAdd(false);setEditSupp(null);};
+  const deleteSupp=id=>{if(confirm("Remove this supplement?"))setSupplements(prev=>prev.filter(s=>s.id!==id));};
+  const saveLog=({taken,amount,notes})=>{const t=today();setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+amount,lastLogged:t}));setLogs(prev=>[...prev,{suppId:logSupp.id,date:t,taken,amount,notes,ts:Date.now()}]);setLogSupp(null);};
+
+  const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
+  const unloggedToday=supplements.filter(s=>s.lastLogged!==today()).length;
+  const todayLogCount=logs.filter(l=>l.date===today()).length;
+  const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14;if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>sortBy==="runout"?daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b)):a.name.localeCompare(b.name));
+
+  const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
+  const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
+
+  if(view==="history") return (
+    <div id="root" className="visible">
+      <div className="shell" style={{paddingBottom:60}}>
+        <HistoryView logs={logs} supplements={supplements} onBack={()=>setView("home")}/>
+      </div>
+      <button className="feedback-tab" onClick={openManualFeedback}>FEEDBACK</button>
+      {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
+    </div>
+  );
+
+  return (
+    <div id="root" className="visible">
+      <div className="shell" style={{paddingBottom:100}}>
+
+        {/* Header */}
+        <div style={{marginBottom:26}}>
+          <div className="flex" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <div>
+              <div className="flex" style={{alignItems:"center",gap:8,marginBottom:6}}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:"#E8A830"}}/>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"2px"}}>SUPPSTACKD</span>
+              </div>
+              <h1 style={{fontSize:26,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px"}}>Your Stack</h1>
+            </div>
+            <div className="flex gap-8" style={{alignItems:"center"}}>
+              <button className="btn-icon" onClick={()=>setShowNotif(true)}>🔔</button>
+              <button className="btn-icon" onClick={()=>setView("history")}>history</button>
+              <button className="btn-icon" onClick={()=>setShowInbox(true)} style={{fontSize:"9px",letterSpacing:"0.5px"}}>INBOX</button>
+            </div>
+          </div>
+          {supplements.length>0&&(urgentCount>0||unloggedToday>0)&&(
+            <div style={{marginTop:14,background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
+              {urgentCount>0&&<span style={{color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:12}}>⚠ {urgentCount} running low</span>}
+              {unloggedToday>0&&<span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12}}>📋 {unloggedToday} unlogged today</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        {supplements.length>0&&(
+          <div className="flex gap-8" style={{marginBottom:18}}>
+            {[{label:"TRACKING",value:supplements.length,color:"#F0F0F0"},{label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85"},{label:"LOGGED TODAY",value:todayLogCount,color:todayLogCount>0?"#5BAD72":"#7A7D85"}].map(s=>(
+              <div key={s.label} style={{flex:1,background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"11px 8px",textAlign:"center"}}>
+                <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace"}}>{s.value}</div>
+                <div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.8px"}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Filter + Sort */}
+        {supplements.length>1&&(
+          <div className="flex gap-8" style={{marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
+            {["all","urgent","stocked"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:filter===f?"1px solid #E8A830":"1px solid #2A2B2E",background:filter===f?"rgba(232,168,48,0.08)":"transparent",color:filter===f?"#E8A830":"#7A7D85"}}>{f.toUpperCase()}</button>))}
+            <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginLeft:"auto",background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:8,padding:"5px 8px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
+              <option value="runout">BY RUN-OUT</option>
+              <option value="name">BY NAME</option>
+            </select>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {supplements.length===0&&(
+          <div style={{textAlign:"center",padding:"70px 20px"}}>
+            <div style={{fontSize:52,marginBottom:18}}>💊</div>
+            <h3 style={{color:"#F0F0F0",margin:"0 0 8px",fontSize:21,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px"}}>Track your supplement stack</h3>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,margin:"0 0 30px",lineHeight:1.8}}>Add your supplements and Suppstackd will show<br/>exactly when each one runs out — updated daily<br/>as you log your doses.</p>
+            <button className="btn-primary" style={{padding:"14px 32px",fontSize:14}} onClick={()=>setShowAdd(true)}>+ ADD FIRST SUPPLEMENT</button>
+          </div>
+        )}
+
+        {/* Cards */}
+        <div>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp}/>)}</div>
+
+        {/* FAB */}
+        {supplements.length>0&&<button className="btn-fab" onClick={()=>setShowAdd(true)}>+</button>}
+
+        {/* Feedback tab */}
+        <button className="feedback-tab" onClick={openManualFeedback}>FEEDBACK</button>
+      </div>
+
+      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate}/>}
+      {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog}/>}
+      {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
+      {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
+      {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
