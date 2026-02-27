@@ -1,3 +1,7 @@
+
+Index · HTML
+Copy
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -327,16 +331,40 @@ function LogModal({supp,onClose,onSave}) {
 // ── AddEditModal ──────────────────────────────────────────────────────────────
 function AddEditModal({supp,onClose,onSave}) {
   const isEdit=!!supp;
-  const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"1",consumed:"0",lastLogged:null});
+  const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null});
   const [touched,setTouched]=useState({});
   const [submitted,setSubmitted]=useState(false);
+
+  // Already-started state (add mode only)
+  const [alreadyStarted,setAlreadyStarted]=useState(false);
+  const [startedMode,setStartedMode]=useState("amount"); // "amount" | "days"
+  const [amountLeft,setAmountLeft]=useState("");
+  const [daysAlready,setDaysAlready]=useState("");
+
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const touch=(k)=>setTouched(t=>({...t,[k]:true}));
+
+  // Calculate consumed from already-started inputs
+  const calcConsumed=()=>{
+    const total=parseFloat(form.totalAmount)||0;
+    const serving=parseFloat(form.servingSize)||0;
+    const perDay=parseFloat(form.servingsPerDay)||1;
+    if(startedMode==="amount"){
+      const left=parseFloat(amountLeft)||0;
+      return Math.max(0, total-left);
+    } else {
+      const days=parseInt(daysAlready)||0;
+      return Math.min(total, days*serving*perDay);
+    }
+  };
+
+  const effectiveConsumed = !isEdit && alreadyStarted ? calcConsumed() : parseFloat(form.consumed)||0;
+
   const errors={
     name:!form.name.trim()?"Supplement name is required":null,
     totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,
     servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999)?"Can't exceed total amount":null,
-    servingsPerDay:!form.servingsPerDay?"Required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,
+    servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,
     consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null,
   };
   const reqFields=["name","totalAmount","servingSize","servingsPerDay"];
@@ -344,9 +372,26 @@ function AddEditModal({supp,onClose,onSave}) {
   const completed=reqFields.filter(k=>!errors[k]).length;
   const progPct=Math.round((completed/reqFields.length)*100);
   const showErr=k=>(touched[k]||submitted)&&errors[k];
-  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize?Math.ceil((parseFloat(form.totalAmount)-(parseFloat(form.consumed)||0))/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
-  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:parseFloat(form.consumed)||0});};
+
+  const remaining = parseFloat(form.totalAmount||0) - effectiveConsumed;
+  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0
+    ? Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1)))
+    : null;
+
+  const handleSave=()=>{
+    setSubmitted(true);
+    if(!isValid)return;
+    onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed});
+  };
   const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
+
+  // Live preview of amount left / days consumed for already-started section
+  const totalNum=parseFloat(form.totalAmount)||0;
+  const servingNum=parseFloat(form.servingSize)||0;
+  const perDayNum=parseFloat(form.servingsPerDay)||1;
+  const consumedPreview=alreadyStarted?calcConsumed():0;
+  const leftPreview=Math.max(0,totalNum-consumedPreview);
+
   return (
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box">
@@ -362,6 +407,7 @@ function AddEditModal({supp,onClose,onSave}) {
             </div>
           </div>}
         </div>
+
         <div className="field"><span className="section-label">SUPPLEMENT NAME *</span><input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamin C" value={form.name} onChange={e=>set("name",e.target.value)} onBlur={()=>touch("name")}/>{showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}</div>
         <div className="field"><span className="section-label">BRAND (OPTIONAL)</span><input className="inp" placeholder="e.g. Optimum Nutrition, MyProtein" value={form.brand} onChange={e=>set("brand",e.target.value)}/></div>
         <div className="flex gap-10">
@@ -371,10 +417,60 @@ function AddEditModal({supp,onClose,onSave}) {
         <div className="field"><span className="section-label">TOTAL AMOUNT IN CONTAINER ({form.unit}) *</span><input type="number" className={ic("totalAmount")} placeholder="e.g. 1000" min="0" value={form.totalAmount} onChange={e=>set("totalAmount",e.target.value)} onBlur={()=>touch("totalAmount")}/>{showErr("totalAmount")&&<div className="err-msg">⚠ {errors.totalAmount}</div>}</div>
         <div className="flex gap-10">
           <div className="field flex-1"><span className="section-label">SERVING SIZE ({form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder="e.g. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
-          <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
+          <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="e.g. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
+
+        {/* ── Already started this tub? (add mode only) ── */}
+        {!isEdit&&(
+          <div style={{marginBottom:16}}>
+            <button onClick={()=>setAlreadyStarted(v=>!v)} style={{width:"100%",padding:"11px 14px",background:alreadyStarted?"rgba(232,168,48,0.08)":"#111213",border:alreadyStarted?"1px solid rgba(232,168,48,0.4)":"1px solid #2A2B2E",borderRadius:9,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
+              <span style={{color:alreadyStarted?"#E8A830":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.5px"}}>ALREADY STARTED THIS TUB?</span>
+              <span style={{color:alreadyStarted?"#E8A830":"#7A7D85",fontSize:16}}>{alreadyStarted?"▲":"▼"}</span>
+            </button>
+
+            {alreadyStarted&&(
+              <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:"0 0 9px 9px",padding:"14px 14px 10px",marginTop:-1}}>
+                <p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginBottom:12,lineHeight:1.6}}>Tell us how much you've used so the run-out date is accurate.</p>
+
+                {/* Mode toggle */}
+                <div className="flex gap-8" style={{marginBottom:14}}>
+                  {[{v:"amount",label:"I know what's left"},{v:"days",label:"I know days taken"}].map(opt=>(
+                    <button key={opt.v} onClick={()=>setStartedMode(opt.v)} style={{flex:1,padding:"7px 4px",borderRadius:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.3px",border:startedMode===opt.v?"1px solid #E8A830":"1px solid #2A2B2E",background:startedMode===opt.v?"rgba(232,168,48,0.1)":"transparent",color:startedMode===opt.v?"#E8A830":"#7A7D85",transition:"all 0.15s"}}>{opt.label}</button>
+                  ))}
+                </div>
+
+                {startedMode==="amount"?(
+                  <div>
+                    <span className="section-label">AMOUNT REMAINING IN TUB ({form.unit||"unit"})</span>
+                    <input type="number" className="inp" placeholder={`e.g. ${Math.round(totalNum*0.5)||250}`} min="0" max={form.totalAmount||undefined} value={amountLeft} onChange={e=>setAmountLeft(e.target.value)}/>
+                    {amountLeft&&totalNum>0&&<p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:6}}>≈ {Math.round(calcConsumed())} {form.unit} already used</p>}
+                  </div>
+                ):(
+                  <div>
+                    <span className="section-label">HOW MANY DAYS HAVE YOU BEEN TAKING IT?</span>
+                    <input type="number" className="inp" placeholder="e.g. 14" min="0" value={daysAlready} onChange={e=>setDaysAlready(e.target.value)}/>
+                    {daysAlready&&servingNum>0&&totalNum>0&&<p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:6}}>≈ {Math.round(calcConsumed())} {form.unit} used · {Math.max(0,Math.round(leftPreview))} {form.unit} left</p>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit mode: manual consumed override */}
         {isEdit&&<div className="field"><span className="section-label">ALREADY CONSUMED ({form.unit})</span><input type="number" className={ic("consumed")} min="0" value={form.consumed} onChange={e=>set("consumed",e.target.value)} onBlur={()=>touch("consumed")}/>{showErr("consumed")&&<div className="err-msg">⚠ {errors.consumed}</div>}</div>}
-        {preview!==null&&preview>0&&<div style={{background:"#111213",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>ESTIMATED SUPPLY</span><span style={{color:"#E8A830",fontWeight:800,fontFamily:"'Space Mono',monospace",fontSize:18}}>{preview} days</span></div>}
+
+        {/* Estimated supply preview */}
+        {preview!==null&&preview>0&&(
+          <div style={{background:"#111213",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",display:"block"}}>ESTIMATED SUPPLY</span>
+              {alreadyStarted&&leftPreview>0&&<span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{Math.round(leftPreview)} {form.unit} remaining</span>}
+            </div>
+            <span style={{color:"#E8A830",fontWeight:800,fontFamily:"'Space Mono',monospace",fontSize:18}}>{preview} days</span>
+          </div>
+        )}
+
         {submitted&&!isValid&&<div style={{background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:10,padding:"11px 14px",marginBottom:16}}><p style={{color:"#C0392B",fontSize:12,fontFamily:"'Space Mono',monospace",margin:0}}>Please fix the highlighted fields above before saving.</p></div>}
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
