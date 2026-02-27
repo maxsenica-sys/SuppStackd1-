@@ -42,9 +42,14 @@ Copy
     @keyframes loaderFill { to { width: 100%; } }
 
     /* ── MAIN APP ────────────────────────────────────────────────────── */
-    #root { min-height: 100vh; background: #111213; opacity: 0; transition: opacity 0.5s ease; }
+    html { overflow: hidden; height: 100%; }
+    body { overflow: hidden; height: 100%; position: fixed; width: 100%; overscroll-behavior: none; }
+    #root { height: 100vh; height: 100dvh; background: #111213; opacity: 0; transition: opacity 0.5s ease; display: flex; flex-direction: column; overflow: hidden; }
     #root.visible { opacity: 1; }
-    .shell { max-width: 480px; margin: 0 auto; padding: env(safe-area-inset-top, 44px) 18px 20px; }
+    .shell { max-width: 480px; width: 100%; margin: 0 auto; padding: env(safe-area-inset-top, 44px) 18px 0; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .shell-fixed { flex-shrink: 0; }
+    .shell-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; min-height: 0; }
+    .shell-scroll::-webkit-scrollbar { display: none; }
     .card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(4px); }
     .modal-box { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 18px; padding: 26px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
@@ -57,8 +62,7 @@ Copy
     .btn-primary { padding: 12px; border: none; background: linear-gradient(135deg, #E8A830, #C88820); color: #111213; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; transition: all 0.2s; }
     .btn-cancel { padding: 12px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: 13px; }
     .btn-icon { padding: 9px 11px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 9px; cursor: pointer; font-size: 11px; font-family: 'Space Mono', monospace; }
-    .btn-fab { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 28px; width: 56px; height: 56px; border-radius: 50%; border: none; background: linear-gradient(135deg, #E8A830, #C88820); color: #111213; font-size: 28px; cursor: pointer; box-shadow: 0 4px 24px rgba(232,168,48,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; transition: transform 0.15s; }
-    .btn-fab:active { transform: scale(0.92); }
+
     .btn-step { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2B2E; background: #111213; color: #F0F0F0; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; flex-shrink: 0; }
     .section-label { color: #7A7D85; font-size: 10px; font-family: 'Space Mono', monospace; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
     .field { margin-bottom: 14px; }
@@ -87,7 +91,7 @@ Copy
     .cal-day.today .cal-dot { background: #111213; }
 
     /* ── FEEDBACK ────────────────────────────────────────────────────── */
-    .feedback-tab { position: fixed; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); right: 0; background: linear-gradient(135deg,#E8A830,#C88820); color: #111213; border: none; border-radius: 10px 0 0 10px; padding: 10px 12px; cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 10px; letter-spacing: 0.8px; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); z-index: 49; box-shadow: -2px 0 12px rgba(232,168,48,0.3); }
+
     .star-btn { background: transparent; border: none; cursor: pointer; font-size: 28px; padding: 4px 6px; transition: transform 0.15s; line-height: 1; }
     .star-btn:active { transform: scale(1.2); }
 
@@ -154,11 +158,12 @@ const FEEDBACK_KEY  = "suppstackd_v1_feedback";
 const ACTIVE_KEY    = "suppstackd_v1_active_days";
 const FB_SHOWN_KEY  = "suppstackd_v1_feedback_shown";
 const PROFILE_KEY   = "suppstackd_v1_profile";
+const FEEL_KEY      = "suppstackd_v1_feel";
 
 const SUPPLEMENT_TYPES = ["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
 const UNITS = ["g","kg","mg","ml","lb","oz","fl oz","count"];
 const SPORTS = ["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","Football","Rugby","Basketball","MMA / Boxing","Tennis","Triathlon","Yoga / Pilates","Other"];
-const GOALS  = ["💪 Build muscle & strength","🔥 Lose weight / body fat","⚡ Boost energy & performance","🧠 Improve focus & recovery","❤️ General health & wellness","🏆 Competitive sport performance"];
+const GOALS  = ["Build muscle & strength","Lose weight / body fat","Boost energy & performance","Improve focus & recovery","General health & wellness","Competitive sport performance"];
 const EXPERIENCE = ["Just starting out","6–12 months","1–3 years","3+ years","Elite / Professional"];
 
 function load(key, fb) { try { return JSON.parse(localStorage.getItem(key)) || fb; } catch { return fb; } }
@@ -302,8 +307,11 @@ function ProgressRing({pct,color,size=58}) {
 // ── SupplementCard ────────────────────────────────────────────────────────────
 function SupplementCard({supp,onLog,onEdit,onDelete}) {
   const runOut=calcRunOut(supp),days=daysFromNow(runOut);
-  const remaining=Math.max(0,supp.totalAmount-supp.consumed);
-  const pct=Math.max(0,Math.min(100,(remaining/supp.totalAmount)*100));
+  const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
+  // Ring shows % of a 90-day window so urgency is visually clear regardless of amount consumed
+  const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
+  const daysRemaining=Math.max(0,daysFromNow(calcRunOut(supp)));
+  const pct=totalDays>0?Math.max(0,Math.min(100,(daysRemaining/totalDays)*100)):0;
   const color=urgencyColor(days);
   const logged=supp.lastLogged===today();
   return (
@@ -352,6 +360,7 @@ function LogModal({supp,onClose,onSave}) {
   const [customAmt,setCustomAmt]=useState(String(supp.servingSize));
   const [useCustom,setUseCustom]=useState(false);
   const [notes,setNotes]=useState("");
+  const [feel,setFeel]=useState({energy:null,recovery:null,mood:null});
   const amount=taken?(useCustom?parseFloat(customAmt)||0:supp.servingSize*scoops):0;
   return (
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -391,10 +400,31 @@ function LogModal({supp,onClose,onSave}) {
             <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{amount.toFixed(1)}{supp.unit}</span>
           </div>
         </>}
+        {/* ── Feel log ── */}
+        <div style={{marginBottom:18}}>
+          <span className="section-label" style={{marginBottom:12,display:"block"}}>HOW ARE YOU FEELING TODAY?</span>
+          {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"}].map(metric=>(
+            <div key={metric.key} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{metric.label}</span>
+                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{feel[metric.key]||"—"}</span>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                {[1,2,3,4,5].map(n=>(
+                  <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"8px 0",borderRadius:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+            <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>LOW</span>
+            <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>HIGH</span>
+          </div>
+        </div>
         <input placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} className="inp" style={{marginBottom:18}}/>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" style={{flex:2}} onClick={()=>onSave({taken,amount,notes})}>SAVE LOG</button>
+          <button className="btn-primary" style={{flex:2}} onClick={()=>onSave({taken,amount,notes,feel})}>SAVE LOG</button>
         </div>
       </div>
     </div>
@@ -435,7 +465,7 @@ function AddEditModal({supp,onClose,onSave}) {
   const remaining=totalNum-effectiveConsumed;
   const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0
     ?Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
-  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed});};
+  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed,price:parseFloat(form.price)||null});};
   const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
   return (
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -461,6 +491,7 @@ function AddEditModal({supp,onClose,onSave}) {
           <div className="field flex-1"><span className="section-label">SERVING SIZE ({form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder="e.g. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
           <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="e.g. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
+        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>£</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to calculate your daily stack cost.</p></div>
         {!isEdit&&(
           <div style={{marginBottom:16}}>
             <button onClick={()=>setAlreadyStarted(v=>!v)} style={{width:"100%",padding:"11px 14px",background:alreadyStarted?"rgba(232,168,48,0.08)":"#111213",border:alreadyStarted?"1px solid rgba(232,168,48,0.4)":"1px solid #2A2B2E",borderRadius:9,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
@@ -668,7 +699,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
         <div style={{marginBottom:20}}>
           {isAutoPrompt&&<div style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.27)",borderRadius:10,padding:"10px 14px",marginBottom:16}}><p style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",margin:0,letterSpacing:"0.5px"}}>🔥 YOU'VE BEEN STACKD FOR 3 DAYS</p></div>}
           <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Share Feedback</h2>
-          <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.6}}>Help shape the future of Suppstackd. Takes 60 seconds.</p>
+          <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.6}}>Help shape the future of Suppstackd.</p>
         </div>
         <div className="field">
           <span className="section-label">HOW ARE YOU FINDING IT? *</span>
@@ -728,6 +759,200 @@ function FeedbackInbox({onClose}) {
   );
 }
 
+
+// ── ShareCard ─────────────────────────────────────────────────────────────────
+function ShareCard({supplements,profile,logs,onClose}) {
+  const canvasRef = useRef(null);
+  const [generated,setGenerated] = useState(false);
+
+  const streak = (() => {
+    const dates = [...new Set(logs.map(l=>l.date))].sort();
+    if(!dates.length) return 0;
+    let s=1,i=dates.length-1;
+    while(i>0){
+      const a=new Date(dates[i]),b=new Date(dates[i-1]);
+      a.setHours(0,0,0,0);b.setHours(0,0,0,0);
+      if((a-b)/86400000===1){s++;i--;}else break;
+    }
+    return s;
+  })();
+
+  const daysOnStack = (() => {
+    if(!logs.length) return 0;
+    const first=new Date(Math.min(...logs.map(l=>l.ts)));
+    const now=new Date();
+    return Math.max(1,Math.round((now-first)/86400000));
+  })();
+
+  useEffect(()=>{
+    const canvas=canvasRef.current;
+    if(!canvas)return;
+    const W=canvas.width=800,H=canvas.height=500;
+    const ctx=canvas.getContext("2d");
+
+    // ── Background ──
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,"#0D1B2A");
+    bg.addColorStop(1,"#080E14");
+    ctx.fillStyle=bg;
+    ctx.fillRect(0,0,W,H);
+
+    // ── Diagonal accent lines ──
+    ctx.save();
+    const lg=ctx.createLinearGradient(0,0,W,0);
+    lg.addColorStop(0,"rgba(232,168,48,0)");
+    lg.addColorStop(0.5,"rgba(232,168,48,0.07)");
+    lg.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=lg;
+    [[W+200,-100,-200,H+100,60],[W+300,-100,-100,H+100,30],[W+400,-100,0,H+100,15]].forEach(([x1,y1,x2,y2,w])=>{
+      ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    });
+    ctx.restore();
+
+    // ── Top accent line ──
+    const tl=ctx.createLinearGradient(0,0,W,0);
+    tl.addColorStop(0,"rgba(232,168,48,0)");
+    tl.addColorStop(0.3,"rgba(232,168,48,0.8)");
+    tl.addColorStop(0.7,"rgba(232,168,48,0.8)");
+    tl.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=tl;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,3);ctx.lineTo(W,3);ctx.stroke();
+
+    // ── Wordmark ──
+    ctx.fillStyle="rgba(255,255,255,0.15)";
+    ctx.font="700 13px -apple-system, Arial, sans-serif";
+    ctx.letterSpacing="3px";
+    ctx.fillText("SUPPSTACKD",48,52);
+
+    // ── Name ──
+    const name=profile?.name||"MY STACK";
+    ctx.fillStyle="#F0F0F0";
+    ctx.font="900 56px -apple-system, Arial, sans-serif";
+    ctx.fillText(name.toUpperCase(),44,132);
+
+    // ── Amber underline under name ──
+    const nameW=ctx.measureText(name.toUpperCase()).width;
+    const ul=ctx.createLinearGradient(44,0,44+Math.min(nameW,W-88),0);
+    ul.addColorStop(0,"#E8A830");
+    ul.addColorStop(1,"rgba(232,168,48,0.2)");
+    ctx.strokeStyle=ul;ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(44,142);ctx.lineTo(44+Math.min(nameW,W-88),142);ctx.stroke();
+
+    // ── Stats row ──
+    const stats=[
+      {label:"DAY STREAK",value:`${streak}`},
+      {label:"DAYS ON STACK",value:`${daysOnStack}`},
+      {label:"SUPPLEMENTS",value:`${supplements.length}`},
+    ];
+    stats.forEach((s,i)=>{
+      const x=44+(i*180);
+      ctx.fillStyle="#E8A830";
+      ctx.font="700 28px -apple-system, Arial, sans-serif";
+      ctx.fillText(s.value,x,196);
+      ctx.fillStyle="rgba(255,255,255,0.35)";
+      ctx.font="500 11px -apple-system, Arial, sans-serif";
+      ctx.fillText(s.label,x,214);
+    });
+
+    // ── Divider ──
+    ctx.strokeStyle="rgba(255,255,255,0.08)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(44,232);ctx.lineTo(W-44,232);ctx.stroke();
+
+    // ── Supplement pills ──
+    let px=44,py=260;
+    const pillH=38,pillPad=16,fontSize=12,gap=10;
+    ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
+
+    supplements.slice(0,8).forEach(s=>{
+      const label=s.name.toUpperCase();
+      const sub=s.brand?s.brand.toUpperCase():"";
+      ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
+      const textW=ctx.measureText(label).width;
+      ctx.font=`500 ${fontSize-1}px -apple-system, Arial, sans-serif`;
+      const subW=sub?ctx.measureText(sub).width:0;
+      ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
+      const pillW=textW+(pillPad*2)+(sub?subW+16:0);
+
+      if(px+pillW>W-44){px=44;py+=pillH+gap;}
+
+      // pill bg
+      ctx.fillStyle="rgba(255,255,255,0.06)";
+      ctx.beginPath();
+      ctx.roundRect(px,py,pillW,pillH,6);
+      ctx.fill();
+
+      // pill border
+      ctx.strokeStyle="rgba(232,168,48,0.25)";ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.roundRect(px,py,pillW,pillH,6);
+      ctx.stroke();
+
+      // pill text
+      ctx.fillStyle="#F0F0F0";
+      ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
+      ctx.fillText(label,px+pillPad,py+pillH/2+4);
+
+      if(sub){
+        ctx.fillStyle="rgba(232,168,48,0.7)";
+        ctx.font=`500 ${fontSize-1}px -apple-system, Arial, sans-serif`;
+        ctx.fillText(sub,px+pillPad+ctx.measureText(label).width+8+pillPad-8,py+pillH/2+4);
+      }
+
+      px+=pillW+gap;
+    });
+
+    if(supplements.length>8){
+      ctx.fillStyle="rgba(255,255,255,0.3)";
+      ctx.font="500 12px -apple-system, Arial, sans-serif";
+      ctx.fillText(`+${supplements.length-8} more`,px,py+pillH/2+4);
+    }
+
+    // ── Bottom date ──
+    const dateStr=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}).toUpperCase();
+    ctx.fillStyle="rgba(255,255,255,0.2)";
+    ctx.font="500 11px -apple-system, Arial, sans-serif";
+    ctx.fillText(dateStr,44,H-28);
+
+    // ── Bottom right branding ──
+    ctx.fillStyle="rgba(232,168,48,0.5)";
+    ctx.font="700 11px -apple-system, Arial, sans-serif";
+    const brand="SUPPSTACKD.NETLIFY.APP";
+    const bw=ctx.measureText(brand).width;
+    ctx.fillText(brand,W-44-bw,H-28);
+
+    setGenerated(true);
+  },[]);
+
+  const download=()=>{
+    const a=document.createElement("a");
+    a.download="my-stack.png";
+    a.href=canvasRef.current.toDataURL("image/png");
+    a.click();
+  };
+
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{maxWidth:480}}>
+        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Your Stack Card</h2>
+        <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:18,lineHeight:1.6}}>Share your stack on Instagram, WhatsApp or anywhere.</p>
+
+        <div style={{borderRadius:12,overflow:"hidden",marginBottom:18,border:"1px solid #2A2B2E"}}>
+          <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block"}}/>
+        </div>
+
+        <div style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+          <p style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",margin:0,lineHeight:1.6}}>On iPhone: press and hold the card → Save Image. Or tap Download below.</p>
+        </div>
+
+        <div className="flex gap-10">
+          <button className="btn-cancel flex-1" onClick={onClose}>Close</button>
+          <button className="btn-primary" style={{flex:2}} onClick={download}>DOWNLOAD IMAGE</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]));
@@ -735,6 +960,7 @@ function App() {
   const [profile,setProfile]=useState(()=>load(PROFILE_KEY,null));
   const [tab,setTab]=useState("stack"); // stack | history
   const [showAdd,setShowAdd]=useState(false);
+  const [showShare,setShowShare]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -761,9 +987,26 @@ function App() {
 
   const addOrUpdate=s=>{setSupplements(prev=>{const ex=prev.find(p=>p.id===s.id);return ex?prev.map(p=>p.id===s.id?s:p):[...prev,s];});setShowAdd(false);setEditSupp(null);};
   const deleteSupp=id=>{if(confirm("Remove this supplement?"))setSupplements(prev=>prev.filter(s=>s.id!==id));};
-  const saveLog=({taken,amount,notes})=>{const t=today();setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+amount,lastLogged:t}));setLogs(prev=>[...prev,{suppId:logSupp.id,date:t,taken,amount,notes,ts:Date.now()}]);setLogSupp(null);};
+  const saveLog=({taken,amount,notes,feel})=>{
+    const t=today();
+    setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+amount,lastLogged:t}));
+    setLogs(prev=>[...prev,{suppId:logSupp.id,date:t,taken,amount,notes,feel,ts:Date.now()}]);
+    // Save feel log separately for history
+    if(feel&&(feel.energy||feel.recovery||feel.mood)){
+      const feels=load(FEEL_KEY,[]);
+      const todayFeel=feels.find(f=>f.date===t);
+      if(todayFeel){save(FEEL_KEY,feels.map(f=>f.date===t?{...f,...feel}:f));}
+      else{save(FEEL_KEY,[...feels,{date:t,...feel,ts:Date.now()}]);}
+    }
+    setLogSupp(null);
+  };
 
   const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
+  const dailyCost=supplements.reduce((total,s)=>{
+    if(!s.price||!s.totalAmount)return total;
+    const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);
+    return total+(costPerServing*s.servingsPerDay);
+  },0);
   const unloggedToday=supplements.filter(s=>s.lastLogged!==today()).length;
   const todayLogCount=logs.filter(l=>l.date===today()).length;
   const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14;if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>sortBy==="runout"?daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b)):a.name.localeCompare(b.name));
@@ -772,92 +1015,93 @@ function App() {
 
   return (
     <div id="root" className="visible">
-      <div className="shell" style={{paddingBottom:110}}>
+      <div className="shell">
 
-        {/* Header */}
-        <div style={{marginBottom:16}}>
-          <div className="flex" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+        {/* ── FIXED HEADER ── */}
+        <div className="shell-fixed">
+          <div className="flex" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,marginTop:4}}>
             <div>
-              <div className="flex" style={{alignItems:"center",gap:8,marginBottom:6}}>
+              <div className="flex" style={{alignItems:"center",gap:8,marginBottom:4}}>
                 <div style={{width:6,height:6,borderRadius:"50%",background:"#E8A830"}}/>
                 <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"2px"}}>SUPPSTACKD</span>
               </div>
-              <h1 style={{fontSize:26,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px"}}>
+              <h1 style={{fontSize:24,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px"}}>
                 {profile?.name ? `Hey, ${profile.name}` : "Your Stack"}
               </h1>
             </div>
             <div className="flex gap-8" style={{alignItems:"center"}}>
               <button className="btn-icon" onClick={()=>setShowNotif(true)}>🔔</button>
+              <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830"}}>SHARE</button>
+              <button className="btn-icon" onClick={openManualFeedback} style={{fontSize:"9px",letterSpacing:"0.5px"}}>FEEDBACK</button>
               <button className="btn-icon" onClick={()=>setShowInbox(true)} style={{fontSize:"9px",letterSpacing:"0.5px"}}>INBOX</button>
             </div>
           </div>
 
-          {/* Alerts */}
           {supplements.length>0&&(urgentCount>0||unloggedToday>0)&&(
-            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:8}}>
-              {urgentCount>0&&<span style={{color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:12}}>⚠ {urgentCount} running low</span>}
-              {unloggedToday>0&&<span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12}}>📋 {unloggedToday} unlogged today</span>}
+            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"8px 14px",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:8}}>
+              {urgentCount>0&&<span style={{color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11}}>⚠ {urgentCount} running low</span>}
+              {unloggedToday>0&&<span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11}}>📋 {unloggedToday} unlogged today</span>}
             </div>
           )}
-        </div>
 
-        {/* Calendar bar */}
-        <CalendarBar logs={logs}/>
+          <CalendarBar logs={logs}/>
 
-        {/* Tab switcher */}
-        <div className="flex gap-8" style={{marginBottom:16}}>
-          {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"9px 0",borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:tab===t.id?"1px solid #E8A830":"1px solid #2A2B2E",background:tab===t.id?"rgba(232,168,48,0.08)":"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"all 0.2s"}}>{t.label}</button>
-          ))}
-        </div>
+          <div className="flex gap-8" style={{marginBottom:10}}>
+            {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map(t=>(
+              <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"8px 0",borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:tab===t.id?"1px solid #E8A830":"1px solid #2A2B2E",background:tab===t.id?"rgba(232,168,48,0.08)":"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"all 0.2s"}}>{t.label}</button>
+            ))}
+          </div>
 
-        {tab==="history" && <SupplementHistory supplements={supplements}/>}
-
-        {tab==="stack" && <>
-          {/* Stats */}
-          {supplements.length>0&&(
-            <div className="flex gap-8" style={{marginBottom:18}}>
+          {tab==="stack"&&supplements.length>0&&(
+            <div className="flex gap-8" style={{marginBottom:10}}>
               {[{label:"TRACKING",value:supplements.length,color:"#F0F0F0"},{label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85"},{label:"LOGGED TODAY",value:todayLogCount,color:todayLogCount>0?"#5BAD72":"#7A7D85"}].map(s=>(
-                <div key={s.label} style={{flex:1,background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"11px 8px",textAlign:"center"}}>
-                  <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace"}}>{s.value}</div>
-                  <div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.8px"}}>{s.label}</div>
+                <div key={s.label} style={{flex:1,background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"9px 8px",textAlign:"center"}}>
+                  <div style={{fontSize:18,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace"}}>{s.value}</div>
+                  <div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:2,letterSpacing:"0.8px"}}>{s.label}</div>
                 </div>
               ))}
             </div>
           )}
+          {tab==="stack"&&dailyCost>0&&(
+            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>DAILY STACK COST</span>
+              <div style={{textAlign:"right"}}>
+                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:14}}>£{dailyCost.toFixed(2)}</span>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginLeft:8}}>/ £{(dailyCost*30).toFixed(0)}/mo</span>
+              </div>
+            </div>
+          )}
 
-          {/* Filter + Sort */}
-          {supplements.length>1&&(
-            <div className="flex gap-8" style={{marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
-              {["all","urgent","stocked"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:filter===f?"1px solid #E8A830":"1px solid #2A2B2E",background:filter===f?"rgba(232,168,48,0.08)":"transparent",color:filter===f?"#E8A830":"#7A7D85"}}>{f.toUpperCase()}</button>))}
+          {tab==="stack"&&supplements.length>1&&(
+            <div className="flex gap-8" style={{marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+              {["all","urgent","stocked"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:filter===f?"1px solid #E8A830":"1px solid #2A2B2E",background:filter===f?"rgba(232,168,48,0.08)":"transparent",color:filter===f?"#E8A830":"#7A7D85"}}>{f.toUpperCase()}</button>))}
               <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginLeft:"auto",background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:8,padding:"5px 8px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
                 <option value="runout">BY RUN-OUT</option>
                 <option value="name">BY NAME</option>
               </select>
             </div>
           )}
+        </div>
 
-          {/* Empty state */}
-          {supplements.length===0&&(
-            <div style={{textAlign:"center",padding:"60px 20px"}}>
-              <div style={{fontSize:52,marginBottom:18}}>💊</div>
-              <h3 style={{color:"#F0F0F0",margin:"0 0 8px",fontSize:21,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px"}}>Track your supplement stack</h3>
-              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,margin:"0 0 30px",lineHeight:1.8}}>Add your supplements and Suppstackd will show<br/>exactly when each one runs out.</p>
-              <button className="btn-primary" style={{padding:"14px 32px",fontSize:14}} onClick={()=>setShowAdd(true)}>+ ADD FIRST SUPPLEMENT</button>
-            </div>
-          )}
+        {/* ── SCROLLABLE CARDS ONLY ── */}
+        <div className="shell-scroll">
+          {tab==="history"&&<SupplementHistory supplements={supplements}/>}
 
-          <div>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp}/>)}</div>
-        </>}
-
-        {/* FAB — only on stack tab */}
-        {tab==="stack"&&supplements.length>0&&<button className="btn-fab" onClick={()=>setShowAdd(true)}>+</button>}
-
-        {/* Feedback tab */}
-        <button className="feedback-tab" onClick={openManualFeedback}>FEEDBACK</button>
+          {tab==="stack"&&<>
+            {supplements.length===0&&(
+              <div style={{textAlign:"center",padding:"40px 20px"}}>
+                <div style={{fontSize:48,marginBottom:14}}>💊</div>
+                <h3 style={{color:"#F0F0F0",margin:"0 0 8px",fontSize:20,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px"}}>Track your supplement stack</h3>
+                <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,margin:"0 0 24px",lineHeight:1.8}}>Add your supplements and Suppstackd<br/>will show exactly when each one runs out.</p>
+                <button className="btn-primary" style={{padding:"14px 32px",fontSize:14}} onClick={()=>setShowAdd(true)}>+ ADD FIRST SUPPLEMENT</button>
+              </div>
+            )}
+            <div style={{paddingBottom:90}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp}/>)}</div>
+          </>}
+        </div>
       </div>
 
-      {/* Bottom nav */}
+
       <div className="bottom-nav">
         <button className="nav-btn active">
           <span className="nav-icon">💊</span>
@@ -878,6 +1122,7 @@ function App() {
       {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
+      {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
     </div>
   );
 }
@@ -885,4 +1130,4 @@ function App() {
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html></html>
+</html></html></html>
