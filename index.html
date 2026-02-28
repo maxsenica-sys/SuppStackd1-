@@ -144,6 +144,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init("MvNsklzhS8eQ1-XbQ");</script>
 
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
@@ -257,24 +259,26 @@ let installPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;});
 
 // ── CalendarBar ───────────────────────────────────────────────────────────────
-function CalendarBar({ logs }) {
-  const days = [];
+function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
   const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const now = new Date();
-  // Show 14 days: 7 past + today + 6 future
-  for (let i = -7; i <= 6; i++) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const todayStr = now.toISOString().slice(0,10);
+
+  // Generate 60 days: 30 past + today + 29 future
+  const days = [];
+  for (let i = -30; i <= 29; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() + i);
     days.push(d);
   }
-  const todayStr = todayISO();
+
   const loggedDates = new Set(logs.map(l => {
     try { return new Date(l.ts).toISOString().slice(0,10); } catch { return ""; }
   }));
 
   const todayRef = useRef(null);
   useEffect(() => {
-    if (todayRef.current) todayRef.current.scrollIntoView({ inline: "center", behavior: "smooth" });
+    if (todayRef.current) todayRef.current.scrollIntoView({ inline: "center", behavior: "instant" });
   }, []);
 
   return (
@@ -282,20 +286,161 @@ function CalendarBar({ logs }) {
       {days.map((d, i) => {
         const iso = d.toISOString().slice(0,10);
         const isToday = iso === todayStr;
-        const isPast = d < now && !isToday;
+        const isFuture = d > now;
+        const isPast = d < now;
         const isLogged = loggedDates.has(iso);
-        let cls = "cal-day";
-        if (isToday) cls += " today";
-        else if (isLogged) cls += " logged";
-        else if (isPast) cls += " past";
+        const isSelected = selectedDate === iso;
         return (
-          <div key={i} className={cls} ref={isToday ? todayRef : null}>
-            <span className="cal-day-name">{DAY_NAMES[d.getDay()]}</span>
-            <span className="cal-day-num">{d.getDate()}</span>
-            {isLogged && <div className="cal-dot"/>}
+          <div
+            key={i}
+            ref={isToday ? todayRef : null}
+            onClick={() => onDateSelect(iso)}
+            style={{
+              display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+              minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",
+              flexShrink:0,transition:"all 0.15s",
+              background: isSelected && !isToday ? "rgba(232,168,48,0.18)" :
+                          isToday ? "linear-gradient(135deg,#E8A830,#C88820)" :
+                          isLogged ? "rgba(91,173,114,0.12)" : "transparent",
+              border: isSelected && !isToday ? "1px solid rgba(232,168,48,0.6)" :
+                      isLogged && !isToday ? "1px solid rgba(91,173,114,0.25)" : "1px solid transparent",
+              opacity: isPast && !isLogged && !isSelected ? 0.45 : 1,
+            }}
+          >
+            <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>
+              {DAY_NAMES[d.getDay()]}
+            </span>
+            <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>
+              {d.getDate()}
+            </span>
+            {isLogged && <div style={{width:4,height:4,borderRadius:"50%",background:isToday?"#111213":"#5BAD72"}}/>}
+            {isFuture && !isLogged && <div style={{width:4,height:4,borderRadius:"50%",background:"transparent"}}/>}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── DateLogModal — view/edit/add logs for a specific date ────────────────────
+function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, onDeleteLog }) {
+  const dateObj = new Date(date + "T00:00:00");
+  const dateLabel = dateObj.toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  const isToday = date === new Date().toISOString().slice(0,10);
+  const isFuture = dateObj > new Date(new Date().toISOString().slice(0,10) + "T00:00:00");
+
+  // Logs for this date
+  const dateLogs = logs.filter(l => {
+    try { return new Date(l.ts).toISOString().slice(0,10) === date; } catch { return false; }
+  });
+
+  // Which supplements were logged on this date
+  const loggedSuppIds = new Set(dateLogs.map(l => l.suppId));
+
+  const [addingFor, setAddingFor] = useState(null); // supp being quick-logged
+  const [quickAmt, setQuickAmt] = useState("");
+  const [quickNotes, setQuickNotes] = useState("");
+
+  const handleQuickLog = (supp) => {
+    setAddingFor(supp);
+    setQuickAmt(String(supp.servingSize));
+    setQuickNotes("");
+  };
+
+  const confirmQuickLog = () => {
+    if (!addingFor) return;
+    onSaveLog({
+      suppId: addingFor.id,
+      date: addingFor.lastLogged,
+      taken: true,
+      amount: parseFloat(quickAmt) || addingFor.servingSize,
+      notes: quickNotes,
+      feel: {},
+      ts: new Date(date + "T12:00:00").getTime(),
+      backdated: true,
+    });
+    setAddingFor(null);
+  };
+
+  return (
+    <div className="overlay" onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
+      <div className="modal-box" style={{padding:"18px 20px",maxHeight:"85vh",overflowY:"auto"}}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+          <div>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",margin:"0 0 4px"}}>{isFuture?"UPCOMING":isToday?"TODAY":"PAST DATE"}</p>
+            <h2 style={{fontSize:17,fontWeight:700,color:"#F0F0F0",margin:0,lineHeight:1.3}}>{dateLabel}</h2>
+          </div>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
+        </div>
+
+        {/* Future date message */}
+        {isFuture && (
+          <div style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+            <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,margin:0,lineHeight:1.6}}>This date is in the future. You can pre-log supplements here if you want to plan ahead.</p>
+          </div>
+        )}
+
+        {/* Logged entries for this date */}
+        {dateLogs.length > 0 && (
+          <div style={{marginBottom:16}}>
+            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>LOGGED</span>
+            {dateLogs.map((log, i) => {
+              const supp = supplements.find(s => s.id === log.suppId);
+              return (
+                <div key={i} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}</p>
+                    <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount}${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
+                  </div>
+                  <button onClick={() => onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Unlogged supplements — add missing entries */}
+        {supplements.filter(s => !loggedSuppIds.has(s.id)).length > 0 && (
+          <div>
+            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>{dateLogs.length > 0 ? "NOT LOGGED" : "SUPPLEMENTS"}</span>
+            {supplements.filter(s => !loggedSuppIds.has(s.id)).map((supp, i) => (
+              <div key={i}>
+                {addingFor?.id === supp.id ? (
+                  <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:9,padding:"12px 14px",marginBottom:8}}>
+                    <p style={{margin:"0 0 10px",color:"#E8A830",fontWeight:700,fontSize:13,fontFamily:"'Space Mono',monospace"}}>{supp.name}</p>
+                    <div style={{display:"flex",gap:8,marginBottom:8}}>
+                      <div style={{flex:1}}>
+                        <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px",display:"block",marginBottom:4}}>AMOUNT ({supp.unit})</span>
+                        <input type="number" className="inp" value={quickAmt} onChange={e=>setQuickAmt(e.target.value)} style={{fontSize:13}}/>
+                      </div>
+                    </div>
+                    <input className="inp" placeholder="Notes (optional)" value={quickNotes} onChange={e=>setQuickNotes(e.target.value)} style={{marginBottom:10}}/>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>setAddingFor(null)} className="btn-cancel" style={{flex:1,padding:"8px 0",fontSize:11}}>Cancel</button>
+                      <button onClick={confirmQuickLog} className="btn-primary" style={{flex:2,padding:"8px 0",fontSize:11}}>SAVE LOG</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <p style={{margin:0,color:"#7A7D85",fontWeight:700,fontSize:13}}>{supp.name}</p>
+                      <p style={{margin:"2px 0 0",color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.servingSize}{supp.unit}/serving</p>
+                    </div>
+                    <button onClick={()=>handleQuickLog(supp)} style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"6px 12px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",letterSpacing:"0.5px"}}>+ LOG</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {supplements.length === 0 && (
+          <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"24px 0"}}>No supplements added yet.</p>
+        )}
+
+        <button onClick={onClose} style={{width:"100%",marginTop:8,padding:"10px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>CLOSE</button>
+      </div>
     </div>
   );
 }
@@ -737,13 +882,24 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
   const [name,setName]=useState("");
   const [submitted,setSubmitted]=useState(false);
   const categories=["Bug / Something broken","Feature request","General feedback","Love it! 🙌"];
+  const [sending,setSending]=useState(false);
   const handleSubmit=()=>{
     setSubmitted(true);
     if(!rating||!category||!message.trim())return;
+    setSending(true);
+    // Save locally
+    const entry={id:Date.now().toString(),ts:new Date().toISOString(),rating,category,message:message.trim(),name:name.trim()||"Anonymous"};
     const existing=load(FEEDBACK_KEY,[]);
-    save(FEEDBACK_KEY,[...existing,{id:Date.now().toString(),ts:new Date().toISOString(),rating,category,message:message.trim(),name:name.trim()||"Anonymous"}]);
+    save(FEEDBACK_KEY,[...existing,entry]);
     save(FB_SHOWN_KEY,true);
-    setStep("thanks");
+    // Send via EmailJS
+    emailjs.send("service_u9c8zy4","template_85iv0yd",{
+      rating: String(rating) + " / 5",
+      category,
+      message: message.trim(),
+      user_name: name.trim()||"Anonymous",
+      date: new Date().toLocaleString("en-GB")
+    }).then(()=>{setSending(false);setStep("thanks");}).catch(()=>{setSending(false);setStep("thanks");});
   };
   const handleClose=()=>{save(FB_SHOWN_KEY,true);onClose();};
   if(step==="thanks") return (
@@ -790,7 +946,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
         </div>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={handleClose}>{isAutoPrompt?"Maybe later":"Cancel"}</button>
-          <button onClick={handleSubmit} style={{flex:2,padding:12,borderRadius:10,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:"none",background:(rating&&category&&message.trim())?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:(rating&&category&&message.trim())?"#111213":"#7A7D85",opacity:(rating&&category&&message.trim())?1:0.5,cursor:(rating&&category&&message.trim())?"pointer":"not-allowed",transition:"all 0.2s"}}>SEND FEEDBACK</button>
+          <button onClick={handleSubmit} disabled={sending} style={{flex:2,padding:12,borderRadius:10,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:"none",background:(rating&&category&&message.trim())?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:(rating&&category&&message.trim())?"#111213":"#7A7D85",opacity:(rating&&category&&message.trim())?1:0.5,cursor:(rating&&category&&message.trim())?"pointer":"not-allowed",transition:"all 0.2s"}}>{sending?"SENDING...":"SEND FEEDBACK"}</button>
         </div>
       </div>
     </div>
@@ -1032,6 +1188,7 @@ function App() {
   const [showInbox,setShowInbox]=useState(false);
   const [filter,setFilter]=useState("all");
   const [sortBy,setSortBy]=useState("runout");
+  const [selectedDate,setSelectedDate]=useState(null);
 
   useEffect(()=>save(STORAGE_KEY,supplements),[supplements]);
   useEffect(()=>save(LOG_KEY,logs),[logs]);
@@ -1077,6 +1234,28 @@ function App() {
     setLogSupp(null);
   };
 
+  const saveBackdatedLog=(entry)=>{
+    // For backdated entries, update consumed and add log but don't change lastLogged if it's future
+    const d=new Date(entry.ts);
+    const dateStr=d.toDateString();
+    setSupplements(prev=>prev.map(s=>s.id!==entry.suppId?s:{
+      ...s,
+      consumed:s.consumed+(entry.taken?entry.amount:0),
+      lastLogged:dateStr===today()?dateStr:s.lastLogged
+    }));
+    setLogs(prev=>[...prev,entry]);
+    setSelectedDate(null);
+  };
+
+  const deleteLog=(log)=>{
+    // Remove log and reverse the consumed amount
+    setSupplements(prev=>prev.map(s=>s.id!==log.suppId?s:{
+      ...s,
+      consumed:Math.max(0,s.consumed-(log.taken?log.amount:0))
+    }));
+    setLogs(prev=>prev.filter(l=>!(l.suppId===log.suppId&&l.ts===log.ts)));
+  };
+
   const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
   const dailyCost=supplements.reduce((total,s)=>{
     if(!s.price||!s.totalAmount)return total;
@@ -1120,7 +1299,7 @@ function App() {
             </div>
           )}
 
-          <CalendarBar logs={logs}/>
+          <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} onDateSelect={d=>setSelectedDate(selectedDate===d?null:d)}/>
 
           <div className="flex gap-8" style={{marginBottom:10}}>
             {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map(t=>(
@@ -1199,6 +1378,7 @@ function App() {
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
+      {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
 }
