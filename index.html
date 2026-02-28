@@ -160,6 +160,18 @@ const FEEL_KEY      = "suppstackd_v1_feel";
 
 const SUPPLEMENT_TYPES = ["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
 const UNITS = ["g","kg","mg","ml","lb","oz","fl oz","count"];
+const CURRENCIES = {
+  "GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥",
+  "CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R",
+  "AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"
+};
+const COUNTRIES = [
+  "GB — United Kingdom","US — United States","EU — European Union","AU — Australia",
+  "CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland",
+  "SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil",
+  "MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong",
+  "TR — Turkey","KR — South Korea","CN — China","Other"
+];
 const SPORTS = ["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","Football","Rugby","Basketball","MMA / Boxing","Tennis","Triathlon","Yoga / Pilates","Other"];
 const GOALS  = ["Build muscle & strength","Lose weight / body fat","Boost energy & performance","Improve focus & recovery","General health & wellness","Competitive sport performance"];
 const EXPERIENCE = ["Just starting out","6–12 months","1–3 years","3+ years","Elite / Professional"];
@@ -478,6 +490,14 @@ function ProfileOnboarding({ onComplete }) {
         <span className="section-label">AGE (OPTIONAL)</span>
         <input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/>
       </div>
+      <div className="field">
+        <span className="section-label">COUNTRY (OPTIONAL)</span>
+        <select className="inp" value={profile.country||""} onChange={e=>set("country",e.target.value)}>
+          <option value="">Select your country</option>
+          {COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}
+        </select>
+        <p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to show the right currency symbol.</p>
+      </div>
       <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:profile.name.trim()?1:0.4,cursor:profile.name.trim()?"pointer":"not-allowed"}} onClick={()=>profile.name.trim()&&finish()}>
         {profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"ENTER YOUR NAME TO CONTINUE"}
       </button>
@@ -518,22 +538,22 @@ function SupplementCard({supp,onLog,onEdit,onDelete}) {
   const color=urgencyColor(days);
   const logged=supp.lastLogged===today();
   return (
-    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"12px 14px",marginBottom:8}}>
+    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"9px 12px",marginBottom:6}}>
       {/* Top row: name + ring */}
       <div className="flex" style={{justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
         <div style={{flex:1,minWidth:0}}>
-          <h3 style={{fontSize:16,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
+          <h3 style={{fontSize:14,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
           <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{supp.servingSize}{supp.unit} × {supp.servingsPerDay}×/day</span>
         </div>
         <div style={{position:"relative",flexShrink:0,marginLeft:10}}>
-          <ProgressRing pct={pct} color={color} size={46}/>
+          <ProgressRing pct={pct} color={color} size={40}/>
           <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <span style={{fontSize:10,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
+            <span style={{fontSize:9,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
           </div>
         </div>
       </div>
       {/* Progress bar + status */}
-      <div style={{marginBottom:8}}>
+      <div style={{marginBottom:6}}>
         <div className="flex" style={{justifyContent:"space-between",fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginBottom:4}}>
           <span>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit} left</span>
           <span style={{color}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
@@ -544,7 +564,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete}) {
       </div>
       {/* Bottom row: runs out + actions */}
       <div className="flex" style={{justifyContent:"space-between",alignItems:"center",gap:6}}>
-        <div style={{background:"#111213",borderRadius:6,padding:"5px 10px",flex:1}}>
+        <div style={{background:"#111213",borderRadius:6,padding:"4px 8px",flex:1}}>
           <span style={{color:"#7A7D85",fontSize:9,fontFamily:"'Space Mono',monospace"}}>RUNS OUT  </span>
           <span style={{color:"#F0F0F0",fontSize:11,fontWeight:600,fontFamily:"'Space Mono',monospace"}}>{formatDate(runOut)}</span>
         </div>
@@ -570,12 +590,12 @@ function LogModal({supp,onClose,onSave}) {
   return (
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box">
-        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Log Dose</h2>
-        <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:22}}>{supp.name} — {new Date().toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</p>
+        <h2 style={{fontSize:18,fontWeight:700,color:"#F0F0F0",marginBottom:2}}>Log Dose</h2>
+        <p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginBottom:12}}>{supp.name} — {new Date().toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</p>
         <span className="section-label">DID YOU TAKE IT?</span>
-        <div className="flex gap-10" style={{marginBottom:20}}>
+        <div className="flex gap-10" style={{marginBottom:12}}>
           {[true,false].map(v=>(
-            <button key={String(v)} onClick={()=>setTaken(v)} style={{flex:1,padding:11,borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,border:taken===v?`1px solid ${v?"#5BAD72":"#C0392B"}`:"1px solid #2A2B2E",background:taken===v?(v?"rgba(91,173,114,0.1)":"rgba(192,57,43,0.1)"):"transparent",color:taken===v?(v?"#5BAD72":"#C0392B"):"#7A7D85",transition:"all 0.15s"}}>{v?"YES":"SKIPPED"}</button>
+            <button key={String(v)} onClick={()=>setTaken(v)} style={{flex:1,padding:8,borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,border:taken===v?`1px solid ${v?"#5BAD72":"#C0392B"}`:"1px solid #2A2B2E",background:taken===v?(v?"rgba(91,173,114,0.1)":"rgba(192,57,43,0.1)"):"transparent",color:taken===v?(v?"#5BAD72":"#C0392B"):"#7A7D85",transition:"all 0.15s"}}>{v?"YES":"SKIPPED"}</button>
           ))}
         </div>
         {taken&&<>
@@ -586,37 +606,37 @@ function LogModal({supp,onClose,onSave}) {
             ))}
           </div>
           {!useCustom?(
-            <div className="flex" style={{alignItems:"center",gap:20,justifyContent:"center",marginBottom:16}}>
+            <div className="flex" style={{alignItems:"center",gap:16,justifyContent:"center",marginBottom:10}}>
               <button className="btn-step" onClick={()=>setScoops(Math.max(0.5,scoops-0.5))}>−</button>
               <div style={{textAlign:"center"}}>
-                <div style={{fontSize:30,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace"}}>{scoops}</div>
+                <div style={{fontSize:24,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace"}}>{scoops}</div>
                 <div style={{fontSize:11,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>= {(supp.servingSize*scoops).toFixed(1)}{supp.unit}</div>
               </div>
               <button className="btn-step" onClick={()=>setScoops(scoops+0.5)}>+</button>
             </div>
           ):(
-            <div className="flex" style={{alignItems:"center",gap:10,marginBottom:16}}>
+            <div className="flex" style={{alignItems:"center",gap:10,marginBottom:10}}>
               <input type="number" value={customAmt} onChange={e=>setCustomAmt(e.target.value)} className="inp" style={{flex:1,fontSize:20,textAlign:"center"}}/>
               <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.unit}</span>
             </div>
           )}
-          <div style={{background:"#111213",borderRadius:8,padding:"10px 14px",display:"flex",justifyContent:"space-between",marginBottom:16}}>
+          <div style={{background:"#111213",borderRadius:8,padding:"7px 12px",display:"flex",justifyContent:"space-between",marginBottom:10}}>
             <span style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>DEDUCTING</span>
             <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{amount.toFixed(1)}{supp.unit}</span>
           </div>
         </>}
         {/* ── Feel log ── */}
-        <div style={{marginBottom:18}}>
-          <span className="section-label" style={{marginBottom:12,display:"block"}}>HOW ARE YOU FEELING TODAY?</span>
+        <div style={{marginBottom:10}}>
+          <span className="section-label" style={{marginBottom:8,display:"block"}}>HOW ARE YOU FEELING TODAY?</span>
           {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
-            <div key={metric.key} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div key={metric.key} style={{marginBottom:7}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                 <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{metric.label}</span>
                 <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{feel[metric.key]||"—"}</span>
               </div>
               <div style={{display:"flex",gap:6}}>
                 {[1,2,3,4,5].map(n=>(
-                  <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"8px 0",borderRadius:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
+                  <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"6px 0",borderRadius:7,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
                 ))}
               </div>
             </div>
@@ -626,7 +646,7 @@ function LogModal({supp,onClose,onSave}) {
             <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>HIGH</span>
           </div>
         </div>
-        <input placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} className="inp" style={{marginBottom:18}}/>
+        <input placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} className="inp" style={{marginBottom:10}}/>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
           <button className="btn-primary" style={{flex:2}} onClick={()=>onSave({taken,amount,notes,feel})}>SAVE LOG</button>
@@ -637,7 +657,7 @@ function LogModal({supp,onClose,onSave}) {
 }
 
 // ── AddEditModal ──────────────────────────────────────────────────────────────
-function AddEditModal({supp,onClose,onSave}) {
+function AddEditModal({supp,onClose,onSave,profile}) {
   const isEdit=!!supp;
   const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null});
   const [touched,setTouched]=useState({});
@@ -688,7 +708,7 @@ function AddEditModal({supp,onClose,onSave}) {
             <div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",borderRadius:2,transition:"width 0.3s ease,background 0.3s",width:`${progPct}%`,background:isValid?"#5BAD72":"#E8A830"}}/></div>
           </div>}
         </div>
-        <div className="field"><span className="section-label">SUPPLEMENT NAME *</span><input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamin C" value={form.name} onChange={e=>set("name",e.target.value)} onBlur={()=>touch("name")}/>{showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}</div>
+        <div className="field"><span className="section-label">SUPPLEMENT NAME *</span><input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamins" value={form.name} onChange={e=>set("name",e.target.value)} onBlur={()=>touch("name")}/>{showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}</div>
         <div className="field"><span className="section-label">BRAND (OPTIONAL)</span><input className="inp" placeholder="e.g. Optimum Nutrition, MyProtein" value={form.brand} onChange={e=>set("brand",e.target.value)}/></div>
         <div className="flex gap-10">
           <div className="field flex-1"><span className="section-label">TYPE</span><select className="inp" value={form.type} onChange={e=>set("type",e.target.value)}>{SUPPLEMENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
@@ -699,7 +719,7 @@ function AddEditModal({supp,onClose,onSave}) {
           <div className="field flex-1"><span className="section-label">SERVING SIZE ({form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder="e.g. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
           <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="e.g. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
-        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>£</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to calculate your daily stack cost.</p></div>
+        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to calculate your daily stack cost.</p></div>
         {!isEdit&&(
           <div style={{marginBottom:16}}>
             <button onClick={()=>setAlreadyStarted(v=>!v)} style={{width:"100%",padding:"11px 14px",background:alreadyStarted?"rgba(232,168,48,0.08)":"#111213",border:alreadyStarted?"1px solid rgba(232,168,48,0.4)":"1px solid #2A2B2E",borderRadius:9,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
@@ -905,8 +925,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
   if(step==="thanks") return (
     <div className="overlay">
       <div className="modal-box" style={{textAlign:"center",padding:"40px 26px"}}>
-        <div style={{fontSize:52,marginBottom:16}}>🙏</div>
-        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:8}}>Thanks for the feedback!</h2>
+        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:8,marginTop:8}}>Thanks for the feedback!</h2>
         <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:28}}>Every response goes directly to the team and helps shape where Suppstackd goes next.</p>
         <button className="btn-primary" style={{width:"100%"}} onClick={handleClose}>CLOSE</button>
       </div>
@@ -1321,8 +1340,8 @@ function App() {
             <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>DAILY STACK COST</span>
               <div style={{textAlign:"right"}}>
-                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:14}}>£{dailyCost.toFixed(2)}</span>
-                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginLeft:8}}>/ £{(dailyCost*30).toFixed(0)}/mo</span>
+                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:14}}>{CURRENCIES[profile?.country||"GB"]||"£"}{dailyCost.toFixed(2)}</span>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginLeft:8}}>/ {CURRENCIES[profile?.country||"GB"]||"£"}{(dailyCost*30).toFixed(0)}/mo</span>
               </div>
             </div>
           )}
@@ -1368,11 +1387,11 @@ function App() {
         </button>
         <button className="nav-btn" onClick={()=>setShowNotif(true)}>
           <span className="nav-icon">🔔</span>
-          <span>ALERTS</span>
+          <span>TEST</span>
         </button>
       </div>
 
-      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate}/>}
+      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate}/>}
       {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog}/>}
       {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
