@@ -47,6 +47,7 @@
     .shell-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; min-height: 0; }
     .shell-scroll::-webkit-scrollbar { display: none; }
     .card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+    .supp-card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 12px; margin-bottom: 6px; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(4px); }
     .modal-box { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 18px; padding: 26px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
     .inp { padding: 9px 12px; background: #111213; border: 1px solid #2A2B2E; border-radius: 9px; color: #F0F0F0; font-size: 14px; font-family: 'Space Mono', monospace; outline: none; width: 100%; display: block; transition: border-color 0.2s; }
@@ -579,13 +580,15 @@ function SupplementCard({supp,onLog,onEdit,onDelete}) {
 }
 
 // ── LogModal ──────────────────────────────────────────────────────────────────
-function LogModal({supp,onClose,onSave}) {
+function LogModal({supp,onClose,onSave,todayFeel}) {
   const [taken,setTaken]=useState(true);
   const [scoops,setScoops]=useState(1);
   const [customAmt,setCustomAmt]=useState(String(supp.servingSize));
   const [useCustom,setUseCustom]=useState(false);
   const [notes,setNotes]=useState("");
-  const [feel,setFeel]=useState({energy:null,recovery:null,mood:null,sleep:null});
+  const [feel,setFeel]=useState(todayFeel||{energy:null,recovery:null,mood:null,sleep:null});
+  const [feelChanged,setFeelChanged]=useState(false); // for subsequent logs: did they say yes to changes?
+  const isFirstLog=!todayFeel; // true = show full feel form, false = show compact "same?" prompt
   const amount=taken?(useCustom?parseFloat(customAmt)||0:supp.servingSize*scoops):0;
   return (
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -626,26 +629,67 @@ function LogModal({supp,onClose,onSave}) {
           </div>
         </>}
         {/* ── Feel log ── */}
-        <div style={{marginBottom:10}}>
-          <span className="section-label" style={{marginBottom:8,display:"block"}}>HOW ARE YOU FEELING TODAY?</span>
-          {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
-            <div key={metric.key} style={{marginBottom:7}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{metric.label}</span>
-                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{feel[metric.key]||"—"}</span>
+        {isFirstLog ? (
+          <div style={{marginBottom:10}}>
+            <span className="section-label" style={{marginBottom:8,display:"block"}}>HOW ARE YOU FEELING TODAY?</span>
+            {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
+              <div key={metric.key} style={{marginBottom:7}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{metric.label}</span>
+                  <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{feel[metric.key]||"—"}</span>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  {[1,2,3,4,5].map(n=>(
+                    <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"6px 0",borderRadius:7,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
+                  ))}
+                </div>
               </div>
-              <div style={{display:"flex",gap:6}}>
-                {[1,2,3,4,5].map(n=>(
-                  <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"6px 0",borderRadius:7,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
-                ))}
-              </div>
+            ))}
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+              <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>LOW</span>
+              <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>HIGH</span>
             </div>
-          ))}
-          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-            <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>LOW</span>
-            <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>HIGH</span>
           </div>
-        </div>
+        ) : (
+          <div style={{marginBottom:10}}>
+            {/* Compact feel — pre-filled from earlier log */}
+            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 12px",marginBottom:feelChanged?10:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:feelChanged?0:8}}>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>TODAY'S FEEL</span>
+                <div style={{display:"flex",gap:10}}>
+                  {[{k:"energy",l:"ENERGY"},{k:"recovery",l:"RECOVERY"},{k:"mood",l:"MOOD"},{k:"sleep",l:"SLEEP"}].map(m=>(
+                    <div key={m.k} style={{textAlign:"center"}}>
+                      <div style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,lineHeight:1}}>{feel[m.k]||"—"}</div>
+                      <div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,marginTop:1}}>{m.l}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {!feelChanged&&<div style={{display:"flex",gap:6,marginTop:6}}>
+                <button onClick={()=>setFeelChanged(false)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #5BAD72",background:"rgba(91,173,114,0.1)",color:"#5BAD72",cursor:"pointer"}}>SAME</button>
+                <button onClick={()=>setFeelChanged(true)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",cursor:"pointer"}}>DIFFERENT</button>
+              </div>}
+            </div>
+            {feelChanged&&(
+              <div>
+                {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
+                  <div key={metric.key} style={{marginBottom:7}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{metric.label}</span>
+                      <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{feel[metric.key]||"—"}</span>
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      {[1,2,3,4,5].map(n=>(
+                        <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"6px 0",borderRadius:7,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <button onClick={()=>{setFeel(todayFeel);setFeelChanged(false);}} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",padding:"4px 0",marginBottom:4}}>← back to same</button>
+              </div>
+            )}
+          </div>
+        )}
         <input placeholder="Notes (optional)" value={notes} onChange={e=>setNotes(e.target.value)} className="inp" style={{marginBottom:10}}/>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
@@ -1191,6 +1235,365 @@ function ShareCard({supplements,profile,logs,onClose}) {
   );
 }
 
+
+
+// ── BatchLogModal ─────────────────────────────────────────────────────────────
+function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
+  const unlogged = supplements.filter(s => s.lastLogged !== today());
+  const alreadyLogged = supplements.filter(s => s.lastLogged === today());
+
+  // Build initial rows — one per unlogged supplement
+  const [rows, setRows] = useState(() =>
+    unlogged.map(s => ({
+      suppId: s.id,
+      name: s.name,
+      unit: s.unit,
+      servingSize: s.servingSize,
+      taken: true,
+      amount: s.servingSize,
+      notes: "",
+    }))
+  );
+
+  // Feel — ask once at top, applies to all
+  const isFirstLog = !todayFeel;
+  const [feel, setFeel] = useState(todayFeel || {energy:null,recovery:null,mood:null,sleep:null});
+  const [feelChanged, setFeelChanged] = useState(false);
+
+  const updateRow = (suppId, field, value) => {
+    setRows(prev => prev.map(r => r.suppId === suppId ? {...r, [field]: value} : r));
+  };
+
+  const handleSaveAll = () => {
+    onSaveAll(rows, feel);
+  };
+
+  const allSkipped = rows.every(r => !r.taken);
+
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{padding:"18px 20px",maxHeight:"88vh",overflowY:"auto"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div>
+            <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Log Today</h2>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"3px 0 0"}}>
+              {new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}
+            </p>
+          </div>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
+        </div>
+
+        {/* Already logged chips */}
+        {alreadyLogged.length > 0 && (
+          <div style={{marginBottom:12}}>
+            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:6}}>ALREADY LOGGED TODAY</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {alreadyLogged.map(s=>(
+                <div key={s.id} style={{background:"rgba(91,173,114,0.1)",border:"1px solid rgba(91,173,114,0.25)",borderRadius:20,padding:"4px 10px"}}>
+                  <span style={{color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:10}}>✓ {s.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {unlogged.length === 0 ? (
+          <div style={{textAlign:"center",padding:"30px 0"}}>
+            <p style={{color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,marginBottom:6}}>ALL LOGGED ✓</p>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11}}>You've logged everything for today.</p>
+            <button onClick={onClose} className="btn-primary" style={{marginTop:16,padding:"10px 24px"}}>DONE</button>
+          </div>
+        ) : (
+          <>
+            {/* Supplement rows */}
+            <div style={{marginBottom:14}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:8}}>TO LOG</span>
+              {rows.map((row, i) => (
+                <div key={row.suppId} style={{
+                  background: row.taken ? "#1C1D1F" : "#111213",
+                  border: row.taken ? "1px solid #2A2B2E" : "1px solid #1C1D1F",
+                  borderLeft: `3px solid ${row.taken ? "#E8A830" : "#3A3B3E"}`,
+                  borderRadius:10, padding:"10px 12px", marginBottom:8,
+                  transition:"all 0.15s"
+                }}>
+                  {/* Supplement name + YES/SKIP toggle */}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: row.taken ? 10 : 0}}>
+                    <span style={{color: row.taken ? "#F0F0F0" : "#4A4B4F",fontWeight:700,fontSize:13}}>{row.name}</span>
+                    <div style={{display:"flex",gap:6}}>
+                      <button
+                        onClick={()=>updateRow(row.suppId,"taken",true)}
+                        style={{padding:"4px 12px",borderRadius:6,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #2A2B2E",background:row.taken?"rgba(91,173,114,0.12)":"transparent",color:row.taken?"#5BAD72":"#4A4B4F",transition:"all 0.12s"}}
+                      >TAKEN</button>
+                      <button
+                        onClick={()=>updateRow(row.suppId,"taken",false)}
+                        style={{padding:"4px 12px",borderRadius:6,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",border:!row.taken?"1px solid #C0392B":"1px solid #2A2B2E",background:!row.taken?"rgba(192,57,43,0.1)":"transparent",color:!row.taken?"#C0392B":"#4A4B4F",transition:"all 0.12s"}}
+                      >SKIP</button>
+                    </div>
+                  </div>
+
+                  {/* Amount row — only if taken */}
+                  {row.taken && (
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0}}>AMOUNT</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
+                        <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))}
+                          style={{width:28,height:28,borderRadius:6,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
+                        <div style={{flex:1,textAlign:"center"}}>
+                          <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:14}}>{row.amount}{row.unit}</span>
+                        </div>
+                        <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)}
+                          style={{width:28,height:28,borderRadius:6,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
+                      </div>
+                      <input
+                        placeholder="Note"
+                        value={row.notes}
+                        onChange={e=>updateRow(row.suppId,"notes",e.target.value)}
+                        style={{flex:1,background:"#111213",border:"1px solid #2A2B2E",borderRadius:7,padding:"6px 10px",color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:10,outline:"none"}}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Feel section — once for all */}
+            {!allSkipped && (
+              <div style={{marginBottom:14}}>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:8}}>HOW ARE YOU FEELING?</span>
+
+                {isFirstLog ? (
+                  <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px"}}>
+                    {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
+                      <div key={metric.key} style={{marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                          <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{metric.label}</span>
+                          <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{feel[metric.key]||"—"}</span>
+                        </div>
+                        <div style={{display:"flex",gap:5}}>
+                          {[1,2,3,4,5].map(n=>(
+                            <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))}
+                              style={{flex:1,padding:"6px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"transparent",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.1s"}}>{n}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"10px 12px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: feelChanged ? 12 : 8}}>
+                      <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>TODAY'S FEEL</span>
+                      <div style={{display:"flex",gap:12}}>
+                        {[{k:"energy",l:"ENERGY"},{k:"recovery",l:"RECOVERY"},{k:"mood",l:"MOOD"},{k:"sleep",l:"SLEEP"}].map(m=>(
+                          <div key={m.k} style={{textAlign:"center"}}>
+                            <div style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,lineHeight:1}}>{feel[m.k]||"—"}</div>
+                            <div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,marginTop:1}}>{m.l}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {!feelChanged && (
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>setFeelChanged(false)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #5BAD72",background:"rgba(91,173,114,0.1)",color:"#5BAD72",cursor:"pointer"}}>SAME</button>
+                        <button onClick={()=>setFeelChanged(true)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",cursor:"pointer"}}>DIFFERENT</button>
+                      </div>
+                    )}
+                    {feelChanged && (
+                      <div>
+                        {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
+                          <div key={metric.key} style={{marginBottom:8}}>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{metric.label}</span>
+                              <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{feel[metric.key]||"—"}</span>
+                            </div>
+                            <div style={{display:"flex",gap:5}}>
+                              {[1,2,3,4,5].map(n=>(
+                                <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))}
+                                  style={{flex:1,padding:"6px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"transparent",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.1s"}}>{n}</button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <button onClick={()=>{setFeel(todayFeel);setFeelChanged(false);}} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",padding:"4px 0"}}>← back to same</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Save all */}
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={onClose} className="btn-cancel" style={{flex:1,padding:"11px 0"}}>Cancel</button>
+              <button onClick={handleSaveAll} className="btn-primary" style={{flex:2,padding:"11px 0"}}>
+                LOG {rows.filter(r=>r.taken).length} SUPPLEMENT{rows.filter(r=>r.taken).length!==1?"S":""}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── ProfileModal ──────────────────────────────────────────────────────────────
+function ProfileModal({profile,onClose,onUpdate}) {
+  const [editing,setEditing]=useState(false);
+  const [form,setForm]=useState({...profile});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const currency=CURRENCIES[profile?.country||"Other"]||"£";
+
+  const handleSave=()=>{
+    onUpdate(form);
+    setEditing(false);
+  };
+
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{padding:"18px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Profile</h2>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
+        </div>
+
+        {!editing ? (
+          <div>
+            {/* Profile info */}
+            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
+              {[
+                {label:"NAME",value:profile?.name||"Not set"},
+                {label:"EMAIL",value:profile?.email||"Not set"},
+                {label:"AGE",value:profile?.age||"Not set"},
+                {label:"COUNTRY",value:profile?.country||"Not set"},
+                {label:"CURRENCY",value:currency},
+              ].map(row=>(
+                <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #2A2B2E"}}>
+                  <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{row.label}</span>
+                  <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:600}}>{row.value}</span>
+                </div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>PLAN</span>
+                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700}}>FREE</span>
+              </div>
+            </div>
+
+            {/* Pro teaser */}
+            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+              <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px",letterSpacing:"0.5px"}}>SUPPSTACKD PRO — £2.99/mo</p>
+              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 10px",lineHeight:1.7}}>Unlimited supplements · Insights · Reorder reminders · Stack templates · Custom schedules</p>
+              <button style={{width:"100%",padding:"9px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
+            </div>
+
+            <button onClick={()=>setEditing(true)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>EDIT PROFILE</button>
+          </div>
+        ) : (
+          <div>
+            <div className="field"><span className="section-label">FIRST NAME</span><input className="inp" value={form.name||""} onChange={e=>set("name",e.target.value)}/></div>
+            <div className="field"><span className="section-label">EMAIL</span><input className="inp" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)}/></div>
+            <div className="field"><span className="section-label">AGE</span><input className="inp" type="number" value={form.age||""} onChange={e=>set("age",e.target.value)}/></div>
+            <div className="field">
+              <span className="section-label">COUNTRY</span>
+              <select className="inp" value={form.country||""} onChange={e=>set("country",e.target.value)}>
+                <option value="">Select country</option>
+                {COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-10" style={{marginTop:4}}>
+              <button className="btn-cancel flex-1" onClick={()=>{setForm({...profile});setEditing(false);}}>Cancel</button>
+              <button className="btn-primary" style={{flex:2}} onClick={handleSave}>SAVE CHANGES</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── InsightsModal ─────────────────────────────────────────────────────────────
+function InsightsModal({onClose,logs,supplements}) {
+  // Calculate basic stats if enough data exists
+  const feelLogs=logs.filter(l=>l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
+  const hasData=feelLogs.length>=3;
+
+  const avgScore=(key)=>{
+    const vals=feelLogs.map(l=>l.feel[key]).filter(v=>v!=null);
+    if(!vals.length)return null;
+    return (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+  };
+
+  return (
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{padding:"18px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Insights</h2>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
+        </div>
+
+        {!hasData ? (
+          <div>
+            {/* Pro teaser */}
+            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"16px",marginBottom:16,textAlign:"center"}}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,margin:"0 0 8px",letterSpacing:"0.5px"}}>INSIGHTS — PRO FEATURE</p>
+              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,margin:"0 0 14px",lineHeight:1.7}}>
+                After logging how you feel for a few days, Insights will surface patterns from your own data.
+              </p>
+            </div>
+
+            <div style={{marginBottom:16}}>
+              {[
+                {title:"Feel trends","desc":"Track energy, recovery, mood & sleep over time"},
+                {title:"Supplement correlation","desc":"See which supplements improve your scores"},
+                {title:"Weekly summary","desc":"Your best and worst days, with reasons why"},
+                {title:"Streak analysis","desc":"How consistent logging affects your performance"},
+              ].map((item,i)=>(
+                <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 0",borderBottom:"1px solid #1C1D1F"}}>
+                  <div style={{width:6,height:6,borderRadius:"50%",background:"#E8A830",marginTop:5,flexShrink:0}}/>
+                  <div>
+                    <p style={{margin:0,color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{item.title}</p>
+                    <p style={{margin:"3px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:1.5}}>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {feelLogs.length > 0 && (
+              <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:12}}>
+                <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 4px"}}>FEEL LOGS SO FAR</p>
+                <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,margin:0}}>{feelLogs.length} / 3 needed to unlock preview</p>
+              </div>
+            )}
+
+            <button style={{width:"100%",padding:"10px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
+          </div>
+        ) : (
+          <div>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginBottom:14,letterSpacing:"1px"}}>BASED ON {feelLogs.length} LOGS</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+              {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(m=>{
+                const avg=avgScore(m.key);
+                const color=avg>=4?"#5BAD72":avg>=3?"#E8A830":"#C0392B";
+                return avg?(
+                  <div key={m.key} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px",textAlign:"center"}}>
+                    <div style={{fontSize:24,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{avg}</div>
+                    <div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.8px"}}>{m.label} AVG</div>
+                  </div>
+                ):null;
+              })}
+            </div>
+            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:9,padding:"12px 14px"}}>
+              <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px"}}>PRO INSIGHTS COMING SOON</p>
+              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:0,lineHeight:1.6}}>Supplement correlations, weekly trends and detailed analysis unlock with Pro.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]));
@@ -1199,6 +1602,9 @@ function App() {
   const [tab,setTab]=useState("stack"); // stack | history
   const [showAdd,setShowAdd]=useState(false);
   const [showShare,setShowShare]=useState(false);
+  const [showBatchLog,setShowBatchLog]=useState(false);
+  const [showProfile,setShowProfile]=useState(false);
+  const [showInsights,setShowInsights]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -1253,6 +1659,31 @@ function App() {
     setLogSupp(null);
   };
 
+  const saveBatchLogs=(rows, feel)=>{
+    const t=today();
+    const newLogs=[];
+    const suppUpdates={};
+    rows.forEach(row=>{
+      suppUpdates[row.suppId]={
+        consumed: row.taken ? row.amount : 0,
+        lastLogged: t,
+      };
+      newLogs.push({suppId:row.suppId,date:t,taken:row.taken,amount:row.taken?row.amount:0,notes:row.notes,feel,ts:Date.now()});
+    });
+    setSupplements(prev=>prev.map(s=>{
+      if(!suppUpdates[s.id]) return s;
+      return {...s,consumed:s.consumed+(suppUpdates[s.id].consumed||0),lastLogged:suppUpdates[s.id].lastLogged};
+    }));
+    setLogs(prev=>[...prev,...newLogs]);
+    if(feel&&(feel.energy||feel.recovery||feel.mood||feel.sleep)){
+      const feels=load(FEEL_KEY,[]);
+      const todayFeel=feels.find(f=>f.date===t);
+      if(todayFeel){save(FEEL_KEY,feels.map(f=>f.date===t?{...f,...feel}:f));}
+      else{save(FEEL_KEY,[...feels,{date:t,...feel,ts:Date.now()}]);}
+    }
+    setShowBatchLog(false);
+  };
+
   const saveBackdatedLog=(entry)=>{
     // For backdated entries, update consumed and add log but don't change lastLogged if it's future
     const d=new Date(entry.ts);
@@ -1267,7 +1698,6 @@ function App() {
   };
 
   const deleteLog=(log)=>{
-    // Remove log and reverse the consumed amount
     setSupplements(prev=>prev.map(s=>s.id!==log.suppId?s:{
       ...s,
       consumed:Math.max(0,s.consumed-(log.taken?log.amount:0))
@@ -1275,7 +1705,18 @@ function App() {
     setLogs(prev=>prev.filter(l=>!(l.suppId===log.suppId&&l.ts===log.ts)));
   };
 
+  const updateProfile=(updated)=>{
+    setProfile(updated);
+    save(PROFILE_KEY,updated);
+  };
+
   const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
+  // Find today's feel log if already submitted
+  const todayFeelLog=(()=>{
+    const todayLogs=logs.filter(l=>l.date===today()&&l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
+    if(!todayLogs.length) return null;
+    return todayLogs[todayLogs.length-1].feel;
+  })();
   const dailyCost=supplements.reduce((total,s)=>{
     if(!s.price||!s.totalAmount)return total;
     const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);
@@ -1346,13 +1787,14 @@ function App() {
             </div>
           )}
 
-          {tab==="stack"&&supplements.length>1&&(
+          {tab==="stack"&&supplements.length>0&&(
             <div className="flex gap-8" style={{marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
-              {["all","urgent","stocked"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:filter===f?"1px solid #E8A830":"1px solid #2A2B2E",background:filter===f?"rgba(232,168,48,0.08)":"transparent",color:filter===f?"#E8A830":"#7A7D85"}}>{f.toUpperCase()}</button>))}
-              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginLeft:"auto",background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:8,padding:"5px 8px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
-                <option value="runout">BY RUN-OUT</option>
+              {supplements.length>1&&["all","urgent","stocked"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:filter===f?"1px solid #E8A830":"1px solid #2A2B2E",background:filter===f?"rgba(232,168,48,0.08)":"transparent",color:filter===f?"#E8A830":"#7A7D85"}}>{f.toUpperCase()}</button>))}
+              {supplements.length>1&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:8,padding:"5px 8px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
+                <option value="runout">FILTER</option>
                 <option value="name">BY NAME</option>
-              </select>
+              </select>}
+              <button onClick={()=>setShowAdd(true)} style={{marginLeft:"auto",padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830"}}>+ ADD</button>
             </div>
           )}
         </div>
@@ -1370,33 +1812,47 @@ function App() {
                 <button className="btn-primary" style={{padding:"14px 32px",fontSize:14}} onClick={()=>setShowAdd(true)}>+ ADD FIRST SUPPLEMENT</button>
               </div>
             )}
-            <div style={{paddingBottom:90}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp}/>)}</div>
+            {supplements.length>0&&(
+              <div
+                style={{
+                  overflowY: displaySupps.length > 3 ? "auto" : "hidden",
+                  maxHeight: "306px",
+                  paddingBottom: displaySupps.length > 3 ? 90 : 0,
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp}/>)}
+              </div>
+            )}
           </>}
         </div>
       </div>
 
 
       <div className="bottom-nav">
-        <button className="nav-btn active">
-          <span className="nav-icon">💊</span>
-          <span>STACK</span>
+        <button className="nav-btn" onClick={()=>setShowProfile(true)}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>PROFILE</span>
         </button>
-        <button className="nav-btn" onClick={()=>setShowAdd(true)}>
+        <button className="nav-btn" onClick={()=>supplements.length>0?setShowBatchLog(true):setShowAdd(true)}>
           <span className="nav-icon" style={{fontSize:28,color:"#E8A830"}}>+</span>
-          <span style={{color:"#E8A830"}}>ADD</span>
+          <span style={{color:"#E8A830"}}>LOG</span>
         </button>
-        <button className="nav-btn" onClick={()=>setShowNotif(true)}>
-          <span className="nav-icon">🔔</span>
-          <span>TEST</span>
+        <button className="nav-btn" onClick={()=>setShowInsights(true)}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>INSIGHTS</span>
         </button>
       </div>
 
+      {showBatchLog&&<BatchLogModal supplements={supplements} logs={logs} todayFeel={todayFeelLog} onClose={()=>setShowBatchLog(false)} onSaveAll={saveBatchLogs}/>}
       {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate}/>}
-      {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog}/>}
+      {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog} todayFeel={todayFeelLog}/>}
       {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
+      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile}/>}
+      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements}/>}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
