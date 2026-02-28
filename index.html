@@ -529,6 +529,40 @@ function ProgressRing({pct,color,size=58}) {
   );
 }
 
+
+// ── StackCardList — measures available height, shows 3+ cards, scrolls if more ──
+function StackCardList({displaySupps, onLog, onEdit, onDelete}) {
+  const containerRef = useRef(null);
+  const [maxH, setMaxH] = useState(320);
+
+  useEffect(() => {
+    function measure() {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      // Available = distance from this container top to bottom of viewport minus bottom nav (~62px)
+      const available = window.innerHeight - rect.top - 62;
+      // Enforce minimum of 3 cards (~102px each = 306px) and use available space
+      setMaxH(Math.max(306, available));
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{
+      overflowY: "auto",
+      maxHeight: maxH,
+      WebkitOverflowScrolling: "touch",
+      paddingBottom: displaySupps.length > 3 ? 16 : 0,
+    }}>
+      {displaySupps.map(s=>(
+        <SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete}/>
+      ))}
+    </div>
+  );
+}
+
 // ── SupplementCard ────────────────────────────────────────────────────────────
 function SupplementCard({supp,onLog,onEdit,onDelete}) {
   const runOut=calcRunOut(supp),days=daysFromNow(runOut);
@@ -945,7 +979,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
   const [message,setMessage]=useState("");
   const [name,setName]=useState("");
   const [submitted,setSubmitted]=useState(false);
-  const categories=["Bug / Something broken","Feature request","General feedback","Love it! 🙌"];
+  const categories=["Something's broken","Feature request","General feedback","Love it!"];
   const [sending,setSending]=useState(false);
   const handleSubmit=()=>{
     setSubmitted(true);
@@ -958,7 +992,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
     save(FB_SHOWN_KEY,true);
     // Send via EmailJS
     emailjs.send("service_u9c8zy4","template_85iv0yd",{
-      rating: String(rating) + " / 5",
+      rating: String(rating),
       category,
       message: message.trim(),
       user_name: name.trim()||"Anonymous",
@@ -992,7 +1026,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
           {rating>0&&<div style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:4}}>{["","Needs work","Could be better","Pretty good","Really good","Love it!"][rating]}</div>}
         </div>
         <div className="field">
-          <span className="section-label">TYPE OF FEEDBACK *</span>
+          <span className="section-label">WHAT'S THIS ABOUT? *</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {categories.map(c=><button key={c} onClick={()=>setCategory(c)} style={{padding:"6px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px",border:category===c?"1px solid #E8A830":"1px solid #2A2B2E",background:category===c?"rgba(232,168,48,0.1)":"transparent",color:category===c?"#E8A830":"#7A7D85",transition:"all 0.15s"}}>{c}</button>)}
           </div>
@@ -1813,16 +1847,12 @@ function App() {
               </div>
             )}
             {supplements.length>0&&(
-              <div
-                style={{
-                  overflowY: displaySupps.length > 3 ? "auto" : "hidden",
-                  maxHeight: "306px",
-                  paddingBottom: displaySupps.length > 3 ? 90 : 0,
-                  WebkitOverflowScrolling: "touch",
-                }}
-              >
-                {displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp}/>)}
-              </div>
+              <StackCardList
+                displaySupps={displaySupps}
+                onLog={setLogSupp}
+                onEdit={setEditSupp}
+                onDelete={deleteSupp}
+              />
             )}
           </>}
         </div>
