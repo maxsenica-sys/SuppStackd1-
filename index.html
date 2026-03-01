@@ -285,9 +285,28 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
     days.push(d);
   }
 
-  const loggedDates = new Set(logs.map(l => {
-    try { return new Date(l.ts).toISOString().slice(0,10); } catch { return ""; }
-  }));
+  const suppCount = supplements.length;
+
+  // Build per-date log counts
+  const dateCounts = {};
+  logs.forEach(l => {
+    try {
+      const iso = new Date(l.ts).toISOString().slice(0,10);
+      dateCounts[iso] = (dateCounts[iso] || new Set());
+      dateCounts[iso].add(l.suppId);
+    } catch {}
+  });
+
+  // 3 states per date:
+  // "full"    = all supplements logged → green
+  // "partial" = some logged → amber
+  // "none"    = nothing logged (past) → faded grey
+  const getDateState = (iso) => {
+    const logged = dateCounts[iso];
+    if (!logged || logged.size === 0) return "none";
+    if (suppCount > 0 && logged.size >= suppCount) return "full";
+    return "partial";
+  };
 
   const todayRef = useRef(null);
   useEffect(() => {
@@ -301,8 +320,17 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
         const isToday = iso === todayStr;
         const isFuture = d > now;
         const isPast = d < now;
-        const isLogged = loggedDates.has(iso);
+        const dateState = getDateState(iso);
         const isSelected = selectedDate === iso;
+        const dotColor = isToday ? "#111213" : dateState === "full" ? "#5BAD72" : "#E8A830";
+        const bgColor = isSelected && !isToday ? "rgba(232,168,48,0.18)" :
+                        isToday ? "linear-gradient(135deg,#E8A830,#C88820)" :
+                        dateState === "full" ? "rgba(91,173,114,0.12)" :
+                        dateState === "partial" ? "rgba(232,168,48,0.08)" : "transparent";
+        const borderColor = isSelected && !isToday ? "1px solid rgba(232,168,48,0.6)" :
+                            dateState === "full" && !isToday ? "1px solid rgba(91,173,114,0.25)" :
+                            dateState === "partial" && !isToday ? "1px solid rgba(232,168,48,0.2)" :
+                            "1px solid transparent";
         return (
           <div
             key={i}
@@ -312,12 +340,8 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
               display:"flex",flexDirection:"column",alignItems:"center",gap:4,
               minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",
               flexShrink:0,transition:"all 0.15s",
-              background: isSelected && !isToday ? "rgba(232,168,48,0.18)" :
-                          isToday ? "linear-gradient(135deg,#E8A830,#C88820)" :
-                          isLogged ? "rgba(91,173,114,0.12)" : "transparent",
-              border: isSelected && !isToday ? "1px solid rgba(232,168,48,0.6)" :
-                      isLogged && !isToday ? "1px solid rgba(91,173,114,0.25)" : "1px solid transparent",
-              opacity: isPast && !isLogged && !isSelected ? 0.45 : 1,
+              background: bgColor, border: borderColor,
+              opacity: isPast && dateState === "none" && !isSelected ? 0.4 : 1,
             }}
           >
             <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>
@@ -326,8 +350,9 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
             <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>
               {d.getDate()}
             </span>
-            {isLogged && <div style={{width:4,height:4,borderRadius:"50%",background:isToday?"#111213":"#5BAD72"}}/>}
-            {isFuture && !isLogged && <div style={{width:4,height:4,borderRadius:"50%",background:"transparent"}}/>}
+            {(dateState !== "none" || isToday) && (
+              <div style={{width:4,height:4,borderRadius:"50%",background:dotColor}}/>
+            )}
           </div>
         );
       })}
@@ -540,9 +565,9 @@ function StackCardList({displaySupps, onLog, onEdit, onDelete}) {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       // Available = distance from this container top to bottom of viewport minus bottom nav (~62px)
-      const available = window.innerHeight - rect.top - 62;
-      // Enforce minimum of 3 cards (~102px each = 306px) and use available space
-      setMaxH(Math.max(306, available));
+      const available = window.innerHeight - rect.top - 70;
+      // Enforce minimum of 3 cards (~115px each = 345px) and use available space
+      setMaxH(Math.max(345, available));
     }
     measure();
     window.addEventListener("resize", measure);
@@ -573,41 +598,32 @@ function SupplementCard({supp,onLog,onEdit,onDelete}) {
   const color=urgencyColor(days);
   const logged=supp.lastLogged===today();
   return (
-    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"9px 12px",marginBottom:6}}>
-      {/* Top row: name + ring */}
-      <div className="flex" style={{justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5}}>
+      {/* Single row layout: name+subtitle | ring + actions */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
         <div style={{flex:1,minWidth:0}}>
-          <h3 style={{fontSize:14,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
-          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{supp.servingSize}{supp.unit} × {supp.servingsPerDay}×/day</span>
-        </div>
-        <div style={{position:"relative",flexShrink:0,marginLeft:10}}>
-          <ProgressRing pct={pct} color={color} size={40}/>
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <span style={{fontSize:9,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
+          <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
+            <h3 style={{fontSize:15,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
+            <span style={{fontSize:10,color:color,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
           </div>
+          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit} left · out {formatDate(runOut)}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+          <div style={{position:"relative"}}>
+            <ProgressRing pct={pct} color={color} size={40}/>
+            <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{fontSize:9,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
+            </div>
+          </div>
+          <button onClick={()=>onLog(supp)} style={{padding:"5px 10px",border:logged?"1px solid #2A2B2E":"1px solid rgba(232,168,48,0.4)",background:logged?"#111213":"rgba(232,168,48,0.07)",color:logged?"#7A7D85":"#E8A830",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
+            {logged?"✓ LOGGED":"LOG"}
+          </button>
+          <button style={{padding:"5px 10px",border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}} onClick={()=>onEdit(supp)}>EDIT</button>
         </div>
       </div>
-      {/* Progress bar + status */}
-      <div style={{marginBottom:6}}>
-        <div className="flex" style={{justifyContent:"space-between",fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginBottom:4}}>
-          <span>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit} left</span>
-          <span style={{color}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
-        </div>
-        <div style={{height:2,background:"#2A2B2E",borderRadius:2}}>
-          <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/>
-        </div>
-      </div>
-      {/* Bottom row: runs out + actions */}
-      <div className="flex" style={{justifyContent:"space-between",alignItems:"center",gap:6}}>
-        <div style={{background:"#111213",borderRadius:6,padding:"4px 8px",flex:1}}>
-          <span style={{color:"#7A7D85",fontSize:9,fontFamily:"'Space Mono',monospace"}}>RUNS OUT  </span>
-          <span style={{color:"#F0F0F0",fontSize:11,fontWeight:600,fontFamily:"'Space Mono',monospace"}}>{formatDate(runOut)}</span>
-        </div>
-        <button onClick={()=>onLog(supp)} style={{padding:"6px 10px",border:logged?"1px solid #2A2B2E":"1px solid rgba(232,168,48,0.4)",background:logged?"#111213":"rgba(232,168,48,0.07)",color:logged?"#7A7D85":"#E8A830",borderRadius:7,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"0.5px",whiteSpace:"nowrap"}}>
-          {logged?"✓ LOGGED":"LOG"}
-        </button>
-        <button className="btn-icon" style={{padding:"6px 8px",fontSize:12}} onClick={()=>onEdit(supp)}>✏️</button>
-        <button className="btn-icon" style={{padding:"6px 8px",fontSize:12}} onClick={()=>onDelete(supp.id)}>🗑</button>
+      {/* Progress bar */}
+      <div style={{height:2,background:"#2A2B2E",borderRadius:2}}>
+        <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/>
       </div>
     </div>
   );
@@ -735,7 +751,7 @@ function LogModal({supp,onClose,onSave,todayFeel}) {
 }
 
 // ── AddEditModal ──────────────────────────────────────────────────────────────
-function AddEditModal({supp,onClose,onSave,profile}) {
+function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
   const isEdit=!!supp;
   const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null});
   const [touched,setTouched]=useState({});
@@ -845,6 +861,12 @@ function AddEditModal({supp,onClose,onSave,profile}) {
           <button onClick={handleSave} style={{flex:2,padding:12,borderRadius:10,cursor:isValid?"pointer":"not-allowed",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:isValid?"none":"1px solid #2A2B2E",background:isValid?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:isValid?"#111213":"#7A7D85",opacity:isValid?1:0.5,transition:"all 0.2s"}}>{isEdit?"SAVE CHANGES":"ADD SUPPLEMENT"}</button>
         </div>
         {!isValid&&<p style={{textAlign:"center",color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:10,letterSpacing:"0.5px"}}>Fill in all required (*) fields to continue</p>}
+        {isEdit&&onDelete&&(
+          <button onClick={()=>{if(window.confirm("Remove this supplement? This cannot be undone."))onDelete(supp.id);}}
+            style={{width:"100%",marginTop:12,padding:"10px",background:"transparent",border:"1px solid rgba(192,57,43,0.3)",borderRadius:9,color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>
+            DELETE SUPPLEMENT
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1239,12 +1261,47 @@ function ShareCard({supplements,profile,logs,onClose}) {
     setGenerated(true);
   },[]);
 
-  const download=()=>{
-    const a=document.createElement("a");
-    a.download="my-stack.png";
-    a.href=canvasRef.current.toDataURL("image/png");
-    a.click();
+  const [sharing, setSharing] = useState(false);
+
+  const shareToPhotos = async () => {
+    setSharing(true);
+    const canvas = canvasRef.current;
+    try {
+      // Convert canvas to blob
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      const file = new File([blob], "my-stack.png", { type: "image/png" });
+
+      // Try native Web Share API first (iOS + Android → goes to Photos/Gallery)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "My Supplement Stack",
+        });
+      } else if (navigator.share) {
+        // Fallback: share without files (some older browsers)
+        const url = canvas.toDataURL("image/png");
+        await navigator.share({ title: "My Supplement Stack", url });
+      } else {
+        // Desktop fallback: trigger download
+        const a = document.createElement("a");
+        a.download = "my-stack.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      }
+    } catch(e) {
+      // User cancelled or share failed — silent fallback to download
+      if (e.name !== "AbortError") {
+        const a = document.createElement("a");
+        a.download = "my-stack.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      }
+    }
+    setSharing(false);
   };
+
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const canNativeShare = typeof navigator.share !== "undefined";
 
   return (
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -1256,13 +1313,11 @@ function ShareCard({supplements,profile,logs,onClose}) {
           <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block"}}/>
         </div>
 
-        <div style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:16}}>
-          <p style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",margin:0,lineHeight:1.6}}>On iPhone: press and hold the card → Save Image. Or tap Download below.</p>
-        </div>
-
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Close</button>
-          <button className="btn-primary" style={{flex:2}} onClick={download}>DOWNLOAD IMAGE</button>
+          <button className="btn-primary" style={{flex:2,opacity:sharing?0.6:1}} onClick={shareToPhotos} disabled={sharing}>
+            {sharing ? "SHARING..." : canNativeShare ? "SAVE / SHARE" : "DOWNLOAD"}
+          </button>
         </div>
       </div>
     </div>
@@ -1273,7 +1328,7 @@ function ShareCard({supplements,profile,logs,onClose}) {
 
 // ── BatchLogModal ─────────────────────────────────────────────────────────────
 function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
-  const unlogged = supplements.filter(s => s.lastLogged !== today());
+  const unlogged = supplements.filter(s => s.lastLogged !== today()).sort((a,b)=>a.name.localeCompare(b.name));
   const alreadyLogged = supplements.filter(s => s.lastLogged === today());
 
   // Build initial rows — one per unlogged supplement
@@ -1342,55 +1397,35 @@ function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
         ) : (
           <>
             {/* Supplement rows */}
-            <div style={{marginBottom:14}}>
-              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:8}}>TO LOG</span>
+            <div style={{marginBottom:12}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:6}}>TO LOG</span>
+              <div style={{maxHeight:168,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
               {rows.map((row, i) => (
                 <div key={row.suppId} style={{
                   background: row.taken ? "#1C1D1F" : "#111213",
                   border: row.taken ? "1px solid #2A2B2E" : "1px solid #1C1D1F",
                   borderLeft: `3px solid ${row.taken ? "#E8A830" : "#3A3B3E"}`,
-                  borderRadius:10, padding:"10px 12px", marginBottom:8,
+                  borderRadius:8, padding:"7px 10px", marginBottom:5,
                   transition:"all 0.15s"
                 }}>
-                  {/* Supplement name + YES/SKIP toggle */}
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: row.taken ? 10 : 0}}>
-                    <span style={{color: row.taken ? "#F0F0F0" : "#4A4B4F",fontWeight:700,fontSize:13}}>{row.name}</span>
-                    <div style={{display:"flex",gap:6}}>
-                      <button
-                        onClick={()=>updateRow(row.suppId,"taken",true)}
-                        style={{padding:"4px 12px",borderRadius:6,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #2A2B2E",background:row.taken?"rgba(91,173,114,0.12)":"transparent",color:row.taken?"#5BAD72":"#4A4B4F",transition:"all 0.12s"}}
-                      >TAKEN</button>
-                      <button
-                        onClick={()=>updateRow(row.suppId,"taken",false)}
-                        style={{padding:"4px 12px",borderRadius:6,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",border:!row.taken?"1px solid #C0392B":"1px solid #2A2B2E",background:!row.taken?"rgba(192,57,43,0.1)":"transparent",color:!row.taken?"#C0392B":"#4A4B4F",transition:"all 0.12s"}}
-                      >SKIP</button>
-                    </div>
+                  {/* Compact single row: name | stepper | taken/skip */}
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{color: row.taken ? "#F0F0F0" : "#4A4B4F",fontWeight:700,fontSize:12,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{row.name}</span>
+                    {row.taken && <>
+                      <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))}
+                        style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>−</button>
+                      <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount}{row.unit}</span>
+                      <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)}
+                        style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>+</button>
+                    </>}
+                    <button onClick={()=>updateRow(row.suppId,"taken",!row.taken)}
+                      style={{padding:"3px 8px",borderRadius:5,fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #C0392B",background:row.taken?"rgba(91,173,114,0.12)":"rgba(192,57,43,0.08)",color:row.taken?"#5BAD72":"#C0392B",flexShrink:0,transition:"all 0.12s"}}>
+                      {row.taken?"TAKEN":"SKIP"}
+                    </button>
                   </div>
-
-                  {/* Amount row — only if taken */}
-                  {row.taken && (
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0}}>AMOUNT</span>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
-                        <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))}
-                          style={{width:28,height:28,borderRadius:6,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
-                        <div style={{flex:1,textAlign:"center"}}>
-                          <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:14}}>{row.amount}{row.unit}</span>
-                        </div>
-                        <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)}
-                          style={{width:28,height:28,borderRadius:6,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
-                      </div>
-                      <input
-                        placeholder="Note"
-                        value={row.notes}
-                        onChange={e=>updateRow(row.suppId,"notes",e.target.value)}
-                        style={{flex:1,background:"#111213",border:"1px solid #2A2B2E",borderRadius:7,padding:"6px 10px",color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:10,outline:"none"}}
-                      />
-                    </div>
-                  )}
                 </div>
               ))}
-            </div>
+            </div></div>
 
             {/* Feel section — once for all */}
             {!allSkipped && (
@@ -1520,7 +1555,10 @@ function ProfileModal({profile,onClose,onUpdate}) {
               <button style={{width:"100%",padding:"9px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
             </div>
 
-            <button onClick={()=>setEditing(true)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>EDIT PROFILE</button>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setEditing(true)} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer"}}>EDIT PROFILE</button>
+              <button onClick={()=>{onClose();setTimeout(()=>window._openFeedback&&window._openFeedback(),50);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer"}}>FEEDBACK</button>
+            </div>
           </div>
         ) : (
           <div>
@@ -1674,6 +1712,9 @@ function App() {
     if(checkAndTrackActiveDay()) setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
   },[]);
 
+  const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
+  useEffect(()=>{ window._openFeedback=openManualFeedback; },[]);
+
   // If no profile yet, show onboarding
   if(!profile) return <ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});}}/>;
 
@@ -1759,7 +1800,6 @@ function App() {
   const unloggedToday=supplements.filter(s=>s.lastLogged!==today()).length;
   const todayLogCount=logs.filter(l=>l.date===today()).length;
   const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14;if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>sortBy==="runout"?daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b)):a.name.localeCompare(b.name));
-  const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
   const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
 
   return (
@@ -1770,65 +1810,49 @@ function App() {
         <div className="shell-fixed">
           <div className="flex" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,marginTop:4}}>
             <div>
-              <div className="flex" style={{alignItems:"center",gap:8,marginBottom:4}}>
-                <div style={{width:6,height:6,borderRadius:"50%",background:"#E8A830"}}/>
-                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"2px"}}>SUPPSTACKD</span>
-              </div>
-              <h1 style={{fontSize:24,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px"}}>
-                {profile?.name ? `Hey, ${profile.name}` : "Your Stack"}
+              <h1 style={{fontSize:22,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px"}}>
+                {profile?.name ? `Hey, ${profile.name}` : "My Stack"}
               </h1>
             </div>
             <div className="flex gap-8" style={{alignItems:"center"}}>
-              <button className="btn-icon" onClick={()=>setShowNotif(true)}>🔔</button>
               <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830"}}>SHARE</button>
-              <button className="btn-icon" onClick={openManualFeedback} style={{fontSize:"9px",letterSpacing:"0.5px"}}>FEEDBACK</button>
-              <button className="btn-icon" onClick={()=>setShowInbox(true)} style={{fontSize:"9px",letterSpacing:"0.5px"}}>INBOX</button>
+              <button className="btn-icon" onClick={()=>setShowNotif(true)} style={{fontSize:"16px",background:"transparent",border:"1px solid #2A2B2E"}}>🔔</button>
             </div>
           </div>
-
-          {supplements.length>0&&(urgentCount>0||unloggedToday>0)&&(
-            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"8px 14px",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:8}}>
-              {urgentCount>0&&<span style={{color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11}}>⚠ {urgentCount} running low</span>}
-              {unloggedToday>0&&<span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11}}>📋 {unloggedToday} unlogged today</span>}
-            </div>
-          )}
 
           <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} onDateSelect={d=>setSelectedDate(selectedDate===d?null:d)}/>
 
           <div className="flex gap-8" style={{marginBottom:10}}>
             {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map(t=>(
-              <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"8px 0",borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:tab===t.id?"1px solid #E8A830":"1px solid #2A2B2E",background:tab===t.id?"rgba(232,168,48,0.08)":"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"all 0.2s"}}>{t.label}</button>
+              <button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=="stack")setFilter("all");}} style={{flex:1,padding:"8px 0",borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:tab===t.id?"1px solid #E8A830":"1px solid #2A2B2E",background:tab===t.id?"rgba(232,168,48,0.08)":"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"all 0.2s"}}>{t.label}</button>
             ))}
           </div>
 
           {tab==="stack"&&supplements.length>0&&(
-            <div className="flex gap-8" style={{marginBottom:10}}>
-              {[{label:"TRACKING",value:supplements.length,color:"#F0F0F0"},{label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85"},{label:"LOGGED TODAY",value:todayLogCount,color:todayLogCount>0?"#5BAD72":"#7A7D85"}].map(s=>(
-                <div key={s.label} style={{flex:1,background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"9px 8px",textAlign:"center"}}>
-                  <div style={{fontSize:18,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace"}}>{s.value}</div>
-                  <div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:2,letterSpacing:"0.8px"}}>{s.label}</div>
+            <div className="flex gap-8" style={{marginBottom:8}}>
+              {[
+                {label:"TRACKING",value:supplements.length,color:"#F0F0F0",onClick:null},
+                {label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85",onClick:()=>setFilter(f=>f==="urgent"?"all":"urgent")},
+                ...(dailyCost>0?[{label:"DAILY COST",value:`${CURRENCIES[profile?.country||"GB"]||"£"}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:null}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
+              ].map(s=>(
+                <div key={s.label} onClick={s.onClick||undefined}
+                  style={{flex:1,background:s.label==="URGENT"&&filter==="urgent"?"rgba(192,57,43,0.12)":"#1C1D1F",border:s.label==="URGENT"&&filter==="urgent"?"1px solid rgba(192,57,43,0.4)":"1px solid #2A2B2E",borderRadius:8,padding:"5px 4px",textAlign:"center",cursor:s.onClick?"pointer":"default",transition:"all 0.15s"}}>
+                  <div style={{fontSize:s.label==="DAILY COST"&&dailyCost>0?11:14,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace",lineHeight:1.2}}>{s.value}</div>
+                  <div style={{fontSize:7,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:1,letterSpacing:"0.3px"}}>{s.label}</div>
                 </div>
               ))}
             </div>
           )}
-          {tab==="stack"&&dailyCost>0&&(
-            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>DAILY STACK COST</span>
-              <div style={{textAlign:"right"}}>
-                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:14}}>{CURRENCIES[profile?.country||"GB"]||"£"}{dailyCost.toFixed(2)}</span>
-                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginLeft:8}}>/ {CURRENCIES[profile?.country||"GB"]||"£"}{(dailyCost*30).toFixed(0)}/mo</span>
-              </div>
-            </div>
-          )}
+
 
           {tab==="stack"&&supplements.length>0&&(
-            <div className="flex gap-8" style={{marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
-              {supplements.length>1&&["all","urgent","stocked"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"5px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:filter===f?"1px solid #E8A830":"1px solid #2A2B2E",background:filter===f?"rgba(232,168,48,0.08)":"transparent",color:filter===f?"#E8A830":"#7A7D85"}}>{f.toUpperCase()}</button>))}
-              {supplements.length>1&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:8,padding:"5px 8px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
-                <option value="runout">FILTER</option>
-                <option value="name">BY NAME</option>
-              </select>}
-              <button onClick={()=>setShowAdd(true)} style={{marginLeft:"auto",padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830"}}>+ ADD</button>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+              {filter==="urgent"&&<button onClick={()=>setFilter("all")} style={{padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,border:"1px solid rgba(192,57,43,0.5)",background:"rgba(192,57,43,0.1)",color:"#C0392B",flexShrink:0}}>URGENT ✕</button>}
+              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
+                <option value="runout">FILTER: URGENCY</option>
+                <option value="name">FILTER: NAME</option>
+              </select>
+              <button onClick={()=>setShowAdd(true)} style={{marginLeft:"auto",padding:"5px 14px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830",flexShrink:0}}>+ ADD</button>
             </div>
           )}
         </div>
@@ -1875,7 +1899,7 @@ function App() {
       </div>
 
       {showBatchLog&&<BatchLogModal supplements={supplements} logs={logs} todayFeel={todayFeelLog} onClose={()=>setShowBatchLog(false)} onSaveAll={saveBatchLogs}/>}
-      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate}/>}
+      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate} onDelete={(id)=>{deleteSupp(id);setEditSupp(null);setShowAdd(false);}}/>}
       {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog} todayFeel={todayFeelLog}/>}
       {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
