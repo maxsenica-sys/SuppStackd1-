@@ -295,7 +295,12 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
   const dateCounts = {};
   logs.forEach(l => {
     try {
-      const iso = new Date(l.ts).toISOString().slice(0,10);
+      // Use l.date field (already local ISO string) if available, else fall back to ts
+      let iso = l.date;
+      if (!iso) {
+        const d = new Date(l.ts);
+        iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      }
       dateCounts[iso] = (dateCounts[iso] || new Set());
       dateCounts[iso].add(l.suppId);
     } catch {}
@@ -376,7 +381,11 @@ function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, 
 
   // Logs for this date
   const dateLogs = logs.filter(l => {
-    try { return new Date(l.ts).toISOString().slice(0,10) === date; } catch { return false; }
+    try {
+      const d = new Date(l.ts);
+      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      return iso === date;
+    } catch { return false; }
   });
 
   // Which supplements were logged on this date
@@ -655,7 +664,7 @@ function SupplementDetailSheet({supp, logs, onClose, onEdit}) {
 
 function StackCardList({displaySupps, onLog, onEdit, onDelete, onView}) {
   return (
-    <div style={{paddingBottom:80}}>
+    <div style={{paddingBottom:120}}>
       {displaySupps.map(s=>(
         <SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView}/>
       ))}
@@ -996,7 +1005,7 @@ function SupplementHistory({ supplements }) {
     const totalConsumed = suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
     const daysTaken = new Set(suppLogs.filter(l=>l.taken).map(l=>l.date)).size;
     return (
-      <div style={{paddingBottom:90}}>
+      <div style={{paddingBottom:120}}>
         <button onClick={()=>setSelected(null)} style={{background:"transparent",border:"none",color:"#E8A830",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:13,padding:"0 0 20px",letterSpacing:"0.5px"}}>← BACK</button>
         <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>{supp?.name}</h2>
         <p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginBottom:20}}>{supp?.brand||"No brand"} · {supp?.type}</p>
@@ -1034,7 +1043,7 @@ function SupplementHistory({ supplements }) {
   }
 
   return (
-    <div style={{paddingBottom:90}}>
+    <div style={{paddingBottom:120}}>
       <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Supplement History</h2>
       <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:20}}>Tap a supplement to see full history</p>
       {supplements.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No supplements tracked yet.</p>}
