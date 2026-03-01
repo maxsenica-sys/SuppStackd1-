@@ -161,6 +161,10 @@ const FEEL_KEY      = "suppstackd_v1_feel";
 
 const SUPPLEMENT_TYPES = ["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
 const UNITS = ["g","kg","mg","ml","lb","oz","fl oz","count"];
+// ── Pro mode flag ────────────────────────────────────────────────────────────
+// DEV_PRO_MODE: set true on dev branch to preview Pro UI, always false on main
+const DEV_PRO_MODE = false;
+
 const CURRENCIES = {
   "GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥",
   "CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R",
@@ -1507,7 +1511,7 @@ function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
 }
 
 // ── ProfileModal ──────────────────────────────────────────────────────────────
-function ProfileModal({profile,onClose,onUpdate}) {
+function ProfileModal({profile,onClose,onUpdate,isPro}) {
   const [editing,setEditing]=useState(false);
   const [form,setForm]=useState({...profile});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
@@ -1544,16 +1548,16 @@ function ProfileModal({profile,onClose,onUpdate}) {
               ))}
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>PLAN</span>
-                <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700}}>FREE</span>
+                <span style={{color:isPro?"#5BAD72":"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700}}>{isPro?"PRO":"FREE"}</span>
               </div>
             </div>
 
-            {/* Pro teaser */}
-            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+            {/* Pro teaser — only shown on free plan */}
+            {!isPro&&<div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
               <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px",letterSpacing:"0.5px"}}>SUPPSTACKD PRO — £2.99/mo</p>
               <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 10px",lineHeight:1.7}}>Unlimited supplements · Insights · Reorder reminders · Stack templates · Custom schedules</p>
               <button style={{width:"100%",padding:"9px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
-            </div>
+            </div>}
 
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setEditing(true)} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer"}}>EDIT PROFILE</button>
@@ -1584,10 +1588,10 @@ function ProfileModal({profile,onClose,onUpdate}) {
 }
 
 // ── InsightsModal ─────────────────────────────────────────────────────────────
-function InsightsModal({onClose,logs,supplements}) {
+function InsightsModal({onClose,logs,supplements,isPro}) {
   // Calculate basic stats if enough data exists
   const feelLogs=logs.filter(l=>l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
-  const hasData=feelLogs.length>=3;
+  const hasData=feelLogs.length>=3 && isPro;
 
   const avgScore=(key)=>{
     const vals=feelLogs.map(l=>l.feel[key]).filter(v=>v!=null);
@@ -1785,6 +1789,7 @@ function App() {
     save(PROFILE_KEY,updated);
   };
 
+  const isPro = profile?.plan === "pro" || DEV_PRO_MODE;
   const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
   // Find today's feel log if already submitted
   const todayFeelLog=(()=>{
@@ -1905,8 +1910,8 @@ function App() {
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
-      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile}/>}
-      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements}/>}
+      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro}/>}
+      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
