@@ -67,9 +67,9 @@
     .flex { display: flex; } .flex-1 { flex: 1; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; }
 
     /* ── BOTTOM NAV ──────────────────────────────────────────────────── */
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0A0A0A; border-top: 1px solid #2A2B2E; display: flex; justify-content: space-around; align-items: center; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 48; }
-    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent; border: none; cursor: pointer; padding: 4px 20px; }
-    .nav-btn span { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.8px; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0A0A0A; border-top: 1px solid #2A2B2E; display: flex; justify-content: space-around; align-items: center; padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 48; }
+    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; background: transparent; border: none; cursor: pointer; padding: 2px 20px; }
+    .nav-btn span { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 0.8px; }
     .nav-btn.active span { color: #E8A830; }
     .nav-btn:not(.active) span { color: #7A7D85; }
     .nav-icon { font-size: 20px; }
@@ -306,9 +306,12 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
   // "partial" = some logged → amber
   // "none"    = nothing logged (past) → faded grey
   const getDateState = (iso) => {
+    // Only count supplements that existed on this date
+    const activeSupps = supplements.filter(s => !s.createdAt || s.createdAt <= iso);
+    const activeCount = activeSupps.length;
     const logged = dateCounts[iso];
-    if (!logged || logged.size === 0) return "none";
-    if (suppCount > 0 && logged.size >= suppCount) return "full";
+    if (!logged || logged.size === 0) return activeCount === 0 ? "full" : "none";
+    if (activeCount > 0 && logged.size >= activeCount) return "full";
     return "partial";
   };
 
@@ -560,40 +563,108 @@ function ProgressRing({pct,color,size=58}) {
 
 
 // ── StackCardList — measures available height, shows 3+ cards, scrolls if more ──
-function StackCardList({displaySupps, onLog, onEdit, onDelete}) {
-  const containerRef = useRef(null);
-  const [maxH, setMaxH] = useState(320);
 
-  useEffect(() => {
-    function measure() {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      // Available = distance from this container top to bottom of viewport minus bottom nav (~62px)
-      const available = window.innerHeight - rect.top - 70;
-      // Enforce minimum of 3 cards (~115px each = 345px) and use available space
-      setMaxH(Math.max(345, available));
-    }
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
+// ── SupplementDetailSheet — tap card to view full details ────────────────────
+function SupplementDetailSheet({supp, logs, onClose, onEdit}) {
+  const runOut = calcRunOut(supp);
+  const days = daysFromNow(runOut);
+  const remaining = Math.max(0, supp.totalAmount - (supp.consumed||0));
+  const totalDays = supp.totalAmount > 0 ? Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)) : 0;
+  const pct = totalDays > 0 ? Math.max(0,Math.min(100,(Math.max(0,days)/totalDays)*100)) : 0;
+  const color = urgencyColor(days);
+  const suppLogs = logs.filter(l=>l.suppId===supp.id).sort((a,b)=>b.ts-a.ts);
+  const totalConsumed = supp.consumed || 0;
+  const startedDate = supp.createdAt ? new Date(supp.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "Unknown";
+  const dailyCostVal = supp.price && supp.totalAmount ? (supp.price / Math.floor(supp.totalAmount/supp.servingSize)) * supp.servingsPerDay : null;
 
   return (
-    <div ref={containerRef} style={{
-      overflowY: "auto",
-      maxHeight: maxH,
-      WebkitOverflowScrolling: "touch",
-      paddingBottom: displaySupps.length > 3 ? 16 : 0,
-    }}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"60vh",overflowY:"auto"}}>
+        {/* Handle */}
+        <div style={{width:36,height:4,borderRadius:2,background:"#3A3B3E",margin:"0 auto 16px"}}/>
+        
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <div>
+            <h2 style={{fontSize:20,fontWeight:800,color:"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px",margin:0}}>{supp.name}</h2>
+            {supp.brand&&<span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.brand} · {supp.type}</span>}
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={onEdit} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>
+            <button onClick={onClose} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"transparent",color:"#7A7D85",fontSize:18,cursor:"pointer",lineHeight:1}}>✕</button>
+          </div>
+        </div>
+
+        {/* Progress ring + key stats */}
+        <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:16,background:"#111213",borderRadius:12,padding:"12px 14px"}}>
+          <div style={{position:"relative",flexShrink:0}}>
+            <ProgressRing pct={pct} color={color} size={56}/>
+            <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{fontSize:11,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
+            </div>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span>
+              <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>RUNS OUT</span>
+              <span style={{color,fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{formatDate(runOut)} · {days>0?`${days}d`:"NOW"}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between"}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span>
+              <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Details grid */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+          {[
+            {label:"CONTAINER",value:`${supp.totalAmount} ${supp.unit==="count"?"count":supp.unit}`},
+            {label:"TOTAL CONSUMED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp.unit==="count"?"count":supp.unit}`},
+            {label:"ADDED ON",value:startedDate},
+            {label:"FORM",value:supp.type||"—"},
+            ...(dailyCostVal?[{label:"DAILY COST",value:`£${dailyCostVal.toFixed(2)}`}]:[]),
+            ...(supp.price?[{label:"UNIT PRICE",value:`£${Number(supp.price).toFixed(2)}`}]:[]),
+          ].map(row=>(
+            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"9px 12px"}}>
+              <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div>
+              <div style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent logs */}
+        {suppLogs.length>0&&(
+          <div>
+            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:8}}>RECENT LOGS</span>
+            {suppLogs.slice(0,4).map((l,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #2A2B2E"}}>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>{new Date(l.ts).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
+                <span style={{color:l.taken?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{l.taken?`${l.amount} ${supp.unit==="count"?"count":supp.unit}`:"SKIPPED"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StackCardList({displaySupps, onLog, onEdit, onDelete, onView}) {
+  return (
+    <div style={{paddingBottom:80}}>
       {displaySupps.map(s=>(
-        <SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete}/>
+        <SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView}/>
       ))}
     </div>
   );
 }
 
 // ── SupplementCard ────────────────────────────────────────────────────────────
-function SupplementCard({supp,onLog,onEdit,onDelete}) {
+function SupplementCard({supp,onLog,onEdit,onDelete,onView}) {
   const runOut=calcRunOut(supp),days=daysFromNow(runOut);
   const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
   const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
@@ -605,12 +676,12 @@ function SupplementCard({supp,onLog,onEdit,onDelete}) {
     <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5}}>
       {/* Single row layout: name+subtitle | ring + actions */}
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-        <div style={{flex:1,minWidth:0}}>
+        <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
           <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
             <h3 style={{fontSize:15,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
             <span style={{fontSize:10,color:color,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
           </div>
-          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit} left · out {formatDate(runOut)}</span>
+          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit==="count"?" count":supp.unit} left · out {formatDate(runOut)}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
           <div style={{position:"relative"}}>
@@ -984,7 +1055,7 @@ function SupplementHistory({ supplements }) {
             </div>
             <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
               <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>📦 {s.totalAmount}{s.unit} container</span>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>💊 {s.servingSize}{s.unit} × {s.servingsPerDay}×/day</span>
+              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>💊 {s.servingSize}{s.unit} × {s.servingsPerDay}/day</span>
               {totalUsed>0&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>✓ {totalUsed.toFixed(0)}{s.unit} used</span>}
               <span style={{color:urgencyColor(days),fontSize:11,fontFamily:"'Space Mono',monospace"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
               {lastLog&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>Last: {lastLog.date}</span>}
@@ -1418,7 +1489,7 @@ function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
                     {row.taken && <>
                       <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))}
                         style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>−</button>
-                      <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount}{row.unit}</span>
+                      <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount}{row.unit==="count"?" count":row.unit}</span>
                       <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)}
                         style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>+</button>
                     </>}
@@ -1690,6 +1761,7 @@ function App() {
   const [filter,setFilter]=useState("all");
   const [sortBy,setSortBy]=useState("runout");
   const [selectedDate,setSelectedDate]=useState(null);
+  const [viewSupp,setViewSupp]=useState(null);
 
   useEffect(()=>save(STORAGE_KEY,supplements),[supplements]);
   useEffect(()=>save(LOG_KEY,logs),[logs]);
@@ -1722,7 +1794,15 @@ function App() {
   // If no profile yet, show onboarding
   if(!profile) return <ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});}}/>;
 
-  const addOrUpdate=s=>{setSupplements(prev=>{const ex=prev.find(p=>p.id===s.id);return ex?prev.map(p=>p.id===s.id?s:p):[...prev,s];});setShowAdd(false);setEditSupp(null);};
+  const addOrUpdate=s=>{
+    setSupplements(prev=>{
+      const ex=prev.find(p=>p.id===s.id);
+      if(ex) return prev.map(p=>p.id===s.id?s:p);
+      // New supplement — stamp createdAt as today's ISO date
+      return [...prev,{...s,createdAt:new Date().toISOString().slice(0,10)}];
+    });
+    setShowAdd(false);setEditSupp(null);
+  };
   const deleteSupp=id=>{if(confirm("Remove this supplement?"))setSupplements(prev=>prev.filter(s=>s.id!==id));};
   const saveLog=({taken,amount,notes,feel})=>{
     const t=today();
@@ -1813,16 +1893,12 @@ function App() {
 
         {/* ── FIXED HEADER ── */}
         <div className="shell-fixed">
-          <div className="flex" style={{justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,marginTop:4}}>
-            <div>
-              <h1 style={{fontSize:22,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px"}}>
-                {profile?.name ? `Hey, ${profile.name}` : "My Stack"}
-              </h1>
-            </div>
-            <div className="flex gap-8" style={{alignItems:"center"}}>
-              <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830"}}>SHARE</button>
-              <button className="btn-icon" onClick={()=>setShowNotif(true)} style={{fontSize:"16px",background:"transparent",border:"1px solid #2A2B2E"}}>🔔</button>
-            </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,marginTop:4}}>
+            <button className="btn-icon" onClick={()=>setShowNotif(true)} style={{fontSize:"15px",background:"transparent",border:"1px solid #2A2B2E",flexShrink:0}}>🔔</button>
+            <h1 style={{fontSize:22,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px",textAlign:"center",flex:1,margin:"0 10px"}}>
+              {profile?.name ? `Hey, ${profile.name}` : "My Stack"}
+            </h1>
+            <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830",flexShrink:0}}>SHARE</button>
           </div>
 
           <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} onDateSelect={d=>setSelectedDate(selectedDate===d?null:d)}/>
@@ -1852,12 +1928,12 @@ function App() {
 
           {tab==="stack"&&supplements.length>0&&(
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+              <button onClick={()=>setShowAdd(true)} style={{padding:"5px 14px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830",flexShrink:0}}>+ ADD</button>
               {filter==="urgent"&&<button onClick={()=>setFilter("all")} style={{padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,border:"1px solid rgba(192,57,43,0.5)",background:"rgba(192,57,43,0.1)",color:"#C0392B",flexShrink:0}}>URGENT ✕</button>}
-              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
+              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginLeft:"auto",background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
                 <option value="runout">FILTER: URGENCY</option>
                 <option value="name">FILTER: NAME</option>
               </select>
-              <button onClick={()=>setShowAdd(true)} style={{marginLeft:"auto",padding:"5px 14px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830",flexShrink:0}}>+ ADD</button>
             </div>
           )}
         </div>
@@ -1881,6 +1957,7 @@ function App() {
                 onLog={setLogSupp}
                 onEdit={setEditSupp}
                 onDelete={deleteSupp}
+                onView={setViewSupp}
               />
             )}
           </>}
@@ -1912,6 +1989,7 @@ function App() {
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
+      {viewSupp&&<SupplementDetailSheet supp={viewSupp} logs={logs} onClose={()=>setViewSupp(null)} onEdit={()=>{setEditSupp(viewSupp);setViewSupp(null);}}/>}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
