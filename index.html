@@ -1182,6 +1182,116 @@ function InsightsModal({onClose,logs,supplements,isPro}){
   );
 }
 
+// ── DailyCostModal ────────────────────────────────────────────────────────────
+function DailyCostModal({supplements,profile,onClose}){
+  const currency=CURRENCIES[profile?.country||"GB"]||"£";
+
+  const items=supplements.map(s=>{
+    if(!s.price||!s.totalAmount||!s.servingSize||!s.servingsPerDay)return null;
+    const servingsInContainer=s.totalAmount/s.servingSize;
+    const costPerServing=s.price/servingsInContainer;
+    const dailyCost=costPerServing*s.servingsPerDay;
+    const daysSupply=Math.floor(servingsInContainer/s.servingsPerDay);
+    const monthlyCost=dailyCost*30;
+    return{id:s.id,name:s.name,brand:s.brand,type:s.type,dailyCost,monthlyCost,costPerServing,daysSupply,price:s.price,servingsPerDay:s.servingsPerDay,servingSize:s.servingSize,unit:s.unit,totalAmount:s.totalAmount};
+  }).filter(Boolean).sort((a,b)=>b.dailyCost-a.dailyCost);
+
+  const totalDaily=items.reduce((a,i)=>a+i.dailyCost,0);
+  const totalMonthly=items.reduce((a,i)=>a+i.monthlyCost,0);
+  const totalAnnual=totalMonthly*12;
+  const maxCost=items.length?items[0].dailyCost:1;
+
+  const noPrice=supplements.filter(s=>!s.price||!s.totalAmount);
+
+  return(
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{padding:"18px 20px",maxHeight:"88vh",overflowY:"auto"}}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+          <div>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",margin:"0 0 3px"}}>COST BREAKDOWN</p>
+            <h2 style={{fontSize:20,fontWeight:700,color:"#F0F0F0",margin:0,lineHeight:1.2}}>Daily Stack Cost</h2>
+          </div>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
+        </div>
+
+        {/* Summary totals */}
+        {items.length>0&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:16}}>
+            {[
+              {label:"PER DAY",value:`${currency}${totalDaily.toFixed(2)}`},
+              {label:"PER MONTH",value:`${currency}${totalMonthly.toFixed(2)}`},
+              {label:"PER YEAR",value:`${currency}${totalAnnual.toFixed(0)}`},
+            ].map(s=>(
+              <div key={s.label} style={{background:"#111213",border:"1px solid rgba(232,168,48,0.2)",borderRadius:9,padding:"10px 8px",textAlign:"center"}}>
+                <div style={{fontSize:s.label==="PER YEAR"?13:15,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace",lineHeight:1.2}}>{s.value}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.5px"}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Per-supplement breakdown */}
+        {items.length>0&&(
+          <div style={{marginBottom:14}}>
+            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:10}}>PER SUPPLEMENT</span>
+            {items.map((item,i)=>{
+              const barPct=Math.max(4,(item.dailyCost/maxCost)*100);
+              const pctOfTotal=totalDaily>0?((item.dailyCost/totalDaily)*100).toFixed(0):0;
+              return(
+                <div key={item.id} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:4}}>
+                    <div style={{flex:1,minWidth:0,paddingRight:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:1}}>
+                        <span style={{color:"#F0F0F0",fontWeight:700,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</span>
+                        <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,flexShrink:0}}>{pctOfTotal}%</span>
+                      </div>
+                      {item.brand&&<span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>{item.brand}</span>}
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,lineHeight:1}}>{currency}{item.dailyCost.toFixed(2)}<span style={{color:"#4A4B4F",fontSize:9}}>/day</span></div>
+                      <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,marginTop:1}}>{currency}{item.monthlyCost.toFixed(2)}/mo · {item.daysSupply}d supply</div>
+                    </div>
+                  </div>
+                  {/* Bar */}
+                  <div style={{height:3,background:"#2A2B2E",borderRadius:2}}>
+                    <div style={{height:"100%",width:`${barPct}%`,borderRadius:2,background:`linear-gradient(90deg,#E8A830,#C88820)`,transition:"width 0.5s ease"}}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Supplements missing price */}
+        {noPrice.length>0&&(
+          <div style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.15)",borderRadius:9,padding:"10px 14px",marginBottom:14}}>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 6px",letterSpacing:"0.5px"}}>NOT INCLUDED — NO PRICE SET</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {noPrice.map(s=>(
+                <span key={s.id} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:20,padding:"3px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{s.name}</span>
+              ))}
+            </div>
+            <p style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,margin:"8px 0 0",lineHeight:1.6}}>Edit these supplements and add a price to include them in cost tracking.</p>
+          </div>
+        )}
+
+        {items.length===0&&noPrice.length===0&&(
+          <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"30px 0"}}>No supplements tracked yet.</p>
+        )}
+
+        {items.length===0&&noPrice.length>0&&(
+          <div style={{textAlign:"center",padding:"10px 0 16px"}}>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,lineHeight:1.7}}>Add prices to your supplements<br/>to see your daily cost breakdown.</p>
+          </div>
+        )}
+
+        <button onClick={onClose} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>CLOSE</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App(){
   const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]));
@@ -1189,6 +1299,7 @@ function App(){
   const [profile,setProfile]=useState(()=>load(PROFILE_KEY,null));
   const [tab,setTab]=useState("stack");
   const [showAdd,setShowAdd]=useState(false);
+  const [showCostBreakdown,setShowCostBreakdown]=useState(false);
   const [showShare,setShowShare]=useState(false);
   const [showBatchLog,setShowBatchLog]=useState(false);
   const [showProfile,setShowProfile]=useState(false);
@@ -1309,9 +1420,9 @@ function App(){
               {[
                 {label:"TRACKING",value:supplements.length,color:"#F0F0F0",onClick:null},
                 {label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85",onClick:()=>setFilter(f=>f==="urgent"?"all":"urgent")},
-                ...(dailyCost>0?[{label:"DAILY COST",value:`${CURRENCIES[profile?.country||"GB"]||"£"}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:null}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
+                ...(dailyCost>0?[{label:"DAILY COST",value:`${CURRENCIES[profile?.country||"GB"]||"£"}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:()=>setShowCostBreakdown(true)}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
               ].map(s=>(
-                <div key={s.label} onClick={s.onClick||undefined} style={{flex:1,background:s.label==="URGENT"&&filter==="urgent"?"rgba(192,57,43,0.12)":"#1C1D1F",border:s.label==="URGENT"&&filter==="urgent"?"1px solid rgba(192,57,43,0.4)":"1px solid #2A2B2E",borderRadius:8,padding:"5px 4px",textAlign:"center",cursor:s.onClick?"pointer":"default",transition:"all 0.15s"}}>
+                <div key={s.label} onClick={s.onClick||undefined} style={{flex:1,background:s.label==="URGENT"&&filter==="urgent"?"rgba(192,57,43,0.12)":s.label==="DAILY COST"&&dailyCost>0?"rgba(232,168,48,0.06)":"#1C1D1F",border:s.label==="URGENT"&&filter==="urgent"?"1px solid rgba(192,57,43,0.4)":s.label==="DAILY COST"&&dailyCost>0?"1px solid rgba(232,168,48,0.3)":"1px solid #2A2B2E",borderRadius:8,padding:"5px 4px",textAlign:"center",cursor:s.onClick?"pointer":"default",transition:"all 0.15s"}}>
                   <div style={{fontSize:s.label==="DAILY COST"&&dailyCost>0?11:14,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace",lineHeight:1.2}}>{s.value}</div>
                   <div style={{fontSize:7,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:1,letterSpacing:"0.3px"}}>{s.label}</div>
                 </div>
@@ -1362,6 +1473,7 @@ function App(){
         </button>
       </div>
 
+      {showCostBreakdown&&<DailyCostModal supplements={supplements} profile={profile} onClose={()=>setShowCostBreakdown(false)}/>}
       {showBatchLog&&<BatchLogModal supplements={supplements} logs={logs} todayFeel={todayFeelLog} onClose={()=>setShowBatchLog(false)} onSaveAll={saveBatchLogs}/>}
       {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate} onDelete={(id)=>{deleteSupp(id);setEditSupp(null);setShowAdd(false);}}/>}
       {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog} todayFeel={todayFeelLog}/>}
