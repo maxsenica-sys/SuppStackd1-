@@ -18,8 +18,6 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #111213; }
     ::-webkit-scrollbar-thumb { background: #2A2B2E; border-radius: 2px; }
-
-    /* ── SPLASH ──────────────────────────────────────────────────────── */
     #splash { position: fixed; inset: 0; z-index: 999; background: #0A0A0A; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; transition: opacity 0.6s ease, transform 0.6s ease; }
     #splash.fade-out { opacity: 0; transform: scale(1.04); pointer-events: none; }
     .splash-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; animation: bgFadeIn 1s ease 0.2s forwards; }
@@ -36,8 +34,6 @@
     .splash-loader-fill { height: 100%; background: #E8A830; border-radius: 2px; width: 0; animation: loaderFill 1.2s cubic-bezier(0.4,0,0.2,1) 1.3s forwards; }
     @keyframes loaderAppear { to { opacity: 1; } }
     @keyframes loaderFill { to { width: 100%; } }
-
-    /* ── MAIN APP ────────────────────────────────────────────────────── */
     html { overflow: hidden; height: 100%; }
     body { overflow: hidden; height: 100%; position: fixed; width: 100%; overscroll-behavior: none; }
     #root { height: 100vh; height: 100dvh; background: #111213; opacity: 0; transition: opacity 0.5s ease; display: flex; flex-direction: column; overflow: hidden; }
@@ -59,40 +55,21 @@
     .btn-primary { padding: 12px; border: none; background: linear-gradient(135deg, #E8A830, #C88820); color: #111213; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; transition: all 0.2s; }
     .btn-cancel { padding: 12px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: 13px; }
     .btn-icon { padding: 9px 11px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 9px; cursor: pointer; font-size: 11px; font-family: 'Space Mono', monospace; }
-
     .btn-step { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2B2E; background: #111213; color: #F0F0F0; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; flex-shrink: 0; }
     .section-label { color: #7A7D85; font-size: 10px; font-family: 'Space Mono', monospace; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
     .field { margin-bottom: 10px; }
     .err-msg { color: #C0392B; font-size: 10px; font-family: 'Space Mono', monospace; margin-top: 5px; letter-spacing: 0.5px; }
     .flex { display: flex; } .flex-1 { flex: 1; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; }
-
-    /* ── BOTTOM NAV ──────────────────────────────────────────────────── */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0A0A0A; border-top: 1px solid #2A2B2E; display: flex; justify-content: space-around; align-items: center; padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 48; }
     .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; background: transparent; border: none; cursor: pointer; padding: 2px 20px; }
     .nav-btn span { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 0.8px; }
     .nav-btn.active span { color: #E8A830; }
     .nav-btn:not(.active) span { color: #7A7D85; }
     .nav-icon { font-size: 20px; }
-
-    /* ── CALENDAR BAR ────────────────────────────────────────────────── */
     .cal-bar { display: flex; gap: 6px; overflow-x: auto; padding: 0 0 12px; scrollbar-width: none; margin-bottom: 18px; }
     .cal-bar::-webkit-scrollbar { display: none; }
-    .cal-day { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 40px; padding: 8px 4px; border-radius: 10px; cursor: default; flex-shrink: 0; }
-    .cal-day.today { background: linear-gradient(135deg, #E8A830, #C88820); }
-    .cal-day.logged { background: rgba(91,173,114,0.12); border: 1px solid rgba(91,173,114,0.25); }
-    .cal-day.past:not(.logged) { opacity: 0.4; }
-    .cal-day-name { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; }
-    .cal-day.today .cal-day-name, .cal-day.today .cal-day-num { color: #111213; }
-    .cal-day-num { font-family: 'Barlow Condensed', monospace; font-weight: 700; font-size: 16px; line-height: 1; }
-    .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: #5BAD72; }
-    .cal-day.today .cal-dot { background: #111213; }
-
-    /* ── FEEDBACK ────────────────────────────────────────────────────── */
-
     .star-btn { background: transparent; border: none; cursor: pointer; font-size: 28px; padding: 4px 6px; transition: transform 0.15s; line-height: 1; }
     .star-btn:active { transform: scale(1.2); }
-
-    /* ── PROFILE ONBOARDING ──────────────────────────────────────────── */
     .onboard-screen { position: fixed; inset: 0; background: #0A0A0A; z-index: 200; display: flex; flex-direction: column; overflow-y: auto; }
     .onboard-progress { height: 3px; background: #1C1D1F; }
     .onboard-progress-fill { height: 100%; background: linear-gradient(90deg, #E8A830, #C88820); transition: width 0.4s ease; }
@@ -103,8 +80,6 @@
   </style>
 </head>
 <body>
-
-<!-- ── SPLASH ──────────────────────────────────────────────────────────────── -->
 <div id="splash">
   <div class="splash-bg">
     <svg viewBox="0 0 390 844" width="390" height="844" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%">
@@ -127,10 +102,7 @@
   </div>
   <div class="splash-loader"><div class="splash-loader-fill"></div></div>
 </div>
-
-<!-- ── APP ─────────────────────────────────────────────────────────────────── -->
 <div id="root"></div>
-
 <script>
   window.addEventListener("load", () => {
     setTimeout(() => {
@@ -141,230 +113,129 @@
     }, 2700);
   });
 </script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init("MvNsklzhS8eQ1-XbQ");</script>
-
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
+const STORAGE_KEY="suppstackd_v1_supplements";
+const LOG_KEY="suppstackd_v1_logs";
+const FEEDBACK_KEY="suppstackd_v1_feedback";
+const ACTIVE_KEY="suppstackd_v1_active_days";
+const FB_SHOWN_KEY="suppstackd_v1_feedback_shown";
+const PROFILE_KEY="suppstackd_v1_profile";
+const FEEL_KEY="suppstackd_v1_feel";
+const SUPPLEMENT_TYPES=["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
+const UNITS=["g","kg","mg","ml","lb","oz","fl oz","count"];
+const DEV_PRO_MODE=false;
+const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
+const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
+const SPORTS=["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","Football","Rugby","Basketball","MMA / Boxing","Tennis","Triathlon","Yoga / Pilates","Other"];
+const GOALS=["Build muscle & strength","Lose weight / body fat","Boost energy & performance","Improve focus & recovery","General health & wellness","Competitive sport performance"];
+const EXPERIENCE=["Just starting out","6–12 months","1–3 years","3+ years","Elite / Professional"];
 
-const STORAGE_KEY   = "suppstackd_v1_supplements";
-const LOG_KEY       = "suppstackd_v1_logs";
-const FEEDBACK_KEY  = "suppstackd_v1_feedback";
-const ACTIVE_KEY    = "suppstackd_v1_active_days";
-const FB_SHOWN_KEY  = "suppstackd_v1_feedback_shown";
-const PROFILE_KEY   = "suppstackd_v1_profile";
-const FEEL_KEY      = "suppstackd_v1_feel";
+const DB_NAME="suppstackd_db",DB_VERSION=1,STORE_NAME="kv";
+let _db=null;
+function openDB(){return new Promise((resolve,reject)=>{if(_db)return resolve(_db);const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=e=>{e.target.result.createObjectStore(STORE_NAME,{keyPath:"key"})};req.onsuccess=e=>{_db=e.target.result;resolve(_db)};req.onerror=()=>reject(req.error)});}
+function saveAsync(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch{}openDB().then(db=>{const tx=db.transaction(STORE_NAME,"readwrite");tx.objectStore(STORE_NAME).put({key,value:JSON.stringify(val)});}).catch(()=>{});}
+function loadAsync(key,fb){return openDB().then(db=>{return new Promise((resolve)=>{const req=db.transaction(STORE_NAME,"readonly").objectStore(STORE_NAME).get(key);req.onsuccess=()=>{if(req.result){try{const parsed=JSON.parse(req.result.value);try{localStorage.setItem(key,req.result.value);}catch{}resolve(parsed||fb);}catch{resolve(fb);}}else{try{const ls=JSON.parse(localStorage.getItem(key));if(ls!==null&&ls!==undefined){saveAsync(key,ls);resolve(ls);}else{resolve(fb);}}catch{resolve(fb);}}};req.onerror=()=>{try{resolve(JSON.parse(localStorage.getItem(key))||fb);}catch{resolve(fb);}};});}).catch(()=>{try{return JSON.parse(localStorage.getItem(key))||fb;}catch{return fb;}});}
+function load(key,fb){try{return JSON.parse(localStorage.getItem(key))||fb;}catch{return fb;}}
+function save(key,val){saveAsync(key,val);}
+function today(){return new Date().toDateString();}
 
-const SUPPLEMENT_TYPES = ["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
-const UNITS = ["g","kg","mg","ml","lb","oz","fl oz","count"];
-// ── Pro mode flag ────────────────────────────────────────────────────────────
-// DEV_PRO_MODE: set true on dev branch to preview Pro UI, always false on main
-const DEV_PRO_MODE = false;
-
-const CURRENCIES = {
-  "GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥",
-  "CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R",
-  "AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"
-};
-const COUNTRIES = [
-  "GB — United Kingdom","US — United States","EU — European Union","AU — Australia",
-  "CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland",
-  "SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil",
-  "MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong",
-  "TR — Turkey","KR — South Korea","CN — China","Other"
-];
-const SPORTS = ["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","Football","Rugby","Basketball","MMA / Boxing","Tennis","Triathlon","Yoga / Pilates","Other"];
-const GOALS  = ["Build muscle & strength","Lose weight / body fat","Boost energy & performance","Improve focus & recovery","General health & wellness","Competitive sport performance"];
-const EXPERIENCE = ["Just starting out","6–12 months","1–3 years","3+ years","Elite / Professional"];
-
-// ── Persistent Storage (IndexedDB + localStorage fallback) ───────────────────
-const DB_NAME = "suppstackd_db";
-const DB_VERSION = 1;
-const STORE_NAME = "kv";
-
-let _db = null;
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (_db) return resolve(_db);
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
-      e.target.result.createObjectStore(STORE_NAME, { keyPath: "key" });
-    };
-    req.onsuccess = e => { _db = e.target.result; resolve(_db); };
-    req.onerror = () => reject(req.error);
-  });
+// ── KEY FIX: localISO always uses local date, never UTC ──────────────────────
+function localISO(date){
+  const d = date || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
+function todayISO(){return localISO(new Date());}
 
-function saveAsync(key, val) {
-  // Always write to localStorage immediately (fast, synchronous)
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-  // Also write to IndexedDB (persistent, survives Safari purge)
-  openDB().then(db => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put({ key, value: JSON.stringify(val) });
-  }).catch(() => {});
-}
+function formatDate(d){return new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
+function daysFromNow(d){const now=new Date();now.setHours(0,0,0,0);const t=new Date(d);t.setHours(0,0,0,0);return Math.round((t-now)/86400000);}
+function calcRunOut(s){const rem=s.totalAmount-s.consumed;if(rem<=0)return new Date();const d=new Date();d.setDate(d.getDate()+Math.ceil(rem/(s.servingSize*s.servingsPerDay)));return d;}
+function urgencyColor(days){if(days<=7)return"#C0392B";if(days<=21)return"#E8A830";return"#5BAD72";}
+function urgencyLabel(days){if(days<=0)return"DEPLETED";if(days<=7)return"CRITICAL";if(days<=21)return"LOW";return"STOCKED";}
 
-function loadAsync(key, fb) {
-  return openDB().then(db => {
-    return new Promise((resolve) => {
-      const req = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(key);
-      req.onsuccess = () => {
-        if (req.result) {
-          try {
-            const parsed = JSON.parse(req.result.value);
-            // Also refresh localStorage cache
-            try { localStorage.setItem(key, req.result.value); } catch {}
-            resolve(parsed || fb);
-          } catch { resolve(fb); }
-        } else {
-          // Fall back to localStorage if not in IndexedDB yet
-          try {
-            const ls = JSON.parse(localStorage.getItem(key));
-            if (ls !== null && ls !== undefined) {
-              // Migrate to IndexedDB
-              saveAsync(key, ls);
-              resolve(ls);
-            } else { resolve(fb); }
-          } catch { resolve(fb); }
-        }
-      };
-      req.onerror = () => {
-        try { resolve(JSON.parse(localStorage.getItem(key)) || fb); } catch { resolve(fb); }
-      };
-    });
-  }).catch(() => {
-    try { return JSON.parse(localStorage.getItem(key)) || fb; } catch { return fb; }
-  });
-}
-
-// Synchronous load — reads from localStorage cache (IndexedDB loads happen on app init)
-function load(key, fb) { try { return JSON.parse(localStorage.getItem(key)) || fb; } catch { return fb; } }
-function save(key, val) { saveAsync(key, val); }
-function today() { return new Date().toDateString(); }
-function todayISO() { return new Date().toISOString().slice(0,10); }
-function formatDate(d) { return new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
-function daysFromNow(d) { const now=new Date();now.setHours(0,0,0,0);const t=new Date(d);t.setHours(0,0,0,0);return Math.round((t-now)/86400000); }
-function calcRunOut(s) { const rem=s.totalAmount-s.consumed;if(rem<=0)return new Date();const d=new Date();d.setDate(d.getDate()+Math.ceil(rem/(s.servingSize*s.servingsPerDay)));return d; }
-function urgencyColor(days) { if(days<=7)return"#C0392B";if(days<=21)return"#E8A830";return"#5BAD72"; }
-function urgencyLabel(days) { if(days<=0)return"DEPLETED";if(days<=7)return"CRITICAL";if(days<=21)return"LOW";return"STOCKED"; }
-
-function checkAndTrackActiveDay() {
-  const todayStr = today();
-  const alreadyShown = load(FB_SHOWN_KEY, false);
-  if (alreadyShown) return false;
-  let activeDays = load(ACTIVE_KEY, []);
-  if (!activeDays.includes(todayStr)) {
-    activeDays = [...activeDays, todayStr].slice(-10);
-    save(ACTIVE_KEY, activeDays);
-  }
-  if (activeDays.length < 3) return false;
-  const last3 = activeDays.slice(-3);
-  const d2=new Date(last3[2]),d1=new Date(last3[1]),d0=new Date(last3[0]);
-  d2.setHours(0,0,0,0);d1.setHours(0,0,0,0);d0.setHours(0,0,0,0);
-  return Math.round((d2-d1)/86400000)===1 && Math.round((d1-d0)/86400000)===1;
-}
-
-async function requestNotifPerm() { if(!("Notification"in window))return false;if(Notification.permission==="granted")return true;return(await Notification.requestPermission())==="granted"; }
-function fireNotif(title,body,delay=500) { if(!("Notification"in window)||Notification.permission!=="granted")return;setTimeout(()=>{try{const n=new Notification(title,{body,tag:"suppstackd"});setTimeout(()=>n.close(),6000);}catch{}},delay); }
+function checkAndTrackActiveDay(){const todayStr=today();const alreadyShown=load(FB_SHOWN_KEY,false);if(alreadyShown)return false;let activeDays=load(ACTIVE_KEY,[]);if(!activeDays.includes(todayStr)){activeDays=[...activeDays,todayStr].slice(-10);save(ACTIVE_KEY,activeDays);}if(activeDays.length<3)return false;const last3=activeDays.slice(-3);const d2=new Date(last3[2]),d1=new Date(last3[1]),d0=new Date(last3[0]);d2.setHours(0,0,0,0);d1.setHours(0,0,0,0);d0.setHours(0,0,0,0);return Math.round((d2-d1)/86400000)===1&&Math.round((d1-d0)/86400000)===1;}
+async function requestNotifPerm(){if(!("Notification"in window))return false;if(Notification.permission==="granted")return true;return(await Notification.requestPermission())==="granted";}
+function fireNotif(title,body,delay=500){if(!("Notification"in window)||Notification.permission!=="granted")return;setTimeout(()=>{try{const n=new Notification(title,{body,tag:"suppstackd"});setTimeout(()=>n.close(),6000);}catch{}},delay);}
 let installPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;});
 
-// ── CalendarBar ───────────────────────────────────────────────────────────────
-function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
-  const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const now = new Date(); now.setHours(0,0,0,0);
-  const todayStr = now.toISOString().slice(0,10);
+// ── CalendarBar — fully fixed: local dates, correct green logic ───────────────
+function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
+  const DAY_NAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  // Use local date only — never toISOString() which shifts timezone
+  const now=new Date();
+  now.setHours(0,0,0,0);
+  const todayStr=localISO(now);
 
-  // Generate 60 days: 30 past + today + 29 future
-  const days = [];
-  for (let i = -30; i <= 29; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() + i);
+  // Generate 60 days using local date arithmetic
+  const days=[];
+  for(let i=-30;i<=29;i++){
+    const d=new Date(now);
+    d.setDate(now.getDate()+i);
     days.push(d);
   }
 
-  const suppCount = supplements.length;
-
-  // Build per-date log counts
-  const dateCounts = {};
-  logs.forEach(l => {
-    try {
-      // Use l.date field (already local ISO string) if available, else fall back to ts
-      let iso = l.date;
-      if (!iso) {
-        const d = new Date(l.ts);
-        iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-      }
-      dateCounts[iso] = (dateCounts[iso] || new Set());
+  // Build dateCounts using l.date (already local ISO) as primary source
+  const dateCounts={};
+  logs.forEach(l=>{
+    try{
+      // l.date is stored as local ISO string from today()/todayISO()
+      const iso=l.date||localISO(new Date(l.ts));
+      if(!dateCounts[iso])dateCounts[iso]=new Set();
       dateCounts[iso].add(l.suppId);
-    } catch {}
+    }catch{}
   });
 
-  // 3 states per date:
-  // "full"    = all supplements logged → green
-  // "partial" = some logged → amber
-  // "none"    = nothing logged (past) → faded grey
-  const getDateState = (iso) => {
-    // Only count supplements that existed on this date
-    const activeSupps = supplements.filter(s => !s.createdAt || s.createdAt <= iso);
-    const activeCount = activeSupps.length;
-    const logged = dateCounts[iso];
-    if (!logged || logged.size === 0) return activeCount === 0 ? "full" : "none";
-    if (activeCount > 0 && logged.size >= activeCount) return "full";
-    return "partial";
+  // 3-state logic — ONLY colour past dates, never future/today retroactively
+  const getDateState=(iso,isPast)=>{
+    if(!isPast)return"none";
+    // Only count supplements that existed on this date (have createdAt on or before)
+    const activeSupps=supplements.filter(s=>s.createdAt&&s.createdAt<=iso);
+    const activeCount=activeSupps.length;
+    // If no supplements existed yet — show nothing (grey, not green)
+    if(activeCount===0)return"none";
+    const logged=dateCounts[iso];
+    if(!logged||logged.size===0)return"none";
+    if(logged.size>=activeCount)return"full";
+    return"partial";
   };
 
-  const todayRef = useRef(null);
-  useEffect(() => {
-    if (todayRef.current) todayRef.current.scrollIntoView({ inline: "center", behavior: "instant" });
-  }, []);
+  const todayRef=useRef(null);
+  useEffect(()=>{
+    if(todayRef.current)todayRef.current.scrollIntoView({inline:"center",behavior:"instant"});
+  },[]);
 
-  return (
+  return(
     <div className="cal-bar">
-      {days.map((d, i) => {
-        const iso = d.toISOString().slice(0,10);
-        const isToday = iso === todayStr;
-        const isFuture = d > now;
-        const isPast = d < now;
-        const dateState = getDateState(iso);
-        const isSelected = selectedDate === iso;
-        const dotColor = isToday ? "#111213" : dateState === "full" ? "#5BAD72" : "#E8A830";
-        const bgColor = isSelected && !isToday ? "rgba(232,168,48,0.18)" :
-                        isToday ? "linear-gradient(135deg,#E8A830,#C88820)" :
-                        dateState === "full" ? "rgba(91,173,114,0.12)" :
-                        dateState === "partial" ? "rgba(232,168,48,0.08)" : "transparent";
-        const borderColor = isSelected && !isToday ? "1px solid rgba(232,168,48,0.6)" :
-                            dateState === "full" && !isToday ? "1px solid rgba(91,173,114,0.25)" :
-                            dateState === "partial" && !isToday ? "1px solid rgba(232,168,48,0.2)" :
-                            "1px solid transparent";
-        return (
-          <div
-            key={i}
-            ref={isToday ? todayRef : null}
-            onClick={() => onDateSelect(iso)}
-            style={{
-              display:"flex",flexDirection:"column",alignItems:"center",gap:4,
-              minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",
-              flexShrink:0,transition:"all 0.15s",
-              background: bgColor, border: borderColor,
-              opacity: isPast && dateState === "none" && !isSelected ? 0.4 : 1,
-            }}
-          >
-            <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>
-              {DAY_NAMES[d.getDay()]}
-            </span>
-            <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>
-              {d.getDate()}
-            </span>
-            {(dateState !== "none" || isToday) && (
-              <div style={{width:4,height:4,borderRadius:"50%",background:dotColor}}/>
-            )}
+      {days.map((d,i)=>{
+        const iso=localISO(d); // ← local ISO, no UTC timezone shift
+        const isToday=iso===todayStr;
+        const isFuture=d>now;
+        const isPast=d<now;
+        const dateState=getDateState(iso,isPast);
+        const isSelected=selectedDate===iso;
+        const dotColor=isToday?"#111213":dateState==="full"?"#5BAD72":"#E8A830";
+        const bgColor=isSelected&&!isToday?"rgba(232,168,48,0.18)":
+                      isToday?"linear-gradient(135deg,#E8A830,#C88820)":
+                      dateState==="full"?"rgba(91,173,114,0.12)":
+                      dateState==="partial"?"rgba(232,168,48,0.08)":"transparent";
+        const borderColor=isSelected&&!isToday?"1px solid rgba(232,168,48,0.6)":
+                          dateState==="full"&&!isToday?"1px solid rgba(91,173,114,0.25)":
+                          dateState==="partial"&&!isToday?"1px solid rgba(232,168,48,0.2)":
+                          "1px solid transparent";
+        return(
+          <div key={i} ref={isToday?todayRef:null} onClick={()=>onDateSelect(iso)}
+            style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",flexShrink:0,transition:"all 0.15s",background:bgColor,border:borderColor,opacity:isPast&&dateState==="none"&&!isSelected?0.4:1}}>
+            <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>{DAY_NAMES[d.getDay()]}</span>
+            <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>{d.getDate()}</span>
+            {/* Only show dot on past days with logs, or today */}
+            {(isPast&&dateState!=="none")&&<div style={{width:4,height:4,borderRadius:"50%",background:dotColor}}/>}
+            {isToday&&<div style={{width:4,height:4,borderRadius:"50%",background:"#111213"}}/>}
           </div>
         );
       })}
@@ -372,54 +243,34 @@ function CalendarBar({ logs, supplements, onDateSelect, selectedDate }) {
   );
 }
 
-// ── DateLogModal — view/edit/add logs for a specific date ────────────────────
-function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, onDeleteLog }) {
-  const dateObj = new Date(date + "T00:00:00");
-  const dateLabel = dateObj.toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
-  const isToday = date === new Date().toISOString().slice(0,10);
-  const isFuture = dateObj > new Date(new Date().toISOString().slice(0,10) + "T00:00:00");
+// ── DateLogModal — fixed: uses localISO for date matching ────────────────────
+function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDeleteLog}){
+  const dateObj=new Date(date+"T00:00:00");
+  const dateLabel=dateObj.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const todayStr=todayISO();
+  const isToday=date===todayStr;
+  const isFuture=date>todayStr;
 
-  // Logs for this date
-  const dateLogs = logs.filter(l => {
-    try {
-      const d = new Date(l.ts);
-      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-      return iso === date;
-    } catch { return false; }
+  // Match logs using l.date (local ISO) as primary key
+  const dateLogs=logs.filter(l=>{
+    try{return(l.date||localISO(new Date(l.ts)))===date;}catch{return false;}
   });
 
-  // Which supplements were logged on this date
-  const loggedSuppIds = new Set(dateLogs.map(l => l.suppId));
+  const loggedSuppIds=new Set(dateLogs.map(l=>l.suppId));
+  const [addingFor,setAddingFor]=useState(null);
+  const [quickAmt,setQuickAmt]=useState("");
+  const [quickNotes,setQuickNotes]=useState("");
 
-  const [addingFor, setAddingFor] = useState(null); // supp being quick-logged
-  const [quickAmt, setQuickAmt] = useState("");
-  const [quickNotes, setQuickNotes] = useState("");
-
-  const handleQuickLog = (supp) => {
-    setAddingFor(supp);
-    setQuickAmt(String(supp.servingSize));
-    setQuickNotes("");
-  };
-
-  const confirmQuickLog = () => {
-    if (!addingFor) return;
-    onSaveLog({
-      suppId: addingFor.id,
-      date: addingFor.lastLogged,
-      taken: true,
-      amount: parseFloat(quickAmt) || addingFor.servingSize,
-      notes: quickNotes,
-      feel: {},
-      ts: new Date(date + "T12:00:00").getTime(),
-      backdated: true,
-    });
+  const handleQuickLog=(supp)=>{setAddingFor(supp);setQuickAmt(String(supp.servingSize));setQuickNotes("");};
+  const confirmQuickLog=()=>{
+    if(!addingFor)return;
+    onSaveLog({suppId:addingFor.id,date:addingFor.lastLogged,taken:true,amount:parseFloat(quickAmt)||addingFor.servingSize,notes:quickNotes,feel:{},ts:new Date(date+"T12:00:00").getTime(),backdated:true});
     setAddingFor(null);
   };
 
-  return (
-    <div className="overlay" onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
+  return(
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px",maxHeight:"85vh",overflowY:"auto"}}>
-        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
           <div>
             <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",margin:"0 0 4px"}}>{isFuture?"UPCOMING":isToday?"TODAY":"PAST DATE"}</p>
@@ -427,40 +278,34 @@ function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, 
           </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
         </div>
-
-        {/* Future date message */}
-        {isFuture && (
+        {isFuture&&(
           <div style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
             <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,margin:0,lineHeight:1.6}}>This date is in the future. You can pre-log supplements here if you want to plan ahead.</p>
           </div>
         )}
-
-        {/* Logged entries for this date */}
-        {dateLogs.length > 0 && (
+        {dateLogs.length>0&&(
           <div style={{marginBottom:16}}>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>LOGGED</span>
-            {dateLogs.map((log, i) => {
-              const supp = supplements.find(s => s.id === log.suppId);
-              return (
+            {dateLogs.map((log,i)=>{
+              const supp=supplements.find(s=>s.id===log.suppId);
+              return(
                 <div key={i} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}</p>
                     <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount}${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
                   </div>
-                  <button onClick={() => onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
+                  <button onClick={()=>onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
                 </div>
               );
             })}
           </div>
         )}
-
-        {/* Unlogged supplements — add missing entries */}
-        {supplements.filter(s => !loggedSuppIds.has(s.id)).length > 0 && (
+        {supplements.filter(s=>!loggedSuppIds.has(s.id)).length>0&&(
           <div>
-            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>{dateLogs.length > 0 ? "NOT LOGGED" : "SUPPLEMENTS"}</span>
-            {supplements.filter(s => !loggedSuppIds.has(s.id)).map((supp, i) => (
+            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>{dateLogs.length>0?"NOT LOGGED":"SUPPLEMENTS"}</span>
+            {supplements.filter(s=>!loggedSuppIds.has(s.id)).map((supp,i)=>(
               <div key={i}>
-                {addingFor?.id === supp.id ? (
+                {addingFor?.id===supp.id?(
                   <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:9,padding:"12px 14px",marginBottom:8}}>
                     <p style={{margin:"0 0 10px",color:"#E8A830",fontWeight:700,fontSize:13,fontFamily:"'Space Mono',monospace"}}>{supp.name}</p>
                     <div style={{display:"flex",gap:8,marginBottom:8}}>
@@ -475,7 +320,7 @@ function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, 
                       <button onClick={confirmQuickLog} className="btn-primary" style={{flex:2,padding:"8px 0",fontSize:11}}>SAVE LOG</button>
                     </div>
                   </div>
-                ) : (
+                ):(
                   <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div>
                       <p style={{margin:0,color:"#7A7D85",fontWeight:700,fontSize:13}}>{supp.name}</p>
@@ -488,11 +333,7 @@ function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, 
             ))}
           </div>
         )}
-
-        {supplements.length === 0 && (
-          <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"24px 0"}}>No supplements added yet.</p>
-        )}
-
+        {supplements.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"24px 0"}}>No supplements added yet.</p>}
         <button onClick={onClose} style={{width:"100%",marginTop:8,padding:"10px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>CLOSE</button>
       </div>
     </div>
@@ -500,99 +341,60 @@ function DateLogModal({ date, supplements, logs, onClose, onSaveLog, onEditLog, 
 }
 
 // ── ProfileOnboarding ─────────────────────────────────────────────────────────
-function ProfileOnboarding({ onComplete }) {
-  const [step, setStep] = useState(0);
-  const [profile, setProfile] = useState({ name:"", email:"", age:"" });
-  const set = (k,v) => setProfile(p => ({...p,[k]:v}));
-  const finish = () => { save(PROFILE_KEY, {...profile, createdAt: new Date().toISOString()}); onComplete(profile); };
-
-  const steps = [
-    // Step 0 — Welcome (no emoji, no "takes 60 seconds")
+function ProfileOnboarding({onComplete}){
+  const [step,setStep]=useState(0);
+  const [profile,setProfile]=useState({name:"",email:"",age:""});
+  const set=(k,v)=>setProfile(p=>({...p,[k]:v}));
+  const finish=()=>{save(PROFILE_KEY,{...profile,createdAt:new Date().toISOString()});onComplete(profile);};
+  const steps=[
     <div key={0} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 28px",textAlign:"center"}}>
       <h1 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:42,fontWeight:900,color:"#F0F0F0",marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.05}}>Welcome to<br/><span style={{color:"#E8A830"}}>SUPPSTACKD</span></h1>
       <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.8,marginBottom:40}}>Let's set up your profile so we can personalise your experience.</p>
       <button className="btn-primary" style={{width:"100%",padding:16,fontSize:14}} onClick={()=>setStep(1)}>LET'S GO →</button>
       <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={finish}>Skip</button>
     </div>,
-
-    // Step 1 — Name + Email + Age (only step, then straight into app)
     <div key={1} style={{padding:"40px 28px",flex:1}}>
       <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Who are you?</h2>
       <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:30,lineHeight:1.6}}>We'll personalise your stack experience.</p>
-      <div className="field">
-        <span className="section-label">FIRST NAME *</span>
-        <input className="inp" placeholder="e.g. Alex" value={profile.name} onChange={e=>set("name",e.target.value)}/>
-      </div>
-      <div className="field">
-        <span className="section-label">EMAIL ADDRESS</span>
-        <input className="inp" type="email" placeholder="your@email.com" value={profile.email} onChange={e=>set("email",e.target.value)}/>
-        <p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>For reorder reminders & product recommendations.</p>
-      </div>
-      <div className="field">
-        <span className="section-label">AGE (OPTIONAL)</span>
-        <input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/>
-      </div>
-      <div className="field">
-        <span className="section-label">COUNTRY (OPTIONAL)</span>
-        <select className="inp" value={profile.country||""} onChange={e=>set("country",e.target.value)}>
-          <option value="">Select your country</option>
-          {COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}
-        </select>
-        <p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to show the right currency symbol.</p>
-      </div>
-      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:profile.name.trim()?1:0.4,cursor:profile.name.trim()?"pointer":"not-allowed"}} onClick={()=>profile.name.trim()&&finish()}>
-        {profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"ENTER YOUR NAME TO CONTINUE"}
-      </button>
+      <div className="field"><span className="section-label">FIRST NAME *</span><input className="inp" placeholder="e.g. Alex" value={profile.name} onChange={e=>set("name",e.target.value)}/></div>
+      <div className="field"><span className="section-label">EMAIL ADDRESS</span><input className="inp" type="email" placeholder="your@email.com" value={profile.email} onChange={e=>set("email",e.target.value)}/><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>For reorder reminders & product recommendations.</p></div>
+      <div className="field"><span className="section-label">AGE (OPTIONAL)</span><input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/></div>
+      <div className="field"><span className="section-label">COUNTRY (OPTIONAL)</span><select className="inp" value={profile.country||""} onChange={e=>set("country",e.target.value)}><option value="">Select your country</option>{COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}</select><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to show the right currency symbol.</p></div>
+      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:profile.name.trim()?1:0.4,cursor:profile.name.trim()?"pointer":"not-allowed"}} onClick={()=>profile.name.trim()&&finish()}>{profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"ENTER YOUR NAME TO CONTINUE"}</button>
       <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={finish}>Skip for now</button>
     </div>,
   ];
-
-  const pct = step === 0 ? 0 : 100;
-
-  return (
+  const pct=step===0?0:100;
+  return(
     <div className="onboard-screen">
       <div className="onboard-progress"><div className="onboard-progress-fill" style={{width:`${pct}%`}}/></div>
-      <div style={{flex:1,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-        {steps[step]}
-      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflowY:"auto"}}>{steps[step]}</div>
     </div>
   );
 }
 
 // ── ProgressRing ──────────────────────────────────────────────────────────────
-function ProgressRing({pct,color,size=58}) {
+function ProgressRing({pct,color,size=58}){
   const r=(size-6)/2,circ=2*Math.PI*r,offset=circ-(Math.min(pct,100)/100)*circ;
-  return (
-    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2A2B2E" strokeWidth="5"/>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={offset} style={{transition:"stroke-dashoffset 0.7s ease",strokeLinecap:"round"}}/>
-    </svg>
-  );
+  return(<svg width={size} height={size} style={{transform:"rotate(-90deg)"}}><circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2A2B2E" strokeWidth="5"/><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5" strokeDasharray={circ} strokeDashoffset={offset} style={{transition:"stroke-dashoffset 0.7s ease",strokeLinecap:"round"}}/></svg>);
 }
 
-
-// ── StackCardList — measures available height, shows 3+ cards, scrolls if more ──
-
-// ── SupplementDetailSheet — tap card to view full details ────────────────────
-function SupplementDetailSheet({supp, logs, onClose, onEdit}) {
-  const runOut = calcRunOut(supp);
-  const days = daysFromNow(runOut);
-  const remaining = Math.max(0, supp.totalAmount - (supp.consumed||0));
-  const totalDays = supp.totalAmount > 0 ? Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)) : 0;
-  const pct = totalDays > 0 ? Math.max(0,Math.min(100,(Math.max(0,days)/totalDays)*100)) : 0;
-  const color = urgencyColor(days);
-  const suppLogs = logs.filter(l=>l.suppId===supp.id).sort((a,b)=>b.ts-a.ts);
-  const totalConsumed = supp.consumed || 0;
-  const startedDate = supp.createdAt ? new Date(supp.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "Unknown";
-  const dailyCostVal = supp.price && supp.totalAmount ? (supp.price / Math.floor(supp.totalAmount/supp.servingSize)) * supp.servingsPerDay : null;
-
-  return (
+// ── SupplementDetailSheet ─────────────────────────────────────────────────────
+function SupplementDetailSheet({supp,logs,onClose,onEdit}){
+  const runOut=calcRunOut(supp);
+  const days=daysFromNow(runOut);
+  const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
+  const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
+  const pct=totalDays>0?Math.max(0,Math.min(100,(Math.max(0,days)/totalDays)*100)):0;
+  const color=urgencyColor(days);
+  const suppLogs=logs.filter(l=>l.suppId===supp.id).sort((a,b)=>b.ts-a.ts);
+  const totalConsumed=supp.consumed||0;
+  const startedDate=supp.createdAt?new Date(supp.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"Unknown";
+  const dailyCostVal=supp.price&&supp.totalAmount?(supp.price/Math.floor(supp.totalAmount/supp.servingSize))*supp.servingsPerDay:null;
+  return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"60vh",overflowY:"auto"}}>
-        {/* Handle */}
         <div style={{width:36,height:4,borderRadius:2,background:"#3A3B3E",margin:"0 auto 16px"}}/>
-        
-        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
             <h2 style={{fontSize:20,fontWeight:800,color:"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px",margin:0}}>{supp.name}</h2>
@@ -603,8 +405,6 @@ function SupplementDetailSheet({supp, logs, onClose, onEdit}) {
             <button onClick={onClose} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"transparent",color:"#7A7D85",fontSize:18,cursor:"pointer",lineHeight:1}}>✕</button>
           </div>
         </div>
-
-        {/* Progress ring + key stats */}
         <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:16,background:"#111213",borderRadius:12,padding:"12px 14px"}}>
           <div style={{position:"relative",flexShrink:0}}>
             <ProgressRing pct={pct} color={color} size={56}/>
@@ -613,39 +413,16 @@ function SupplementDetailSheet({supp, logs, onClose, onEdit}) {
             </div>
           </div>
           <div style={{flex:1}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span>
-              <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit}</span>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>RUNS OUT</span>
-              <span style={{color,fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{formatDate(runOut)} · {days>0?`${days}d`:"NOW"}</span>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between"}}>
-              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span>
-              <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span>
-            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span><span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>RUNS OUT</span><span style={{color,fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{formatDate(runOut)} · {days>0?`${days}d`:"NOW"}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span><span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span></div>
           </div>
         </div>
-
-        {/* Details grid */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-          {[
-            {label:"CONTAINER",value:`${supp.totalAmount} ${supp.unit==="count"?"count":supp.unit}`},
-            {label:"TOTAL CONSUMED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp.unit==="count"?"count":supp.unit}`},
-            {label:"ADDED ON",value:startedDate},
-            {label:"FORM",value:supp.type||"—"},
-            ...(dailyCostVal?[{label:"DAILY COST",value:`£${dailyCostVal.toFixed(2)}`}]:[]),
-            ...(supp.price?[{label:"UNIT PRICE",value:`£${Number(supp.price).toFixed(2)}`}]:[]),
-          ].map(row=>(
-            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"9px 12px"}}>
-              <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div>
-              <div style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div>
-            </div>
+          {[{label:"CONTAINER",value:`${supp.totalAmount} ${supp.unit==="count"?"count":supp.unit}`},{label:"TOTAL CONSUMED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp.unit==="count"?"count":supp.unit}`},{label:"ADDED ON",value:startedDate},{label:"FORM",value:supp.type||"—"},...(dailyCostVal?[{label:"DAILY COST",value:`£${dailyCostVal.toFixed(2)}`}]:[]),...(supp.price?[{label:"UNIT PRICE",value:`£${Number(supp.price).toFixed(2)}`}]:[])].map(row=>(
+            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"9px 12px"}}><div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div><div style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div></div>
           ))}
         </div>
-
-        {/* Recent logs */}
         {suppLogs.length>0&&(
           <div>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:8}}>RECENT LOGS</span>
@@ -662,18 +439,12 @@ function SupplementDetailSheet({supp, logs, onClose, onEdit}) {
   );
 }
 
-function StackCardList({displaySupps, onLog, onEdit, onDelete, onView}) {
-  return (
-    <div style={{paddingBottom:120}}>
-      {displaySupps.map(s=>(
-        <SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView}/>
-      ))}
-    </div>
-  );
+function StackCardList({displaySupps,onLog,onEdit,onDelete,onView}){
+  return(<div style={{paddingBottom:120}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView}/>)}</div>);
 }
 
 // ── SupplementCard ────────────────────────────────────────────────────────────
-function SupplementCard({supp,onLog,onEdit,onDelete,onView}) {
+function SupplementCard({supp,onLog,onEdit,onDelete,onView}){
   const runOut=calcRunOut(supp),days=daysFromNow(runOut);
   const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
   const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
@@ -681,9 +452,8 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView}) {
   const pct=totalDays>0?Math.max(0,Math.min(100,(daysRemaining/totalDays)*100)):0;
   const color=urgencyColor(days);
   const logged=supp.lastLogged===today();
-  return (
+  return(
     <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5}}>
-      {/* Single row layout: name+subtitle | ring + actions */}
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
         <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
           <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
@@ -699,32 +469,27 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView}) {
               <span style={{fontSize:9,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
             </div>
           </div>
-          <button onClick={()=>onLog(supp)} style={{padding:"5px 10px",border:logged?"1px solid #2A2B2E":"1px solid rgba(232,168,48,0.4)",background:logged?"#111213":"rgba(232,168,48,0.07)",color:logged?"#7A7D85":"#E8A830",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
-            {logged?"✓ LOGGED":"LOG"}
-          </button>
+          <button onClick={()=>onLog(supp)} style={{padding:"5px 10px",border:logged?"1px solid #2A2B2E":"1px solid rgba(232,168,48,0.4)",background:logged?"#111213":"rgba(232,168,48,0.07)",color:logged?"#7A7D85":"#E8A830",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{logged?"✓ LOGGED":"LOG"}</button>
           <button style={{padding:"5px 10px",border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}} onClick={()=>onEdit(supp)}>EDIT</button>
         </div>
       </div>
-      {/* Progress bar */}
-      <div style={{height:2,background:"#2A2B2E",borderRadius:2}}>
-        <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/>
-      </div>
+      <div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/></div>
     </div>
   );
 }
 
 // ── LogModal ──────────────────────────────────────────────────────────────────
-function LogModal({supp,onClose,onSave,todayFeel}) {
+function LogModal({supp,onClose,onSave,todayFeel}){
   const [taken,setTaken]=useState(true);
   const [scoops,setScoops]=useState(1);
   const [customAmt,setCustomAmt]=useState(String(supp.servingSize));
   const [useCustom,setUseCustom]=useState(false);
   const [notes,setNotes]=useState("");
   const [feel,setFeel]=useState(todayFeel||{energy:null,recovery:null,mood:null,sleep:null});
-  const [feelChanged,setFeelChanged]=useState(false); // for subsequent logs: did they say yes to changes?
-  const isFirstLog=!todayFeel; // true = show full feel form, false = show compact "same?" prompt
+  const [feelChanged,setFeelChanged]=useState(false);
+  const isFirstLog=!todayFeel;
   const amount=taken?(useCustom?parseFloat(customAmt)||0:supp.servingSize*scoops):0;
-  return (
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box">
         <h2 style={{fontSize:18,fontWeight:700,color:"#F0F0F0",marginBottom:2}}>Log Dose</h2>
@@ -762,8 +527,7 @@ function LogModal({supp,onClose,onSave,todayFeel}) {
             <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{amount.toFixed(1)}{supp.unit}</span>
           </div>
         </>}
-        {/* ── Feel log ── */}
-        {isFirstLog ? (
+        {isFirstLog?(
           <div style={{marginBottom:10}}>
             <span className="section-label" style={{marginBottom:8,display:"block"}}>HOW ARE YOU FEELING TODAY?</span>
             {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
@@ -784,9 +548,8 @@ function LogModal({supp,onClose,onSave,todayFeel}) {
               <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>HIGH</span>
             </div>
           </div>
-        ) : (
+        ):(
           <div style={{marginBottom:10}}>
-            {/* Compact feel — pre-filled from earlier log */}
             <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 12px",marginBottom:feelChanged?10:0}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:feelChanged?0:8}}>
                 <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>TODAY'S FEEL</span>
@@ -835,7 +598,7 @@ function LogModal({supp,onClose,onSave,todayFeel}) {
 }
 
 // ── AddEditModal ──────────────────────────────────────────────────────────────
-function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
+function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const isEdit=!!supp;
   const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null});
   const [touched,setTouched]=useState({});
@@ -846,19 +609,9 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
   const [daysAlready,setDaysAlready]=useState("");
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const touch=(k)=>setTouched(t=>({...t,[k]:true}));
-  const calcConsumed=()=>{
-    const total=parseFloat(form.totalAmount)||0,serving=parseFloat(form.servingSize)||0,perDay=parseFloat(form.servingsPerDay)||1;
-    if(startedMode==="amount"){const left=parseFloat(amountLeft)||0;return Math.max(0,total-left);}
-    else{const days=parseInt(daysAlready)||0;return Math.min(total,days*serving*perDay);}
-  };
+  const calcConsumed=()=>{const total=parseFloat(form.totalAmount)||0,serving=parseFloat(form.servingSize)||0,perDay=parseFloat(form.servingsPerDay)||1;if(startedMode==="amount"){const left=parseFloat(amountLeft)||0;return Math.max(0,total-left);}else{const days=parseInt(daysAlready)||0;return Math.min(total,days*serving*perDay);}};
   const effectiveConsumed=!isEdit&&alreadyStarted?calcConsumed():parseFloat(form.consumed)||0;
-  const errors={
-    name:!form.name.trim()?"Supplement name is required":null,
-    totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,
-    servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999)?"Can't exceed total amount":null,
-    servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,
-    consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null,
-  };
+  const errors={name:!form.name.trim()?"Supplement name is required":null,totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999)?"Can't exceed total amount":null,servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null};
   const reqFields=["name","totalAmount","servingSize","servingsPerDay"];
   const isValid=reqFields.every(k=>!errors[k]);
   const completed=reqFields.filter(k=>!errors[k]).length;
@@ -866,11 +619,10 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
   const showErr=k=>(touched[k]||submitted)&&errors[k];
   const totalNum=parseFloat(form.totalAmount)||0;
   const remaining=totalNum-effectiveConsumed;
-  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0
-    ?Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
+  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0?Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
   const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed,price:parseFloat(form.price)||null});};
   const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
-  return (
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px"}}>
         <div style={{marginBottom:14}}>
@@ -878,13 +630,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
             <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>{isEdit?"Edit Supplement":"Add Supplement"}</h2>
             <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",padding:"2px 6px",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
           </div>
-          {!isEdit&&<div>
-            <div className="flex" style={{justifyContent:"space-between",marginBottom:4}}>
-              <span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",letterSpacing:1}}>REQUIRED FIELDS</span>
-              <span style={{color:isValid?"#5BAD72":"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{completed}/{reqFields.length}</span>
-            </div>
-            <div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",borderRadius:2,transition:"width 0.3s ease,background 0.3s",width:`${progPct}%`,background:isValid?"#5BAD72":"#E8A830"}}/></div>
-          </div>}
+          {!isEdit&&<div><div className="flex" style={{justifyContent:"space-between",marginBottom:4}}><span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",letterSpacing:1}}>REQUIRED FIELDS</span><span style={{color:isValid?"#5BAD72":"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{completed}/{reqFields.length}</span></div><div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",borderRadius:2,transition:"width 0.3s ease,background 0.3s",width:`${progPct}%`,background:isValid?"#5BAD72":"#E8A830"}}/></div></div>}
         </div>
         <div className="field"><span className="section-label">SUPPLEMENT NAME *</span><input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamins" value={form.name} onChange={e=>set("name",e.target.value)} onBlur={()=>touch("name")}/>{showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}</div>
         <div className="field"><span className="section-label">BRAND (OPTIONAL)</span><input className="inp" placeholder="e.g. Optimum Nutrition, MyProtein" value={form.brand} onChange={e=>set("brand",e.target.value)}/></div>
@@ -913,17 +659,9 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
                   ))}
                 </div>
                 {startedMode==="amount"?(
-                  <div>
-                    <span className="section-label">AMOUNT REMAINING IN TUB ({form.unit||"unit"})</span>
-                    <input type="number" className="inp" placeholder={`e.g. ${Math.round(totalNum*0.5)||250}`} min="0" value={amountLeft} onChange={e=>setAmountLeft(e.target.value)}/>
-                    {amountLeft&&totalNum>0&&<p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:6}}>≈ {Math.round(calcConsumed())} {form.unit} already used</p>}
-                  </div>
+                  <div><span className="section-label">AMOUNT REMAINING IN TUB ({form.unit||"unit"})</span><input type="number" className="inp" placeholder={`e.g. ${Math.round(totalNum*0.5)||250}`} min="0" value={amountLeft} onChange={e=>setAmountLeft(e.target.value)}/>{amountLeft&&totalNum>0&&<p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:6}}>≈ {Math.round(calcConsumed())} {form.unit} already used</p>}</div>
                 ):(
-                  <div>
-                    <span className="section-label">HOW MANY DAYS HAVE YOU BEEN TAKING IT?</span>
-                    <input type="number" className="inp" placeholder="e.g. 14" min="0" value={daysAlready} onChange={e=>setDaysAlready(e.target.value)}/>
-                    {daysAlready&&<p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:6}}>≈ {Math.round(calcConsumed())} {form.unit} used · {Math.max(0,Math.round(totalNum-calcConsumed()))} {form.unit} left</p>}
-                  </div>
+                  <div><span className="section-label">HOW MANY DAYS HAVE YOU BEEN TAKING IT?</span><input type="number" className="inp" placeholder="e.g. 14" min="0" value={daysAlready} onChange={e=>setDaysAlready(e.target.value)}/>{daysAlready&&<p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:6}}>≈ {Math.round(calcConsumed())} {form.unit} used · {Math.max(0,Math.round(totalNum-calcConsumed()))} {form.unit} left</p>}</div>
                 )}
               </div>
             )}
@@ -932,10 +670,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
         {isEdit&&<div className="field"><span className="section-label">ALREADY CONSUMED ({form.unit})</span><input type="number" className={ic("consumed")} min="0" value={form.consumed} onChange={e=>set("consumed",e.target.value)} onBlur={()=>touch("consumed")}/>{showErr("consumed")&&<div className="err-msg">⚠ {errors.consumed}</div>}</div>}
         {preview!==null&&preview>0&&(
           <div style={{background:"#111213",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",display:"block"}}>ESTIMATED SUPPLY</span>
-              {alreadyStarted&&remaining>0&&<span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{Math.round(remaining)} {form.unit} remaining</span>}
-            </div>
+            <div><span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",display:"block"}}>ESTIMATED SUPPLY</span>{alreadyStarted&&remaining>0&&<span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{Math.round(remaining)} {form.unit} remaining</span>}</div>
             <span style={{color:"#E8A830",fontWeight:800,fontFamily:"'Space Mono',monospace",fontSize:18}}>{preview} days</span>
           </div>
         )}
@@ -946,10 +681,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
         </div>
         {!isValid&&<p style={{textAlign:"center",color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:10,letterSpacing:"0.5px"}}>Fill in all required (*) fields to continue</p>}
         {isEdit&&onDelete&&(
-          <button onClick={()=>{if(window.confirm("Remove this supplement? This cannot be undone."))onDelete(supp.id);}}
-            style={{width:"100%",marginTop:12,padding:"10px",background:"transparent",border:"1px solid rgba(192,57,43,0.3)",borderRadius:9,color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>
-            DELETE SUPPLEMENT
-          </button>
+          <button onClick={()=>{if(window.confirm("Remove this supplement? This cannot be undone."))onDelete(supp.id);}} style={{width:"100%",marginTop:12,padding:"10px",background:"transparent",border:"1px solid rgba(192,57,43,0.3)",borderRadius:9,color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>DELETE SUPPLEMENT</button>
         )}
       </div>
     </div>
@@ -957,29 +689,20 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}) {
 }
 
 // ── NotifPanel ────────────────────────────────────────────────────────────────
-function NotifPanel({onClose}) {
+function NotifPanel({onClose}){
   const [perm,setPerm]=useState(typeof Notification!=="undefined"?Notification.permission:"denied");
   const [testSent,setTestSent]=useState(false);
   const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
   const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
   const request=async()=>{const ok=await requestNotifPerm();setPerm(ok?"granted":"denied");};
   const sendTest=()=>{fireNotif("Suppstackd — Log your supplements","Don't forget to log your stack today.",200);setTestSent(true);setTimeout(()=>setTestSent(false),3000);};
-  return (
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box">
         <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Notifications</h2>
         <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:22}}>Daily reminders to log your stack</p>
-        {isIOS&&!isPWA&&(
-          <div style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.27)",borderRadius:10,padding:14,marginBottom:18}}>
-            <p style={{color:"#E8A830",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,margin:0}}>📱 iPhone: Add to Home Screen first:<br/>1. Tap Share in Safari<br/>2. "Add to Home Screen"<br/>3. Open from Home Screen<br/>4. Enable notifications below</p>
-          </div>
-        )}
-        {!isIOS&&installPrompt&&(
-          <div style={{background:"rgba(91,173,114,0.08)",border:"1px solid rgba(91,173,114,0.27)",borderRadius:10,padding:14,marginBottom:18}}>
-            <p style={{color:"#5BAD72",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:10}}>Install Suppstackd as an app for reliable daily alerts.</p>
-            <button className="btn-primary" style={{width:"100%",padding:10}} onClick={()=>installPrompt.prompt()}>INSTALL APP</button>
-          </div>
-        )}
+        {isIOS&&!isPWA&&(<div style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.27)",borderRadius:10,padding:14,marginBottom:18}}><p style={{color:"#E8A830",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,margin:0}}>📱 iPhone: Add to Home Screen first:<br/>1. Tap Share in Safari<br/>2. "Add to Home Screen"<br/>3. Open from Home Screen<br/>4. Enable notifications below</p></div>)}
+        {!isIOS&&installPrompt&&(<div style={{background:"rgba(91,173,114,0.08)",border:"1px solid rgba(91,173,114,0.27)",borderRadius:10,padding:14,marginBottom:18}}><p style={{color:"#5BAD72",fontSize:13,fontFamily:"'Space Mono',monospace",marginBottom:10}}>Install Suppstackd as an app for reliable daily alerts.</p><button className="btn-primary" style={{width:"100%",padding:10}} onClick={()=>installPrompt.prompt()}>INSTALL APP</button></div>)}
         <div style={{background:"#111213",borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>PERMISSION</span>
           <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,color:perm==="granted"?"#5BAD72":perm==="denied"?"#C0392B":"#E8A830"}}>{perm==="granted"?"GRANTED":perm==="denied"?"BLOCKED":"NOT SET"}</span>
@@ -994,55 +717,40 @@ function NotifPanel({onClose}) {
 }
 
 // ── SupplementHistory ─────────────────────────────────────────────────────────
-function SupplementHistory({ supplements }) {
-  // Group by supplement, show full history per supp
-  const [selected, setSelected] = useState(null);
-  const logs = load(LOG_KEY, []);
-
-  if (selected) {
-    const supp = supplements.find(s => s.id === selected);
-    const suppLogs = [...logs].filter(l => l.suppId === selected).reverse();
-    const totalConsumed = suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
-    const daysTaken = new Set(suppLogs.filter(l=>l.taken).map(l=>l.date)).size;
-    return (
+function SupplementHistory({supplements}){
+  const [selected,setSelected]=useState(null);
+  const logs=load(LOG_KEY,[]);
+  if(selected){
+    const supp=supplements.find(s=>s.id===selected);
+    const suppLogs=[...logs].filter(l=>l.suppId===selected).reverse();
+    const totalConsumed=suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
+    const daysTaken=new Set(suppLogs.filter(l=>l.taken).map(l=>l.date)).size;
+    return(
       <div style={{paddingBottom:120}}>
         <button onClick={()=>setSelected(null)} style={{background:"transparent",border:"none",color:"#E8A830",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:13,padding:"0 0 20px",letterSpacing:"0.5px"}}>← BACK</button>
         <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>{supp?.name}</h2>
         <p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginBottom:20}}>{supp?.brand||"No brand"} · {supp?.type}</p>
-
-        {/* Summary stats */}
         <div className="flex gap-8" style={{marginBottom:20}}>
-          {[
-            {label:"TOTAL USED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)}${supp?.unit||""}`},
-            {label:"DAYS TAKEN",value:daysTaken},
-            {label:"REMAINING",value:`${Math.max(0,(supp?.totalAmount||0)-(supp?.consumed||0)).toFixed(0)}${supp?.unit||""}`}
-          ].map(s=>(
+          {[{label:"TOTAL USED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp?.unit==="count"?"count":supp?.unit||""}`},{label:"DAYS TAKEN",value:daysTaken},{label:"REMAINING",value:`${Math.max(0,(supp?.totalAmount||0)-(supp?.consumed||0)).toFixed(0)} ${supp?.unit==="count"?"count":supp?.unit||""}`}].map(s=>(
             <div key={s.label} style={{flex:1,background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
               <div style={{fontSize:14,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace",marginBottom:3}}>{s.value}</div>
               <div style={{fontSize:8,color:"#7A7D85",fontFamily:"'Space Mono',monospace",letterSpacing:"0.8px"}}>{s.label}</div>
             </div>
           ))}
         </div>
-
         {suppLogs.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No logs yet for this supplement.</p>}
         {suppLogs.map((log,i)=>(
           <div key={i} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px 16px",marginBottom:8}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div>
-                <p style={{margin:0,color:"#F0F0F0",fontWeight:600,fontSize:14}}>{log.date}</p>
-                {log.notes&&<p style={{margin:"3px 0 0",color:"#7A7D85",fontSize:11}}>"{log.notes}"</p>}
-              </div>
-              <div style={{textAlign:"right"}}>
-                <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,color:log.taken?"#5BAD72":"#C0392B"}}>{log.taken?`−${log.amount.toFixed(1)}${supp?.unit||""}`:"SKIPPED"}</span>
-              </div>
+              <div><p style={{margin:0,color:"#F0F0F0",fontWeight:600,fontSize:14}}>{log.date}</p>{log.notes&&<p style={{margin:"3px 0 0",color:"#7A7D85",fontSize:11}}>"{log.notes}"</p>}</div>
+              <div style={{textAlign:"right"}}><span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,color:log.taken?"#5BAD72":"#C0392B"}}>{log.taken?`−${log.amount.toFixed(1)} ${supp?.unit==="count"?"count":supp?.unit||""}`:"SKIPPED"}</span></div>
             </div>
           </div>
         ))}
       </div>
     );
   }
-
-  return (
+  return(
     <div style={{paddingBottom:120}}>
       <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Supplement History</h2>
       <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:20}}>Tap a supplement to see full history</p>
@@ -1053,19 +761,16 @@ function SupplementHistory({ supplements }) {
         const totalUsed=suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
         const runOut=calcRunOut(s);
         const days=daysFromNow(runOut);
-        return (
+        return(
           <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-              <div>
-                <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:15}}>{s.name}</p>
-                <p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p>
-              </div>
+              <div><p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:15}}>{s.name}</p><p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p></div>
               <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
             </div>
             <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>📦 {s.totalAmount}{s.unit} container</span>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>💊 {s.servingSize}{s.unit} × {s.servingsPerDay}/day</span>
-              {totalUsed>0&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>✓ {totalUsed.toFixed(0)}{s.unit} used</span>}
+              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>📦 {s.totalAmount} {s.unit==="count"?"count":s.unit} container</span>
+              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>💊 {s.servingSize} {s.unit==="count"?"count":s.unit} × {s.servingsPerDay}/day</span>
+              {totalUsed>0&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>✓ {totalUsed.toFixed(0)} {s.unit==="count"?"count":s.unit} used</span>}
               <span style={{color:urgencyColor(days),fontSize:11,fontFamily:"'Space Mono',monospace"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
               {lastLog&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>Last: {lastLog.date}</span>}
             </div>
@@ -1077,7 +782,7 @@ function SupplementHistory({ supplements }) {
 }
 
 // ── FeedbackModal ─────────────────────────────────────────────────────────────
-function FeedbackModal({onClose,isAutoPrompt=false}) {
+function FeedbackModal({onClose,isAutoPrompt=false}){
   const [step,setStep]=useState("form");
   const [rating,setRating]=useState(0);
   const [hovered,setHovered]=useState(0);
@@ -1087,35 +792,10 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
   const [submitted,setSubmitted]=useState(false);
   const categories=["Something's broken","Feature request","General feedback","Love it!"];
   const [sending,setSending]=useState(false);
-  const handleSubmit=()=>{
-    setSubmitted(true);
-    if(!rating||!category||!message.trim())return;
-    setSending(true);
-    // Save locally
-    const entry={id:Date.now().toString(),ts:new Date().toISOString(),rating,category,message:message.trim(),name:name.trim()||"Anonymous"};
-    const existing=load(FEEDBACK_KEY,[]);
-    save(FEEDBACK_KEY,[...existing,entry]);
-    save(FB_SHOWN_KEY,true);
-    // Send via EmailJS
-    emailjs.send("service_u9c8zy4","template_85iv0yd",{
-      rating: String(rating),
-      category,
-      message: message.trim(),
-      user_name: name.trim()||"Anonymous",
-      date: new Date().toLocaleString("en-GB")
-    }).then(()=>{setSending(false);setStep("thanks");}).catch(()=>{setSending(false);setStep("thanks");});
-  };
+  const handleSubmit=()=>{setSubmitted(true);if(!rating||!category||!message.trim())return;setSending(true);const entry={id:Date.now().toString(),ts:new Date().toISOString(),rating,category,message:message.trim(),name:name.trim()||"Anonymous"};const existing=load(FEEDBACK_KEY,[]);save(FEEDBACK_KEY,[...existing,entry]);save(FB_SHOWN_KEY,true);emailjs.send("service_u9c8zy4","template_85iv0yd",{rating:String(rating),category,message:message.trim(),user_name:name.trim()||"Anonymous",date:new Date().toLocaleString("en-GB")}).then(()=>{setSending(false);setStep("thanks");}).catch(()=>{setSending(false);setStep("thanks");});};
   const handleClose=()=>{save(FB_SHOWN_KEY,true);onClose();};
-  if(step==="thanks") return (
-    <div className="overlay">
-      <div className="modal-box" style={{textAlign:"center",padding:"40px 26px"}}>
-        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:8,marginTop:8}}>Thanks for the feedback!</h2>
-        <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:28}}>Every response goes directly to the team and helps shape where Suppstackd goes next.</p>
-        <button className="btn-primary" style={{width:"100%"}} onClick={handleClose}>CLOSE</button>
-      </div>
-    </div>
-  );
-  return (
+  if(step==="thanks")return(<div className="overlay"><div className="modal-box" style={{textAlign:"center",padding:"40px 26px"}}><h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:8,marginTop:8}}>Thanks for the feedback!</h2><p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:28}}>Every response goes directly to the team and helps shape where Suppstackd goes next.</p><button className="btn-primary" style={{width:"100%"}} onClick={handleClose}>CLOSE</button></div></div>);
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)handleClose();}}>
       <div className="modal-box">
         <div style={{marginBottom:20}}>
@@ -1123,30 +803,10 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
           <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Share Feedback</h2>
           <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.6}}>Help shape the future of Suppstackd.</p>
         </div>
-        <div className="field">
-          <span className="section-label">HOW ARE YOU FINDING IT? *</span>
-          <div style={{display:"flex",gap:4,marginBottom:4}}>
-            {[1,2,3,4,5].map(n=><button key={n} className="star-btn" onMouseEnter={()=>setHovered(n)} onMouseLeave={()=>setHovered(0)} onClick={()=>setRating(n)} style={{opacity:(hovered||rating)>=n?1:0.3}}>⭐</button>)}
-          </div>
-          {submitted&&!rating&&<div className="err-msg">⚠ Please give a rating</div>}
-          {rating>0&&<div style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:4}}>{["","Needs work","Could be better","Pretty good","Really good","Love it!"][rating]}</div>}
-        </div>
-        <div className="field">
-          <span className="section-label">WHAT'S THIS ABOUT? *</span>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-            {categories.map(c=><button key={c} onClick={()=>setCategory(c)} style={{padding:"6px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px",border:category===c?"1px solid #E8A830":"1px solid #2A2B2E",background:category===c?"rgba(232,168,48,0.1)":"transparent",color:category===c?"#E8A830":"#7A7D85",transition:"all 0.15s"}}>{c}</button>)}
-          </div>
-          {submitted&&!category&&<div className="err-msg" style={{marginTop:6}}>⚠ Please select a type</div>}
-        </div>
-        <div className="field">
-          <span className="section-label">YOUR FEEDBACK *</span>
-          <textarea className="inp" rows={4} placeholder="Tell us what's working, what's broken, or what you'd love to see next..." value={message} onChange={e=>setMessage(e.target.value)}/>
-          {submitted&&!message.trim()&&<div className="err-msg">⚠ Please add a message</div>}
-        </div>
-        <div className="field">
-          <span className="section-label">YOUR NAME (OPTIONAL)</span>
-          <input className="inp" placeholder="So we know who to thank" value={name} onChange={e=>setName(e.target.value)}/>
-        </div>
+        <div className="field"><span className="section-label">HOW ARE YOU FINDING IT? *</span><div style={{display:"flex",gap:4,marginBottom:4}}>{[1,2,3,4,5].map(n=><button key={n} className="star-btn" onMouseEnter={()=>setHovered(n)} onMouseLeave={()=>setHovered(0)} onClick={()=>setRating(n)} style={{opacity:(hovered||rating)>=n?1:0.3}}>⭐</button>)}</div>{submitted&&!rating&&<div className="err-msg">⚠ Please give a rating</div>}{rating>0&&<div style={{color:"#E8A830",fontSize:11,fontFamily:"'Space Mono',monospace",marginTop:4}}>{["","Needs work","Could be better","Pretty good","Really good","Love it!"][rating]}</div>}</div>
+        <div className="field"><span className="section-label">WHAT'S THIS ABOUT? *</span><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{categories.map(c=><button key={c} onClick={()=>setCategory(c)} style={{padding:"6px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px",border:category===c?"1px solid #E8A830":"1px solid #2A2B2E",background:category===c?"rgba(232,168,48,0.1)":"transparent",color:category===c?"#E8A830":"#7A7D85",transition:"all 0.15s"}}>{c}</button>)}</div>{submitted&&!category&&<div className="err-msg" style={{marginTop:6}}>⚠ Please select a type</div>}</div>
+        <div className="field"><span className="section-label">YOUR FEEDBACK *</span><textarea className="inp" rows={4} placeholder="Tell us what's working, what's broken, or what you'd love to see next..." value={message} onChange={e=>setMessage(e.target.value)}/>{submitted&&!message.trim()&&<div className="err-msg">⚠ Please add a message</div>}</div>
+        <div className="field"><span className="section-label">YOUR NAME (OPTIONAL)</span><input className="inp" placeholder="So we know who to thank" value={name} onChange={e=>setName(e.target.value)}/></div>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={handleClose}>{isAutoPrompt?"Maybe later":"Cancel"}</button>
           <button onClick={handleSubmit} disabled={sending} style={{flex:2,padding:12,borderRadius:10,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:"none",background:(rating&&category&&message.trim())?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:(rating&&category&&message.trim())?"#111213":"#7A7D85",opacity:(rating&&category&&message.trim())?1:0.5,cursor:(rating&&category&&message.trim())?"pointer":"not-allowed",transition:"all 0.2s"}}>{sending?"SENDING...":"SEND FEEDBACK"}</button>
@@ -1157,10 +817,10 @@ function FeedbackModal({onClose,isAutoPrompt=false}) {
 }
 
 // ── FeedbackInbox ─────────────────────────────────────────────────────────────
-function FeedbackInbox({onClose}) {
+function FeedbackInbox({onClose}){
   const entries=load(FEEDBACK_KEY,[]).reverse();
   const avgRating=entries.length?(entries.reduce((a,e)=>a+e.rating,0)/entries.length).toFixed(1):null;
-  return (
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box">
         <button onClick={onClose} style={{background:"transparent",border:"none",color:"#E8A830",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:13,padding:"0 0 16px",letterSpacing:"0.5px"}}>← BACK</button>
@@ -1181,226 +841,223 @@ function FeedbackInbox({onClose}) {
   );
 }
 
+// ── ShareCard — 9:16 iPhone aspect ratio, no brand shown, Suppstackd logo fallback ──
+function ShareCard({supplements,profile,logs,onClose}){
+  const canvasRef=useRef(null);
+  const [generated,setGenerated]=useState(false);
+  const [sharing,setSharing]=useState(false);
 
-// ── ShareCard ─────────────────────────────────────────────────────────────────
-function ShareCard({supplements,profile,logs,onClose}) {
-  const canvasRef = useRef(null);
-  const [generated,setGenerated] = useState(false);
-
-  const streak = (() => {
-    const dates = [...new Set(logs.map(l=>l.date))].sort();
-    if(!dates.length) return 0;
+  const streak=(()=>{
+    const dates=[...new Set(logs.map(l=>l.date))].sort();
+    if(!dates.length)return 0;
     let s=1,i=dates.length-1;
-    while(i>0){
-      const a=new Date(dates[i]),b=new Date(dates[i-1]);
-      a.setHours(0,0,0,0);b.setHours(0,0,0,0);
-      if((a-b)/86400000===1){s++;i--;}else break;
-    }
+    while(i>0){const a=new Date(dates[i]),b=new Date(dates[i-1]);a.setHours(0,0,0,0);b.setHours(0,0,0,0);if((a-b)/86400000===1){s++;i--;}else break;}
     return s;
   })();
 
-  const daysOnStack = (() => {
-    if(!logs.length) return 0;
+  const daysOnStack=(()=>{
+    if(!logs.length)return 0;
     const first=new Date(Math.min(...logs.map(l=>l.ts)));
-    const now=new Date();
-    return Math.max(1,Math.round((now-first)/86400000));
+    return Math.max(1,Math.round((new Date()-first)/86400000));
   })();
 
   useEffect(()=>{
     const canvas=canvasRef.current;
     if(!canvas)return;
-    const W=canvas.width=800,H=canvas.height=500;
+    // 9:16 aspect ratio — full iPhone screen
+    const W=canvas.width=1080;
+    const H=canvas.height=1920;
     const ctx=canvas.getContext("2d");
 
-    // ── Background ──
+    // ── Background gradient ──
     const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,"#0D1B2A");
-    bg.addColorStop(1,"#080E14");
+    bg.addColorStop(0,"#0A0D10");
+    bg.addColorStop(0.5,"#0D1B2A");
+    bg.addColorStop(1,"#060A0E");
     ctx.fillStyle=bg;
     ctx.fillRect(0,0,W,H);
 
-    // ── Diagonal accent lines ──
+    // ── Diagonal glow lines ──
     ctx.save();
     const lg=ctx.createLinearGradient(0,0,W,0);
     lg.addColorStop(0,"rgba(232,168,48,0)");
-    lg.addColorStop(0.5,"rgba(232,168,48,0.07)");
+    lg.addColorStop(0.5,"rgba(232,168,48,0.06)");
     lg.addColorStop(1,"rgba(232,168,48,0)");
     ctx.strokeStyle=lg;
-    [[W+200,-100,-200,H+100,60],[W+300,-100,-100,H+100,30],[W+400,-100,0,H+100,15]].forEach(([x1,y1,x2,y2,w])=>{
+    [[W*1.5,-100,-W*0.3,H+100,160],[W*1.7,-100,-W*0.1,H+100,80],[W*2,-100,W*0.2,H+100,40]].forEach(([x1,y1,x2,y2,w])=>{
       ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
     });
     ctx.restore();
 
-    // ── Top accent line ──
+    // ── Top accent bar ──
     const tl=ctx.createLinearGradient(0,0,W,0);
     tl.addColorStop(0,"rgba(232,168,48,0)");
-    tl.addColorStop(0.3,"rgba(232,168,48,0.8)");
-    tl.addColorStop(0.7,"rgba(232,168,48,0.8)");
+    tl.addColorStop(0.2,"rgba(232,168,48,0.9)");
+    tl.addColorStop(0.8,"rgba(232,168,48,0.9)");
     tl.addColorStop(1,"rgba(232,168,48,0)");
-    ctx.strokeStyle=tl;ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(0,3);ctx.lineTo(W,3);ctx.stroke();
+    ctx.strokeStyle=tl;ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(W,4);ctx.stroke();
 
-    // ── Wordmark ──
-    ctx.fillStyle="rgba(255,255,255,0.15)";
-    ctx.font="700 13px -apple-system, Arial, sans-serif";
-    ctx.letterSpacing="3px";
-    ctx.fillText("SUPPSTACKD",48,52);
+    // ── SUPPSTACKD wordmark (top) ──
+    ctx.fillStyle="rgba(255,255,255,0.12)";
+    ctx.font="700 36px Arial, sans-serif";
+    ctx.letterSpacing="8px";
+    ctx.fillText("SUPPSTACKD",80,100);
 
-    // ── Name ──
-    const name=profile?.name||"MY STACK";
+    // ── Big name / greeting ──
+    const name=(profile?.name||"MY STACK").toUpperCase();
     ctx.fillStyle="#F0F0F0";
-    ctx.font="900 56px -apple-system, Arial, sans-serif";
-    ctx.fillText(name.toUpperCase(),44,132);
+    ctx.font="900 130px Arial, sans-serif";
+    ctx.fillText(name,72,320);
 
-    // ── Amber underline under name ──
-    const nameW=ctx.measureText(name.toUpperCase()).width;
-    const ul=ctx.createLinearGradient(44,0,44+Math.min(nameW,W-88),0);
-    ul.addColorStop(0,"#E8A830");
-    ul.addColorStop(1,"rgba(232,168,48,0.2)");
-    ctx.strokeStyle=ul;ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(44,142);ctx.lineTo(44+Math.min(nameW,W-88),142);ctx.stroke();
+    // ── Amber underline ──
+    const nameW=Math.min(ctx.measureText(name).width,W-144);
+    const ul=ctx.createLinearGradient(72,0,72+nameW,0);
+    ul.addColorStop(0,"#E8A830");ul.addColorStop(1,"rgba(232,168,48,0.1)");
+    ctx.strokeStyle=ul;ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(72,345);ctx.lineTo(72+nameW,345);ctx.stroke();
+
+    // ── Subheading ──
+    ctx.fillStyle="rgba(255,255,255,0.35)";
+    ctx.font="500 32px Arial, sans-serif";
+    ctx.letterSpacing="2px";
+    ctx.fillText("MY SUPPLEMENT STACK",72,420);
 
     // ── Stats row ──
-    const stats=[
-      {label:"DAY STREAK",value:`${streak}`},
-      {label:"DAYS ON STACK",value:`${daysOnStack}`},
-      {label:"SUPPLEMENTS",value:`${supplements.length}`},
-    ];
+    const stats=[{label:"DAY STREAK",value:`${streak}`},{label:"DAYS ON STACK",value:`${daysOnStack}`},{label:"SUPPLEMENTS",value:`${supplements.length}`}];
+    const statW=(W-144)/3;
     stats.forEach((s,i)=>{
-      const x=44+(i*180);
+      const x=72+(i*statW);
+      // Stat card bg
+      ctx.fillStyle="rgba(255,255,255,0.04)";
+      ctx.beginPath();
+      ctx.roundRect(x,490,statW-16,130,12);
+      ctx.fill();
+      ctx.strokeStyle="rgba(232,168,48,0.15)";ctx.lineWidth=1;
+      ctx.beginPath();ctx.roundRect(x,490,statW-16,130,12);ctx.stroke();
+      // Value
       ctx.fillStyle="#E8A830";
-      ctx.font="700 28px -apple-system, Arial, sans-serif";
-      ctx.fillText(s.value,x,196);
-      ctx.fillStyle="rgba(255,255,255,0.35)";
-      ctx.font="500 11px -apple-system, Arial, sans-serif";
-      ctx.fillText(s.label,x,214);
+      ctx.font="800 62px Arial, sans-serif";
+      ctx.letterSpacing="0px";
+      ctx.fillText(s.value,x+20,566);
+      // Label
+      ctx.fillStyle="rgba(255,255,255,0.3)";
+      ctx.font="500 22px Arial, sans-serif";
+      ctx.letterSpacing="1px";
+      ctx.fillText(s.label,x+20,600);
     });
 
     // ── Divider ──
-    ctx.strokeStyle="rgba(255,255,255,0.08)";ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(44,232);ctx.lineTo(W-44,232);ctx.stroke();
+    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(72,656);ctx.lineTo(W-72,656);ctx.stroke();
 
-    // ── Supplement pills ──
-    let px=44,py=260;
-    const pillH=38,pillPad=16,fontSize=12,gap=10;
-    ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
+    // ── Supplements label ──
+    ctx.fillStyle="rgba(232,168,48,0.6)";
+    ctx.font="700 26px Arial, sans-serif";
+    ctx.letterSpacing="4px";
+    ctx.fillText("SUPPLEMENTS",72,720);
 
-    supplements.slice(0,8).forEach(s=>{
+    // ── Supplement pills — name only, no brand ──
+    let px=72,py=760;
+    const pillH=72,pillPad=28,gap=14;
+    ctx.font="700 26px Arial, sans-serif";
+    ctx.letterSpacing="0px";
+
+    supplements.slice(0,10).forEach(s=>{
       const label=s.name.toUpperCase();
-      const sub=s.brand?s.brand.toUpperCase():"";
-      ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
       const textW=ctx.measureText(label).width;
-      ctx.font=`500 ${fontSize-1}px -apple-system, Arial, sans-serif`;
-      const subW=sub?ctx.measureText(sub).width:0;
-      ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
-      const pillW=textW+(pillPad*2)+(sub?subW+16:0);
+      const pillW=textW+(pillPad*2);
 
-      if(px+pillW>W-44){px=44;py+=pillH+gap;}
+      if(px+pillW>W-72){px=72;py+=pillH+gap;}
+      if(py>H-300)return; // don't overflow
 
-      // pill bg
-      ctx.fillStyle="rgba(255,255,255,0.06)";
-      ctx.beginPath();
-      ctx.roundRect(px,py,pillW,pillH,6);
-      ctx.fill();
-
-      // pill border
-      ctx.strokeStyle="rgba(232,168,48,0.25)";ctx.lineWidth=1;
-      ctx.beginPath();
-      ctx.roundRect(px,py,pillW,pillH,6);
-      ctx.stroke();
-
-      // pill text
+      // Pill bg
+      ctx.fillStyle="rgba(255,255,255,0.05)";
+      ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.fill();
+      // Pill border
+      ctx.strokeStyle="rgba(232,168,48,0.3)";ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.stroke();
+      // Text
       ctx.fillStyle="#F0F0F0";
-      ctx.font=`700 ${fontSize}px -apple-system, Arial, sans-serif`;
-      ctx.fillText(label,px+pillPad,py+pillH/2+4);
-
-      if(sub){
-        ctx.fillStyle="rgba(232,168,48,0.7)";
-        ctx.font=`500 ${fontSize-1}px -apple-system, Arial, sans-serif`;
-        ctx.fillText(sub,px+pillPad+ctx.measureText(label).width+8+pillPad-8,py+pillH/2+4);
-      }
+      ctx.font="700 26px Arial, sans-serif";
+      ctx.fillText(label,px+pillPad,py+pillH/2+9);
 
       px+=pillW+gap;
     });
 
-    if(supplements.length>8){
-      ctx.fillStyle="rgba(255,255,255,0.3)";
-      ctx.font="500 12px -apple-system, Arial, sans-serif";
-      ctx.fillText(`+${supplements.length-8} more`,px,py+pillH/2+4);
+    if(supplements.length>10){
+      ctx.fillStyle="rgba(255,255,255,0.25)";
+      ctx.font="500 26px Arial, sans-serif";
+      ctx.fillText(`+${supplements.length-10} more`,px,py+pillH/2+9);
     }
 
-    // ── Bottom date ──
-    const dateStr=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}).toUpperCase();
-    ctx.fillStyle="rgba(255,255,255,0.2)";
-    ctx.font="500 11px -apple-system, Arial, sans-serif";
-    ctx.fillText(dateStr,44,H-28);
+    // ── Bottom section: big SUPPSTACKD branding ──
+    const bottomY=H-200;
 
-    // ── Bottom right branding ──
-    ctx.fillStyle="rgba(232,168,48,0.5)";
-    ctx.font="700 11px -apple-system, Arial, sans-serif";
-    const brand="SUPPSTACKD.NETLIFY.APP";
-    const bw=ctx.measureText(brand).width;
-    ctx.fillText(brand,W-44-bw,H-28);
+    // Bottom divider
+    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(72,bottomY);ctx.lineTo(W-72,bottomY);ctx.stroke();
+
+    // Big wordmark at bottom
+    ctx.fillStyle="rgba(232,168,48,0.15)";
+    ctx.font="900 80px Arial, sans-serif";
+    ctx.letterSpacing="-2px";
+    const brandW=ctx.measureText("SUPPSTACKD").width;
+    ctx.fillText("SUPPSTACKD",(W-brandW)/2,bottomY+110);
+
+    // Tagline
+    ctx.fillStyle="rgba(255,255,255,0.2)";
+    ctx.font="500 26px Arial, sans-serif";
+    ctx.letterSpacing="4px";
+    const tagline="KNOW YOUR STACK";
+    const tagW=ctx.measureText(tagline).width;
+    ctx.fillText(tagline,(W-tagW)/2,bottomY+155);
+
+    // Date bottom right
+    const dateStr=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}).toUpperCase();
+    ctx.fillStyle="rgba(255,255,255,0.15)";
+    ctx.font="400 22px Arial, sans-serif";
+    ctx.letterSpacing="1px";
+    const dw=ctx.measureText(dateStr).width;
+    ctx.fillText(dateStr,(W-dw)/2,H-40);
 
     setGenerated(true);
   },[]);
 
-  const [sharing, setSharing] = useState(false);
-
-  const shareToPhotos = async () => {
+  const shareToPhotos=async()=>{
     setSharing(true);
-    const canvas = canvasRef.current;
-    try {
-      // Convert canvas to blob
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-      const file = new File([blob], "my-stack.png", { type: "image/png" });
-
-      // Try native Web Share API first (iOS + Android → goes to Photos/Gallery)
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "My Supplement Stack",
-        });
-      } else if (navigator.share) {
-        // Fallback: share without files (some older browsers)
-        const url = canvas.toDataURL("image/png");
-        await navigator.share({ title: "My Supplement Stack", url });
-      } else {
-        // Desktop fallback: trigger download
-        const a = document.createElement("a");
-        a.download = "my-stack.png";
-        a.href = canvas.toDataURL("image/png");
-        a.click();
+    const canvas=canvasRef.current;
+    try{
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
+      const file=new File([blob],"my-suppstack.png",{type:"image/png"});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:"My Supplement Stack"});
+      }else if(navigator.share){
+        await navigator.share({title:"My Supplement Stack",url:window.location.href});
+      }else{
+        const a=document.createElement("a");a.download="my-suppstack.png";a.href=canvas.toDataURL("image/png");a.click();
       }
-    } catch(e) {
-      // User cancelled or share failed — silent fallback to download
-      if (e.name !== "AbortError") {
-        const a = document.createElement("a");
-        a.download = "my-stack.png";
-        a.href = canvas.toDataURL("image/png");
-        a.click();
-      }
+    }catch(e){
+      if(e.name!=="AbortError"){const a=document.createElement("a");a.download="my-suppstack.png";a.href=canvas.toDataURL("image/png");a.click();}
     }
     setSharing(false);
   };
 
-  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const canNativeShare = typeof navigator.share !== "undefined";
+  const canNativeShare=typeof navigator.share!=="undefined";
 
-  return (
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div className="modal-box" style={{maxWidth:480}}>
+      <div className="modal-box" style={{maxWidth:420}}>
         <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Your Stack Card</h2>
-        <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:18,lineHeight:1.6}}>Share your stack on Instagram, WhatsApp or anywhere.</p>
-
-        <div style={{borderRadius:12,overflow:"hidden",marginBottom:18,border:"1px solid #2A2B2E"}}>
-          <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block"}}/>
+        <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:18,lineHeight:1.6}}>Full iPhone screen format — save to photos or share anywhere.</p>
+        {/* Preview — shown at reduced size, actual canvas is 1080×1920 */}
+        <div style={{borderRadius:12,overflow:"hidden",marginBottom:18,border:"1px solid #2A2B2E",maxHeight:360,display:"flex",alignItems:"center",justifyContent:"center",background:"#111213"}}>
+          <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block",maxHeight:360,objectFit:"contain"}}/>
         </div>
-
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Close</button>
           <button className="btn-primary" style={{flex:2,opacity:sharing?0.6:1}} onClick={shareToPhotos} disabled={sharing}>
-            {sharing ? "SHARING..." : canNativeShare ? "SAVE / SHARE" : "DOWNLOAD"}
+            {sharing?"SHARING...":canNativeShare?"SAVE / SHARE":"DOWNLOAD"}
           </button>
         </div>
       </div>
@@ -1408,180 +1065,90 @@ function ShareCard({supplements,profile,logs,onClose}) {
   );
 }
 
-
-
 // ── BatchLogModal ─────────────────────────────────────────────────────────────
-function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
-  const unlogged = supplements.filter(s => s.lastLogged !== today()).sort((a,b)=>a.name.localeCompare(b.name));
-  const alreadyLogged = supplements.filter(s => s.lastLogged === today());
-
-  // Build initial rows — one per unlogged supplement
-  const [rows, setRows] = useState(() =>
-    unlogged.map(s => ({
-      suppId: s.id,
-      name: s.name,
-      unit: s.unit,
-      servingSize: s.servingSize,
-      taken: true,
-      amount: s.servingSize,
-      notes: "",
-    }))
-  );
-
-  // Feel — ask once at top, applies to all
-  const isFirstLog = !todayFeel;
-  const [feel, setFeel] = useState(todayFeel || {energy:null,recovery:null,mood:null,sleep:null});
-  const [feelChanged, setFeelChanged] = useState(false);
-
-  const updateRow = (suppId, field, value) => {
-    setRows(prev => prev.map(r => r.suppId === suppId ? {...r, [field]: value} : r));
-  };
-
-  const handleSaveAll = () => {
-    onSaveAll(rows, feel);
-  };
-
-  const allSkipped = rows.every(r => !r.taken);
-
-  return (
+function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
+  const unlogged=supplements.filter(s=>s.lastLogged!==today()).sort((a,b)=>a.name.localeCompare(b.name));
+  const alreadyLogged=supplements.filter(s=>s.lastLogged===today());
+  const [rows,setRows]=useState(()=>unlogged.map(s=>({suppId:s.id,name:s.name,unit:s.unit,servingSize:s.servingSize,taken:true,amount:s.servingSize,notes:""})));
+  const isFirstLog=!todayFeel;
+  const [feel,setFeel]=useState(todayFeel||{energy:null,recovery:null,mood:null,sleep:null});
+  const [feelChanged,setFeelChanged]=useState(false);
+  const updateRow=(suppId,field,value)=>setRows(prev=>prev.map(r=>r.suppId===suppId?{...r,[field]:value}:r));
+  const handleSaveAll=()=>onSaveAll(rows,feel);
+  const allSkipped=rows.every(r=>!r.taken);
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px",maxHeight:"88vh",overflowY:"auto"}}>
-
-        {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <div>
             <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Log Today</h2>
-            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"3px 0 0"}}>
-              {new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}
-            </p>
+            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"3px 0 0"}}>{new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}</p>
           </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
         </div>
-
-        {/* Already logged chips */}
-        {alreadyLogged.length > 0 && (
+        {alreadyLogged.length>0&&(
           <div style={{marginBottom:12}}>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:6}}>ALREADY LOGGED TODAY</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-              {alreadyLogged.map(s=>(
-                <div key={s.id} style={{background:"rgba(91,173,114,0.1)",border:"1px solid rgba(91,173,114,0.25)",borderRadius:20,padding:"4px 10px"}}>
-                  <span style={{color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:10}}>✓ {s.name}</span>
-                </div>
-              ))}
+              {alreadyLogged.map(s=>(<div key={s.id} style={{background:"rgba(91,173,114,0.1)",border:"1px solid rgba(91,173,114,0.25)",borderRadius:20,padding:"4px 10px"}}><span style={{color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:10}}>✓ {s.name}</span></div>))}
             </div>
           </div>
         )}
-
-        {unlogged.length === 0 ? (
+        {unlogged.length===0?(
           <div style={{textAlign:"center",padding:"30px 0"}}>
             <p style={{color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,marginBottom:6}}>ALL LOGGED ✓</p>
             <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11}}>You've logged everything for today.</p>
             <button onClick={onClose} className="btn-primary" style={{marginTop:16,padding:"10px 24px"}}>DONE</button>
           </div>
-        ) : (
+        ):(
           <>
-            {/* Supplement rows */}
             <div style={{marginBottom:12}}>
               <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:6}}>TO LOG</span>
               <div style={{maxHeight:168,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-              {rows.map((row, i) => (
-                <div key={row.suppId} style={{
-                  background: row.taken ? "#1C1D1F" : "#111213",
-                  border: row.taken ? "1px solid #2A2B2E" : "1px solid #1C1D1F",
-                  borderLeft: `3px solid ${row.taken ? "#E8A830" : "#3A3B3E"}`,
-                  borderRadius:8, padding:"7px 10px", marginBottom:5,
-                  transition:"all 0.15s"
-                }}>
-                  {/* Compact single row: name | stepper | taken/skip */}
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{color: row.taken ? "#F0F0F0" : "#4A4B4F",fontWeight:700,fontSize:12,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{row.name}</span>
-                    {row.taken && <>
-                      <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))}
-                        style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>−</button>
-                      <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount}{row.unit==="count"?" count":row.unit}</span>
-                      <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)}
-                        style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>+</button>
-                    </>}
-                    <button onClick={()=>updateRow(row.suppId,"taken",!row.taken)}
-                      style={{padding:"3px 8px",borderRadius:5,fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #C0392B",background:row.taken?"rgba(91,173,114,0.12)":"rgba(192,57,43,0.08)",color:row.taken?"#5BAD72":"#C0392B",flexShrink:0,transition:"all 0.12s"}}>
-                      {row.taken?"TAKEN":"SKIP"}
-                    </button>
+                {rows.map((row)=>(
+                  <div key={row.suppId} style={{background:row.taken?"#1C1D1F":"#111213",border:row.taken?"1px solid #2A2B2E":"1px solid #1C1D1F",borderLeft:`3px solid ${row.taken?"#E8A830":"#3A3B3E"}`,borderRadius:8,padding:"7px 10px",marginBottom:5,transition:"all 0.15s"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{color:row.taken?"#F0F0F0":"#4A4B4F",fontWeight:700,fontSize:12,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{row.name}</span>
+                      {row.taken&&<>
+                        <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))} style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>−</button>
+                        <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount}{row.unit==="count"?" count":row.unit}</span>
+                        <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)} style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>+</button>
+                      </>}
+                      <button onClick={()=>updateRow(row.suppId,"taken",!row.taken)} style={{padding:"3px 8px",borderRadius:5,fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #C0392B",background:row.taken?"rgba(91,173,114,0.12)":"rgba(192,57,43,0.08)",color:row.taken?"#5BAD72":"#C0392B",flexShrink:0,transition:"all 0.12s"}}>{row.taken?"TAKEN":"SKIP"}</button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div></div>
-
-            {/* Feel section — once for all */}
-            {!allSkipped && (
+                ))}
+              </div>
+            </div>
+            {!allSkipped&&(
               <div style={{marginBottom:14}}>
                 <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:8}}>HOW ARE YOU FEELING?</span>
-
-                {isFirstLog ? (
+                {isFirstLog?(
                   <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px"}}>
                     {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
                       <div key={metric.key} style={{marginBottom:8}}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                          <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{metric.label}</span>
-                          <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{feel[metric.key]||"—"}</span>
-                        </div>
-                        <div style={{display:"flex",gap:5}}>
-                          {[1,2,3,4,5].map(n=>(
-                            <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))}
-                              style={{flex:1,padding:"6px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"transparent",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.1s"}}>{n}</button>
-                          ))}
-                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{metric.label}</span><span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{feel[metric.key]||"—"}</span></div>
+                        <div style={{display:"flex",gap:5}}>{[1,2,3,4,5].map(n=>(<button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"6px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"transparent",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.1s"}}>{n}</button>))}</div>
                       </div>
                     ))}
                   </div>
-                ) : (
+                ):(
                   <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"10px 12px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: feelChanged ? 12 : 8}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:feelChanged?12:8}}>
                       <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>TODAY'S FEEL</span>
                       <div style={{display:"flex",gap:12}}>
-                        {[{k:"energy",l:"ENERGY"},{k:"recovery",l:"RECOVERY"},{k:"mood",l:"MOOD"},{k:"sleep",l:"SLEEP"}].map(m=>(
-                          <div key={m.k} style={{textAlign:"center"}}>
-                            <div style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,lineHeight:1}}>{feel[m.k]||"—"}</div>
-                            <div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,marginTop:1}}>{m.l}</div>
-                          </div>
-                        ))}
+                        {[{k:"energy",l:"ENERGY"},{k:"recovery",l:"RECOVERY"},{k:"mood",l:"MOOD"},{k:"sleep",l:"SLEEP"}].map(m=>(<div key={m.k} style={{textAlign:"center"}}><div style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,lineHeight:1}}>{feel[m.k]||"—"}</div><div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,marginTop:1}}>{m.l}</div></div>))}
                       </div>
                     </div>
-                    {!feelChanged && (
-                      <div style={{display:"flex",gap:6}}>
-                        <button onClick={()=>setFeelChanged(false)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #5BAD72",background:"rgba(91,173,114,0.1)",color:"#5BAD72",cursor:"pointer"}}>SAME</button>
-                        <button onClick={()=>setFeelChanged(true)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",cursor:"pointer"}}>DIFFERENT</button>
-                      </div>
-                    )}
-                    {feelChanged && (
-                      <div>
-                        {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
-                          <div key={metric.key} style={{marginBottom:8}}>
-                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{metric.label}</span>
-                              <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{feel[metric.key]||"—"}</span>
-                            </div>
-                            <div style={{display:"flex",gap:5}}>
-                              {[1,2,3,4,5].map(n=>(
-                                <button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))}
-                                  style={{flex:1,padding:"6px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"transparent",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.1s"}}>{n}</button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        <button onClick={()=>{setFeel(todayFeel);setFeelChanged(false);}} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",padding:"4px 0"}}>← back to same</button>
-                      </div>
-                    )}
+                    {!feelChanged&&(<div style={{display:"flex",gap:6}}><button onClick={()=>setFeelChanged(false)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #5BAD72",background:"rgba(91,173,114,0.1)",color:"#5BAD72",cursor:"pointer"}}>SAME</button><button onClick={()=>setFeelChanged(true)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",cursor:"pointer"}}>DIFFERENT</button></div>)}
+                    {feelChanged&&(<div>{[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(<div key={metric.key} style={{marginBottom:8}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{metric.label}</span><span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{feel[metric.key]||"—"}</span></div><div style={{display:"flex",gap:5}}>{[1,2,3,4,5].map(n=>(<button key={n} onClick={()=>setFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"6px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:feel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:feel[metric.key]===n?"rgba(232,168,48,0.12)":"transparent",color:feel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.1s"}}>{n}</button>))}</div></div>))}<button onClick={()=>{setFeel(todayFeel);setFeelChanged(false);}} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",padding:"4px 0"}}>← back to same</button></div>)}
                   </div>
                 )}
               </div>
             )}
-
-            {/* Save all */}
             <div style={{display:"flex",gap:8}}>
               <button onClick={onClose} className="btn-cancel" style={{flex:1,padding:"11px 0"}}>Cancel</button>
-              <button onClick={handleSaveAll} className="btn-primary" style={{flex:2,padding:"11px 0"}}>
-                LOG {rows.filter(r=>r.taken).length} SUPPLEMENT{rows.filter(r=>r.taken).length!==1?"S":""}
-              </button>
+              <button onClick={handleSaveAll} className="btn-primary" style={{flex:2,padding:"11px 0"}}>LOG {rows.filter(r=>r.taken).length} SUPPLEMENT{rows.filter(r=>r.taken).length!==1?"S":""}</button>
             </div>
           </>
         )}
@@ -1591,36 +1158,23 @@ function BatchLogModal({supplements, logs, todayFeel, onClose, onSaveAll}) {
 }
 
 // ── ProfileModal ──────────────────────────────────────────────────────────────
-function ProfileModal({profile,onClose,onUpdate,isPro}) {
+function ProfileModal({profile,onClose,onUpdate,isPro}){
   const [editing,setEditing]=useState(false);
   const [form,setForm]=useState({...profile});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const currency=CURRENCIES[profile?.country||"Other"]||"£";
-
-  const handleSave=()=>{
-    onUpdate(form);
-    setEditing(false);
-  };
-
-  return (
+  const handleSave=()=>{onUpdate(form);setEditing(false);};
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
           <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Profile</h2>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
         </div>
-
-        {!editing ? (
+        {!editing?(
           <div>
-            {/* Profile info */}
             <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
-              {[
-                {label:"NAME",value:profile?.name||"Not set"},
-                {label:"EMAIL",value:profile?.email||"Not set"},
-                {label:"AGE",value:profile?.age||"Not set"},
-                {label:"COUNTRY",value:profile?.country||"Not set"},
-                {label:"CURRENCY",value:currency},
-              ].map(row=>(
+              {[{label:"NAME",value:profile?.name||"Not set"},{label:"EMAIL",value:profile?.email||"Not set"},{label:"AGE",value:profile?.age||"Not set"},{label:"COUNTRY",value:profile?.country||"Not set"},{label:"CURRENCY",value:currency}].map(row=>(
                 <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #2A2B2E"}}>
                   <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px"}}>{row.label}</span>
                   <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:600}}>{row.value}</span>
@@ -1631,31 +1185,22 @@ function ProfileModal({profile,onClose,onUpdate,isPro}) {
                 <span style={{color:isPro?"#5BAD72":"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700}}>{isPro?"PRO":"FREE"}</span>
               </div>
             </div>
-
-            {/* Pro teaser — only shown on free plan */}
             {!isPro&&<div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
               <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px",letterSpacing:"0.5px"}}>SUPPSTACKD PRO — £2.99/mo</p>
               <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 10px",lineHeight:1.7}}>Unlimited supplements · Insights · Reorder reminders · Stack templates · Custom schedules</p>
               <button style={{width:"100%",padding:"9px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
             </div>}
-
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setEditing(true)} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer"}}>EDIT PROFILE</button>
               <button onClick={()=>{onClose();setTimeout(()=>window._openFeedback&&window._openFeedback(),50);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer"}}>FEEDBACK</button>
             </div>
           </div>
-        ) : (
+        ):(
           <div>
             <div className="field"><span className="section-label">FIRST NAME</span><input className="inp" value={form.name||""} onChange={e=>set("name",e.target.value)}/></div>
             <div className="field"><span className="section-label">EMAIL</span><input className="inp" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)}/></div>
             <div className="field"><span className="section-label">AGE</span><input className="inp" type="number" value={form.age||""} onChange={e=>set("age",e.target.value)}/></div>
-            <div className="field">
-              <span className="section-label">COUNTRY</span>
-              <select className="inp" value={form.country||""} onChange={e=>set("country",e.target.value)}>
-                <option value="">Select country</option>
-                {COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}
-              </select>
-            </div>
+            <div className="field"><span className="section-label">COUNTRY</span><select className="inp" value={form.country||""} onChange={e=>set("country",e.target.value)}><option value="">Select country</option>{COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}</select></div>
             <div className="flex gap-10" style={{marginTop:4}}>
               <button className="btn-cancel flex-1" onClick={()=>{setForm({...profile});setEditing(false);}}>Cancel</button>
               <button className="btn-primary" style={{flex:2}} onClick={handleSave}>SAVE CHANGES</button>
@@ -1668,81 +1213,46 @@ function ProfileModal({profile,onClose,onUpdate,isPro}) {
 }
 
 // ── InsightsModal ─────────────────────────────────────────────────────────────
-function InsightsModal({onClose,logs,supplements,isPro}) {
-  // Calculate basic stats if enough data exists
+function InsightsModal({onClose,logs,supplements,isPro}){
   const feelLogs=logs.filter(l=>l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
-  const hasData=feelLogs.length>=3 && isPro;
-
-  const avgScore=(key)=>{
-    const vals=feelLogs.map(l=>l.feel[key]).filter(v=>v!=null);
-    if(!vals.length)return null;
-    return (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
-  };
-
-  return (
+  const hasData=feelLogs.length>=3&&isPro;
+  const avgScore=(key)=>{const vals=feelLogs.map(l=>l.feel[key]).filter(v=>v!=null);if(!vals.length)return null;return(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);};
+  return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Insights</h2>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
         </div>
-
-        {!hasData ? (
+        {!hasData?(
           <div>
-            {/* Pro teaser */}
             <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"16px",marginBottom:16,textAlign:"center"}}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,margin:"0 0 8px",letterSpacing:"0.5px"}}>INSIGHTS — PRO FEATURE</p>
-              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,margin:"0 0 14px",lineHeight:1.7}}>
-                After logging how you feel for a few days, Insights will surface patterns from your own data.
-              </p>
+              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,margin:"0 0 14px",lineHeight:1.7}}>After logging how you feel for a few days, Insights will surface patterns from your own data.</p>
             </div>
-
             <div style={{marginBottom:16}}>
-              {[
-                {title:"Feel trends","desc":"Track energy, recovery, mood & sleep over time"},
-                {title:"Supplement correlation","desc":"See which supplements improve your scores"},
-                {title:"Weekly summary","desc":"Your best and worst days, with reasons why"},
-                {title:"Streak analysis","desc":"How consistent logging affects your performance"},
-              ].map((item,i)=>(
+              {[{title:"Feel trends",desc:"Track energy, recovery, mood & sleep over time"},{title:"Supplement correlation",desc:"See which supplements improve your scores"},{title:"Weekly summary",desc:"Your best and worst days, with reasons why"},{title:"Streak analysis",desc:"How consistent logging affects your performance"}].map((item,i)=>(
                 <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 0",borderBottom:"1px solid #1C1D1F"}}>
                   <div style={{width:6,height:6,borderRadius:"50%",background:"#E8A830",marginTop:5,flexShrink:0}}/>
-                  <div>
-                    <p style={{margin:0,color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{item.title}</p>
-                    <p style={{margin:"3px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:1.5}}>{item.desc}</p>
-                  </div>
+                  <div><p style={{margin:0,color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{item.title}</p><p style={{margin:"3px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:1.5}}>{item.desc}</p></div>
                 </div>
               ))}
             </div>
-
-            {feelLogs.length > 0 && (
-              <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:12}}>
-                <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 4px"}}>FEEL LOGS SO FAR</p>
-                <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,margin:0}}>{feelLogs.length} / 3 needed to unlock preview</p>
-              </div>
-            )}
-
+            {feelLogs.length>0&&(<div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:12}}><p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 4px"}}>FEEL LOGS SO FAR</p><p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,margin:0}}>{feelLogs.length} / 3 needed to unlock preview</p></div>)}
             <button style={{width:"100%",padding:"10px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
           </div>
-        ) : (
+        ):(
           <div>
             <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginBottom:14,letterSpacing:"1px"}}>BASED ON {feelLogs.length} LOGS</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
               {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(m=>{
                 const avg=avgScore(m.key);
                 const color=avg>=4?"#5BAD72":avg>=3?"#E8A830":"#C0392B";
-                return avg?(
-                  <div key={m.key} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px",textAlign:"center"}}>
-                    <div style={{fontSize:24,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{avg}</div>
-                    <div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.8px"}}>{m.label} AVG</div>
-                  </div>
-                ):null;
+                return avg?(<div key={m.key} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px",textAlign:"center"}}><div style={{fontSize:24,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{avg}</div><div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.8px"}}>{m.label} AVG</div></div>):null;
               })}
             </div>
-            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:9,padding:"12px 14px"}}>
-              <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px"}}>PRO INSIGHTS COMING SOON</p>
-              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:0,lineHeight:1.6}}>Supplement correlations, weekly trends and detailed analysis unlock with Pro.</p>
-            </div>
+            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:9,padding:"12px 14px"}}><p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px"}}>PRO INSIGHTS COMING SOON</p><p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:0,lineHeight:1.6}}>Supplement correlations, weekly trends and detailed analysis unlock with Pro.</p></div>
           </div>
         )}
       </div>
@@ -1751,11 +1261,11 @@ function InsightsModal({onClose,logs,supplements,isPro}) {
 }
 
 // ── Main App ──────────────────────────────────────────────────────────────────
-function App() {
+function App(){
   const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]));
   const [logs,setLogs]=useState(()=>load(LOG_KEY,[]));
   const [profile,setProfile]=useState(()=>load(PROFILE_KEY,null));
-  const [tab,setTab]=useState("stack"); // stack | history
+  const [tab,setTab]=useState("stack");
   const [showAdd,setShowAdd]=useState(false);
   const [showShare,setShowShare]=useState(false);
   const [showBatchLog,setShowBatchLog]=useState(false);
@@ -1775,18 +1285,16 @@ function App() {
   useEffect(()=>save(STORAGE_KEY,supplements),[supplements]);
   useEffect(()=>save(LOG_KEY,logs),[logs]);
 
-  // On mount: hydrate from IndexedDB — survives iOS Safari localStorage purge
   useEffect(()=>{
-    Promise.all([
-      loadAsync(STORAGE_KEY,[]),
-      loadAsync(LOG_KEY,[]),
-      loadAsync(PROFILE_KEY,null),
-    ]).then(([supps,lg,prof])=>{
-      if(supps&&supps.length>0) setSupplements(supps);
-      if(lg&&lg.length>0) setLogs(lg);
-      if(prof) setProfile(prof);
+    Promise.all([loadAsync(STORAGE_KEY,[]),loadAsync(LOG_KEY,[]),loadAsync(PROFILE_KEY,null)]).then(([supps,lg,prof])=>{
+      if(supps&&supps.length>0)setSupplements(supps);
+      if(lg&&lg.length>0)setLogs(lg);
+      if(prof)setProfile(prof);
     }).catch(()=>{});
   },[]);
+
+  const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
+  useEffect(()=>{window._openFeedback=openManualFeedback;},[]);
 
   useEffect(()=>{
     if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
@@ -1794,119 +1302,74 @@ function App() {
       if(supplements.length>0&&unlogged.length>0&&logs.filter(l=>l.date===today()).length===0)
         fireNotif("Suppstackd — Log your supplements",`${unlogged.length} supplement${unlogged.length>1?"s":""} not logged today.`,1500);
     }
-    if(checkAndTrackActiveDay()) setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
+    if(checkAndTrackActiveDay())setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
   },[]);
 
-  const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
-  useEffect(()=>{ window._openFeedback=openManualFeedback; },[]);
-
-  // If no profile yet, show onboarding
-  if(!profile) return <ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});}}/>;
+  if(!profile)return<ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});}}/>;
 
   const addOrUpdate=s=>{
     setSupplements(prev=>{
       const ex=prev.find(p=>p.id===s.id);
-      if(ex) return prev.map(p=>p.id===s.id?s:p);
-      // New supplement — stamp createdAt as today's ISO date
-      return [...prev,{...s,createdAt:new Date().toISOString().slice(0,10)}];
+      if(ex)return prev.map(p=>p.id===s.id?s:p);
+      return[...prev,{...s,createdAt:todayISO()}];
     });
     setShowAdd(false);setEditSupp(null);
   };
   const deleteSupp=id=>{if(confirm("Remove this supplement?"))setSupplements(prev=>prev.filter(s=>s.id!==id));};
   const saveLog=({taken,amount,notes,feel})=>{
-    const t=today();
+    const t=today();const tISO=todayISO();
     setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+amount,lastLogged:t}));
-    setLogs(prev=>[...prev,{suppId:logSupp.id,date:t,taken,amount,notes,feel,ts:Date.now()}]);
-    // Save feel log separately for history
+    setLogs(prev=>[...prev,{suppId:logSupp.id,date:tISO,taken,amount,notes,feel,ts:Date.now()}]);
     if(feel&&(feel.energy||feel.recovery||feel.mood)){
-      const feels=load(FEEL_KEY,[]);
-      const todayFeel=feels.find(f=>f.date===t);
-      if(todayFeel){save(FEEL_KEY,feels.map(f=>f.date===t?{...f,...feel}:f));}
-      else{save(FEEL_KEY,[...feels,{date:t,...feel,ts:Date.now()}]);}
+      const feels=load(FEEL_KEY,[]);const todayFeel=feels.find(f=>f.date===tISO);
+      if(todayFeel){save(FEEL_KEY,feels.map(f=>f.date===tISO?{...f,...feel}:f));}
+      else{save(FEEL_KEY,[...feels,{date:tISO,...feel,ts:Date.now()}]);}
     }
     setLogSupp(null);
   };
-
-  const saveBatchLogs=(rows, feel)=>{
-    const t=today();
-    const newLogs=[];
-    const suppUpdates={};
-    rows.forEach(row=>{
-      suppUpdates[row.suppId]={
-        consumed: row.taken ? row.amount : 0,
-        lastLogged: t,
-      };
-      newLogs.push({suppId:row.suppId,date:t,taken:row.taken,amount:row.taken?row.amount:0,notes:row.notes,feel,ts:Date.now()});
-    });
-    setSupplements(prev=>prev.map(s=>{
-      if(!suppUpdates[s.id]) return s;
-      return {...s,consumed:s.consumed+(suppUpdates[s.id].consumed||0),lastLogged:suppUpdates[s.id].lastLogged};
-    }));
+  const saveBatchLogs=(rows,feel)=>{
+    const t=today();const tISO=todayISO();
+    const newLogs=[];const suppUpdates={};
+    rows.forEach(row=>{suppUpdates[row.suppId]={consumed:row.taken?row.amount:0,lastLogged:t};newLogs.push({suppId:row.suppId,date:tISO,taken:row.taken,amount:row.taken?row.amount:0,notes:row.notes,feel,ts:Date.now()});});
+    setSupplements(prev=>prev.map(s=>{if(!suppUpdates[s.id])return s;return{...s,consumed:s.consumed+(suppUpdates[s.id].consumed||0),lastLogged:suppUpdates[s.id].lastLogged};}));
     setLogs(prev=>[...prev,...newLogs]);
     if(feel&&(feel.energy||feel.recovery||feel.mood||feel.sleep)){
-      const feels=load(FEEL_KEY,[]);
-      const todayFeel=feels.find(f=>f.date===t);
-      if(todayFeel){save(FEEL_KEY,feels.map(f=>f.date===t?{...f,...feel}:f));}
-      else{save(FEEL_KEY,[...feels,{date:t,...feel,ts:Date.now()}]);}
+      const feels=load(FEEL_KEY,[]);const todayFeel=feels.find(f=>f.date===tISO);
+      if(todayFeel){save(FEEL_KEY,feels.map(f=>f.date===tISO?{...f,...feel}:f));}
+      else{save(FEEL_KEY,[...feels,{date:tISO,...feel,ts:Date.now()}]);}
     }
     setShowBatchLog(false);
   };
-
   const saveBackdatedLog=(entry)=>{
-    // For backdated entries, update consumed and add log but don't change lastLogged if it's future
-    const d=new Date(entry.ts);
-    const dateStr=d.toDateString();
-    setSupplements(prev=>prev.map(s=>s.id!==entry.suppId?s:{
-      ...s,
-      consumed:s.consumed+(entry.taken?entry.amount:0),
-      lastLogged:dateStr===today()?dateStr:s.lastLogged
-    }));
-    setLogs(prev=>[...prev,entry]);
-    setSelectedDate(null);
+    const d=new Date(entry.ts);const dateStr=d.toDateString();
+    setSupplements(prev=>prev.map(s=>s.id!==entry.suppId?s:{...s,consumed:s.consumed+(entry.taken?entry.amount:0),lastLogged:dateStr===today()?dateStr:s.lastLogged}));
+    setLogs(prev=>[...prev,entry]);setSelectedDate(null);
   };
-
   const deleteLog=(log)=>{
-    setSupplements(prev=>prev.map(s=>s.id!==log.suppId?s:{
-      ...s,
-      consumed:Math.max(0,s.consumed-(log.taken?log.amount:0))
-    }));
+    setSupplements(prev=>prev.map(s=>s.id!==log.suppId?s:{...s,consumed:Math.max(0,s.consumed-(log.taken?log.amount:0))}));
     setLogs(prev=>prev.filter(l=>!(l.suppId===log.suppId&&l.ts===log.ts)));
   };
+  const updateProfile=(updated)=>{setProfile(updated);save(PROFILE_KEY,updated);};
 
-  const updateProfile=(updated)=>{
-    setProfile(updated);
-    save(PROFILE_KEY,updated);
-  };
-
-  const isPro = profile?.plan === "pro" || DEV_PRO_MODE;
+  const isPro=profile?.plan==="pro"||DEV_PRO_MODE;
   const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
-  // Find today's feel log if already submitted
   const todayFeelLog=(()=>{
-    const todayLogs=logs.filter(l=>l.date===today()&&l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
-    if(!todayLogs.length) return null;
+    const tISO=todayISO();
+    const todayLogs=logs.filter(l=>l.date===tISO&&l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
+    if(!todayLogs.length)return null;
     return todayLogs[todayLogs.length-1].feel;
   })();
-  const dailyCost=supplements.reduce((total,s)=>{
-    if(!s.price||!s.totalAmount)return total;
-    const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);
-    return total+(costPerServing*s.servingsPerDay);
-  },0);
-  const unloggedToday=supplements.filter(s=>s.lastLogged!==today()).length;
-  const todayLogCount=logs.filter(l=>l.date===today()).length;
+  const dailyCost=supplements.reduce((total,s)=>{if(!s.price||!s.totalAmount)return total;const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);return total+(costPerServing*s.servingsPerDay);},0);
   const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14;if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>sortBy==="runout"?daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b)):a.name.localeCompare(b.name));
   const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
 
-  return (
+  return(
     <div id="root" className="visible">
       <div className="shell">
-
-        {/* ── FIXED HEADER ── */}
         <div className="shell-fixed">
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,marginTop:4}}>
             <button className="btn-icon" onClick={()=>setShowNotif(true)} style={{fontSize:"15px",background:"transparent",border:"1px solid #2A2B2E",flexShrink:0}}>🔔</button>
-            <h1 style={{fontSize:22,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px",textAlign:"center",flex:1,margin:"0 10px"}}>
-              {profile?.name ? `Hey, ${profile.name}` : "My Stack"}
-            </h1>
+            <h1 style={{fontSize:22,fontWeight:800,color:"#F0F0F0",lineHeight:1,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.5px",textAlign:"center",flex:1,margin:"0 10px"}}>{profile?.name?`Hey, ${profile.name}`:"My Stack"}</h1>
             <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830",flexShrink:0}}>SHARE</button>
           </div>
 
@@ -1925,15 +1388,13 @@ function App() {
                 {label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85",onClick:()=>setFilter(f=>f==="urgent"?"all":"urgent")},
                 ...(dailyCost>0?[{label:"DAILY COST",value:`${CURRENCIES[profile?.country||"GB"]||"£"}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:null}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
               ].map(s=>(
-                <div key={s.label} onClick={s.onClick||undefined}
-                  style={{flex:1,background:s.label==="URGENT"&&filter==="urgent"?"rgba(192,57,43,0.12)":"#1C1D1F",border:s.label==="URGENT"&&filter==="urgent"?"1px solid rgba(192,57,43,0.4)":"1px solid #2A2B2E",borderRadius:8,padding:"5px 4px",textAlign:"center",cursor:s.onClick?"pointer":"default",transition:"all 0.15s"}}>
+                <div key={s.label} onClick={s.onClick||undefined} style={{flex:1,background:s.label==="URGENT"&&filter==="urgent"?"rgba(192,57,43,0.12)":"#1C1D1F",border:s.label==="URGENT"&&filter==="urgent"?"1px solid rgba(192,57,43,0.4)":"1px solid #2A2B2E",borderRadius:8,padding:"5px 4px",textAlign:"center",cursor:s.onClick?"pointer":"default",transition:"all 0.15s"}}>
                   <div style={{fontSize:s.label==="DAILY COST"&&dailyCost>0?11:14,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace",lineHeight:1.2}}>{s.value}</div>
                   <div style={{fontSize:7,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:1,letterSpacing:"0.3px"}}>{s.label}</div>
                 </div>
               ))}
             </div>
           )}
-
 
           {tab==="stack"&&supplements.length>0&&(
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
@@ -1947,10 +1408,8 @@ function App() {
           )}
         </div>
 
-        {/* ── SCROLLABLE CARDS ONLY ── */}
         <div className="shell-scroll">
           {tab==="history"&&<SupplementHistory supplements={supplements}/>}
-
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{textAlign:"center",padding:"40px 20px"}}>
@@ -1960,19 +1419,10 @@ function App() {
                 <button className="btn-primary" style={{padding:"14px 32px",fontSize:14}} onClick={()=>setShowAdd(true)}>+ ADD FIRST SUPPLEMENT</button>
               </div>
             )}
-            {supplements.length>0&&(
-              <StackCardList
-                displaySupps={displaySupps}
-                onLog={setLogSupp}
-                onEdit={setEditSupp}
-                onDelete={deleteSupp}
-                onView={setViewSupp}
-              />
-            )}
+            {supplements.length>0&&<StackCardList displaySupps={displaySupps} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp} onView={setViewSupp}/>}
           </>}
         </div>
       </div>
-
 
       <div className="bottom-nav">
         <button className="nav-btn" onClick={()=>setShowProfile(true)}>
