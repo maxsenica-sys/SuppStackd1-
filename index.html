@@ -145,12 +145,27 @@ function load(key,fb){try{return JSON.parse(localStorage.getItem(key))||fb;}catc
 function save(key,val){saveAsync(key,val);}
 function today(){return new Date().toDateString();}
 
-// ── KEY FIX: localISO always uses local date, never UTC ──────────────────────
+// ── localISO always uses local date, never UTC ────────────────────────────────
 function localISO(date){
-  const d = date || new Date();
+  const d=date||new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 function todayISO(){return localISO(new Date());}
+
+// ── Normalise any date value to a YYYY-MM-DD string safely ───────────────────
+// Handles: "2025-03-01", "2025-03-01T12:00:00.000Z", timestamp numbers
+function toISODate(val){
+  if(!val)return null;
+  if(typeof val==="number")return localISO(new Date(val));
+  if(typeof val==="string"){
+    // Already a plain date string
+    if(/^\d{4}-\d{2}-\d{2}$/.test(val))return val;
+    // Full ISO timestamp — slice the date part using local parsing
+    return localISO(new Date(val));
+  }
+  if(val instanceof Date)return localISO(val);
+  return null;
+}
 
 function formatDate(d){return new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
 function daysFromNow(d){const now=new Date();now.setHours(0,0,0,0);const t=new Date(d);t.setHours(0,0,0,0);return Math.round((t-now)/86400000);}
@@ -164,15 +179,13 @@ function fireNotif(title,body,delay=500){if(!("Notification"in window)||Notifica
 let installPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;});
 
-// ── CalendarBar — fully fixed: local dates, correct green logic ───────────────
+// ── CalendarBar ───────────────────────────────────────────────────────────────
 function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
   const DAY_NAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  // Use local date only — never toISOString() which shifts timezone
   const now=new Date();
   now.setHours(0,0,0,0);
   const todayStr=localISO(now);
 
-  // Generate 60 days using local date arithmetic
   const days=[];
   for(let i=-30;i<=29;i++){
     const d=new Date(now);
@@ -180,29 +193,36 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
     days.push(d);
   }
 
-  // Build dateCounts using l.date (already local ISO) as primary source
+  // ── FIX 1: Robust date normalisation for all log formats ─────────────────
   const dateCounts={};
   logs.forEach(l=>{
     try{
-      // l.date is stored as local ISO string from today()/todayISO()
-      const iso=l.date||localISO(new Date(l.ts));
+      // Use toISODate to handle any stored format: plain date, ISO timestamp, or ts number
+      const iso=toISODate(l.date)||toISODate(l.ts);
+      if(!iso)return;
       if(!dateCounts[iso])dateCounts[iso]=new Set();
       dateCounts[iso].add(l.suppId);
     }catch{}
   });
 
-  // 3-state logic — ONLY colour past dates, never future/today retroactively
+  // ── FIX 2: Only count supplements that existed on that date ──────────────
   const getDateState=(iso,isPast)=>{
     if(!isPast)return"none";
-    // Only count supplements that existed on this date (have createdAt on or before)
-    const activeSupps=supplements.filter(s=>s.createdAt&&s.createdAt<=iso);
+    // Only supplements whose createdAt date is on or before this calendar date
+    const activeSupps=supplements.filter(s=>{
+      const created=toISODate(s.createdAt);
+      return created&&created<=iso;
+    });
     const activeCount=activeSupps.length;
-    // If no supplements existed yet — show nothing (grey, not green)
     if(activeCount===0)return"none";
     const logged=dateCounts[iso];
     if(!logged||logged.size===0)return"none";
-    if(logged.size>=activeCount)return"full";
-    return"partial";
+    // Only count logged supplements that were actually active that day
+    const activeIds=new Set(activeSupps.map(s=>s.id));
+    const loggedActiveCount=[...logged].filter(id=>activeIds.has(id)).length;
+    if(loggedActiveCount>=activeCount)return"full";
+    if(loggedActiveCount>0)return"partial";
+    return"none";
   };
 
   const todayRef=useRef(null);
@@ -213,7 +233,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
   return(
     <div className="cal-bar">
       {days.map((d,i)=>{
-        const iso=localISO(d); // ← local ISO, no UTC timezone shift
+        const iso=localISO(d);
         const isToday=iso===todayStr;
         const isFuture=d>now;
         const isPast=d<now;
@@ -233,7 +253,6 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
             style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",flexShrink:0,transition:"all 0.15s",background:bgColor,border:borderColor,opacity:isPast&&dateState==="none"&&!isSelected?0.4:1}}>
             <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>{DAY_NAMES[d.getDay()]}</span>
             <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>{d.getDate()}</span>
-            {/* Only show dot on past days with logs, or today */}
             {(isPast&&dateState!=="none")&&<div style={{width:4,height:4,borderRadius:"50%",background:dotColor}}/>}
             {isToday&&<div style={{width:4,height:4,borderRadius:"50%",background:"#111213"}}/>}
           </div>
@@ -243,17 +262,23 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
   );
 }
 
-// ── DateLogModal — fixed: uses localISO for date matching ────────────────────
-function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDeleteLog}){
+// ── DateLogModal ──────────────────────────────────────────────────────────────
+function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
   const dateObj=new Date(date+"T00:00:00");
   const dateLabel=dateObj.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const todayStr=todayISO();
   const isToday=date===todayStr;
   const isFuture=date>todayStr;
 
-  // Match logs using l.date (local ISO) as primary key
+  // Match logs using normalised date
   const dateLogs=logs.filter(l=>{
-    try{return(l.date||localISO(new Date(l.ts)))===date;}catch{return false;}
+    try{return(toISODate(l.date)||toISODate(l.ts))===date;}catch{return false;}
+  });
+
+  // ── FIX 3: Only show supplements that existed on this date ───────────────
+  const supplementsForDate=supplements.filter(s=>{
+    const created=toISODate(s.createdAt);
+    return created&&created<=date;
   });
 
   const loggedSuppIds=new Set(dateLogs.map(l=>l.suppId));
@@ -264,7 +289,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
   const handleQuickLog=(supp)=>{setAddingFor(supp);setQuickAmt(String(supp.servingSize));setQuickNotes("");};
   const confirmQuickLog=()=>{
     if(!addingFor)return;
-    onSaveLog({suppId:addingFor.id,date:addingFor.lastLogged,taken:true,amount:parseFloat(quickAmt)||addingFor.servingSize,notes:quickNotes,feel:{},ts:new Date(date+"T12:00:00").getTime(),backdated:true});
+    onSaveLog({suppId:addingFor.id,date,taken:true,amount:parseFloat(quickAmt)||addingFor.servingSize,notes:quickNotes,feel:{},ts:new Date(date+"T12:00:00").getTime(),backdated:true});
     setAddingFor(null);
   };
 
@@ -300,10 +325,11 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
             })}
           </div>
         )}
-        {supplements.filter(s=>!loggedSuppIds.has(s.id)).length>0&&(
+        {/* Only show supplements that existed on this date and haven't been logged yet */}
+        {supplementsForDate.filter(s=>!loggedSuppIds.has(s.id)).length>0&&(
           <div>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>{dateLogs.length>0?"NOT LOGGED":"SUPPLEMENTS"}</span>
-            {supplements.filter(s=>!loggedSuppIds.has(s.id)).map((supp,i)=>(
+            {supplementsForDate.filter(s=>!loggedSuppIds.has(s.id)).map((supp,i)=>(
               <div key={i}>
                 {addingFor?.id===supp.id?(
                   <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:9,padding:"12px 14px",marginBottom:8}}>
@@ -333,7 +359,10 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
             ))}
           </div>
         )}
-        {supplements.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"24px 0"}}>No supplements added yet.</p>}
+        {/* Message when no supplements existed yet on this date */}
+        {supplementsForDate.length===0&&(
+          <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"24px 0"}}>No supplements were in your stack on this date.</p>
+        )}
         <button onClick={onClose} style={{width:"100%",marginTop:8,padding:"10px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>CLOSE</button>
       </div>
     </div>
@@ -841,7 +870,7 @@ function FeedbackInbox({onClose}){
   );
 }
 
-// ── ShareCard — 9:16 iPhone aspect ratio, no brand shown, Suppstackd logo fallback ──
+// ── ShareCard ─────────────────────────────────────────────────────────────────
 function ShareCard({supplements,profile,logs,onClose}){
   const canvasRef=useRef(null);
   const [generated,setGenerated]=useState(false);
@@ -864,163 +893,66 @@ function ShareCard({supplements,profile,logs,onClose}){
   useEffect(()=>{
     const canvas=canvasRef.current;
     if(!canvas)return;
-    // 9:16 aspect ratio — full iPhone screen
     const W=canvas.width=1080;
     const H=canvas.height=1920;
     const ctx=canvas.getContext("2d");
-
-    // ── Background gradient ──
     const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,"#0A0D10");
-    bg.addColorStop(0.5,"#0D1B2A");
-    bg.addColorStop(1,"#060A0E");
-    ctx.fillStyle=bg;
-    ctx.fillRect(0,0,W,H);
-
-    // ── Diagonal glow lines ──
+    bg.addColorStop(0,"#0A0D10");bg.addColorStop(0.5,"#0D1B2A");bg.addColorStop(1,"#060A0E");
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     ctx.save();
     const lg=ctx.createLinearGradient(0,0,W,0);
-    lg.addColorStop(0,"rgba(232,168,48,0)");
-    lg.addColorStop(0.5,"rgba(232,168,48,0.06)");
-    lg.addColorStop(1,"rgba(232,168,48,0)");
+    lg.addColorStop(0,"rgba(232,168,48,0)");lg.addColorStop(0.5,"rgba(232,168,48,0.06)");lg.addColorStop(1,"rgba(232,168,48,0)");
     ctx.strokeStyle=lg;
-    [[W*1.5,-100,-W*0.3,H+100,160],[W*1.7,-100,-W*0.1,H+100,80],[W*2,-100,W*0.2,H+100,40]].forEach(([x1,y1,x2,y2,w])=>{
-      ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    });
+    [[W*1.5,-100,-W*0.3,H+100,160],[W*1.7,-100,-W*0.1,H+100,80],[W*2,-100,W*0.2,H+100,40]].forEach(([x1,y1,x2,y2,w])=>{ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});
     ctx.restore();
-
-    // ── Top accent bar ──
     const tl=ctx.createLinearGradient(0,0,W,0);
-    tl.addColorStop(0,"rgba(232,168,48,0)");
-    tl.addColorStop(0.2,"rgba(232,168,48,0.9)");
-    tl.addColorStop(0.8,"rgba(232,168,48,0.9)");
-    tl.addColorStop(1,"rgba(232,168,48,0)");
-    ctx.strokeStyle=tl;ctx.lineWidth=4;
-    ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(W,4);ctx.stroke();
-
-    // ── SUPPSTACKD wordmark (top) ──
-    ctx.fillStyle="rgba(255,255,255,0.12)";
-    ctx.font="700 36px Arial, sans-serif";
-    ctx.letterSpacing="8px";
-    ctx.fillText("SUPPSTACKD",80,100);
-
-    // ── Big name / greeting ──
+    tl.addColorStop(0,"rgba(232,168,48,0)");tl.addColorStop(0.2,"rgba(232,168,48,0.9)");tl.addColorStop(0.8,"rgba(232,168,48,0.9)");tl.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=tl;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(W,4);ctx.stroke();
+    ctx.fillStyle="rgba(255,255,255,0.12)";ctx.font="700 36px Arial, sans-serif";ctx.letterSpacing="8px";ctx.fillText("SUPPSTACKD",80,100);
     const name=(profile?.name||"MY STACK").toUpperCase();
-    ctx.fillStyle="#F0F0F0";
-    ctx.font="900 130px Arial, sans-serif";
-    ctx.fillText(name,72,320);
-
-    // ── Amber underline ──
+    ctx.fillStyle="#F0F0F0";ctx.font="900 130px Arial, sans-serif";ctx.fillText(name,72,320);
     const nameW=Math.min(ctx.measureText(name).width,W-144);
     const ul=ctx.createLinearGradient(72,0,72+nameW,0);
     ul.addColorStop(0,"#E8A830");ul.addColorStop(1,"rgba(232,168,48,0.1)");
-    ctx.strokeStyle=ul;ctx.lineWidth=6;
-    ctx.beginPath();ctx.moveTo(72,345);ctx.lineTo(72+nameW,345);ctx.stroke();
-
-    // ── Subheading ──
-    ctx.fillStyle="rgba(255,255,255,0.35)";
-    ctx.font="500 32px Arial, sans-serif";
-    ctx.letterSpacing="2px";
-    ctx.fillText("MY SUPPLEMENT STACK",72,420);
-
-    // ── Stats row ──
+    ctx.strokeStyle=ul;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(72,345);ctx.lineTo(72+nameW,345);ctx.stroke();
+    ctx.fillStyle="rgba(255,255,255,0.35)";ctx.font="500 32px Arial, sans-serif";ctx.letterSpacing="2px";ctx.fillText("MY SUPPLEMENT STACK",72,420);
     const stats=[{label:"DAY STREAK",value:`${streak}`},{label:"DAYS ON STACK",value:`${daysOnStack}`},{label:"SUPPLEMENTS",value:`${supplements.length}`}];
     const statW=(W-144)/3;
     stats.forEach((s,i)=>{
       const x=72+(i*statW);
-      // Stat card bg
-      ctx.fillStyle="rgba(255,255,255,0.04)";
-      ctx.beginPath();
-      ctx.roundRect(x,490,statW-16,130,12);
-      ctx.fill();
-      ctx.strokeStyle="rgba(232,168,48,0.15)";ctx.lineWidth=1;
-      ctx.beginPath();ctx.roundRect(x,490,statW-16,130,12);ctx.stroke();
-      // Value
-      ctx.fillStyle="#E8A830";
-      ctx.font="800 62px Arial, sans-serif";
-      ctx.letterSpacing="0px";
-      ctx.fillText(s.value,x+20,566);
-      // Label
-      ctx.fillStyle="rgba(255,255,255,0.3)";
-      ctx.font="500 22px Arial, sans-serif";
-      ctx.letterSpacing="1px";
-      ctx.fillText(s.label,x+20,600);
+      ctx.fillStyle="rgba(255,255,255,0.04)";ctx.beginPath();ctx.roundRect(x,490,statW-16,130,12);ctx.fill();
+      ctx.strokeStyle="rgba(232,168,48,0.15)";ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,490,statW-16,130,12);ctx.stroke();
+      ctx.fillStyle="#E8A830";ctx.font="800 62px Arial, sans-serif";ctx.letterSpacing="0px";ctx.fillText(s.value,x+20,566);
+      ctx.fillStyle="rgba(255,255,255,0.3)";ctx.font="500 22px Arial, sans-serif";ctx.letterSpacing="1px";ctx.fillText(s.label,x+20,600);
     });
-
-    // ── Divider ──
-    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(72,656);ctx.lineTo(W-72,656);ctx.stroke();
-
-    // ── Supplements label ──
-    ctx.fillStyle="rgba(232,168,48,0.6)";
-    ctx.font="700 26px Arial, sans-serif";
-    ctx.letterSpacing="4px";
-    ctx.fillText("SUPPLEMENTS",72,720);
-
-    // ── Supplement pills — name only, no brand ──
+    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(72,656);ctx.lineTo(W-72,656);ctx.stroke();
+    ctx.fillStyle="rgba(232,168,48,0.6)";ctx.font="700 26px Arial, sans-serif";ctx.letterSpacing="4px";ctx.fillText("SUPPLEMENTS",72,720);
     let px=72,py=760;
     const pillH=72,pillPad=28,gap=14;
-    ctx.font="700 26px Arial, sans-serif";
-    ctx.letterSpacing="0px";
-
+    ctx.font="700 26px Arial, sans-serif";ctx.letterSpacing="0px";
     supplements.slice(0,10).forEach(s=>{
       const label=s.name.toUpperCase();
       const textW=ctx.measureText(label).width;
       const pillW=textW+(pillPad*2);
-
       if(px+pillW>W-72){px=72;py+=pillH+gap;}
-      if(py>H-300)return; // don't overflow
-
-      // Pill bg
-      ctx.fillStyle="rgba(255,255,255,0.05)";
-      ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.fill();
-      // Pill border
-      ctx.strokeStyle="rgba(232,168,48,0.3)";ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.stroke();
-      // Text
-      ctx.fillStyle="#F0F0F0";
-      ctx.font="700 26px Arial, sans-serif";
-      ctx.fillText(label,px+pillPad,py+pillH/2+9);
-
+      if(py>H-300)return;
+      ctx.fillStyle="rgba(255,255,255,0.05)";ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.fill();
+      ctx.strokeStyle="rgba(232,168,48,0.3)";ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.stroke();
+      ctx.fillStyle="#F0F0F0";ctx.font="700 26px Arial, sans-serif";ctx.fillText(label,px+pillPad,py+pillH/2+9);
       px+=pillW+gap;
     });
-
-    if(supplements.length>10){
-      ctx.fillStyle="rgba(255,255,255,0.25)";
-      ctx.font="500 26px Arial, sans-serif";
-      ctx.fillText(`+${supplements.length-10} more`,px,py+pillH/2+9);
-    }
-
-    // ── Bottom section: big SUPPSTACKD branding ──
+    if(supplements.length>10){ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="500 26px Arial, sans-serif";ctx.fillText(`+${supplements.length-10} more`,px,py+pillH/2+9);}
     const bottomY=H-200;
-
-    // Bottom divider
-    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(72,bottomY);ctx.lineTo(W-72,bottomY);ctx.stroke();
-
-    // Big wordmark at bottom
-    ctx.fillStyle="rgba(232,168,48,0.15)";
-    ctx.font="900 80px Arial, sans-serif";
-    ctx.letterSpacing="-2px";
+    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(72,bottomY);ctx.lineTo(W-72,bottomY);ctx.stroke();
+    ctx.fillStyle="rgba(232,168,48,0.15)";ctx.font="900 80px Arial, sans-serif";ctx.letterSpacing="-2px";
     const brandW=ctx.measureText("SUPPSTACKD").width;
     ctx.fillText("SUPPSTACKD",(W-brandW)/2,bottomY+110);
-
-    // Tagline
-    ctx.fillStyle="rgba(255,255,255,0.2)";
-    ctx.font="500 26px Arial, sans-serif";
-    ctx.letterSpacing="4px";
-    const tagline="KNOW YOUR STACK";
-    const tagW=ctx.measureText(tagline).width;
+    ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="500 26px Arial, sans-serif";ctx.letterSpacing="4px";
+    const tagline="KNOW YOUR STACK";const tagW=ctx.measureText(tagline).width;
     ctx.fillText(tagline,(W-tagW)/2,bottomY+155);
-
-    // Date bottom right
     const dateStr=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}).toUpperCase();
-    ctx.fillStyle="rgba(255,255,255,0.15)";
-    ctx.font="400 22px Arial, sans-serif";
-    ctx.letterSpacing="1px";
-    const dw=ctx.measureText(dateStr).width;
-    ctx.fillText(dateStr,(W-dw)/2,H-40);
-
+    ctx.fillStyle="rgba(255,255,255,0.15)";ctx.font="400 22px Arial, sans-serif";ctx.letterSpacing="1px";
+    const dw=ctx.measureText(dateStr).width;ctx.fillText(dateStr,(W-dw)/2,H-40);
     setGenerated(true);
   },[]);
 
@@ -1030,35 +962,25 @@ function ShareCard({supplements,profile,logs,onClose}){
     try{
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
       const file=new File([blob],"my-suppstack.png",{type:"image/png"});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){
-        await navigator.share({files:[file],title:"My Supplement Stack"});
-      }else if(navigator.share){
-        await navigator.share({title:"My Supplement Stack",url:window.location.href});
-      }else{
-        const a=document.createElement("a");a.download="my-suppstack.png";a.href=canvas.toDataURL("image/png");a.click();
-      }
-    }catch(e){
-      if(e.name!=="AbortError"){const a=document.createElement("a");a.download="my-suppstack.png";a.href=canvas.toDataURL("image/png");a.click();}
-    }
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"My Supplement Stack"});}
+      else if(navigator.share){await navigator.share({title:"My Supplement Stack",url:window.location.href});}
+      else{const a=document.createElement("a");a.download="my-suppstack.png";a.href=canvas.toDataURL("image/png");a.click();}
+    }catch(e){if(e.name!=="AbortError"){const a=document.createElement("a");a.download="my-suppstack.png";a.href=canvas.toDataURL("image/png");a.click();}}
     setSharing(false);
   };
 
   const canNativeShare=typeof navigator.share!=="undefined";
-
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{maxWidth:420}}>
         <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Your Stack Card</h2>
         <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:18,lineHeight:1.6}}>Full iPhone screen format — save to photos or share anywhere.</p>
-        {/* Preview — shown at reduced size, actual canvas is 1080×1920 */}
         <div style={{borderRadius:12,overflow:"hidden",marginBottom:18,border:"1px solid #2A2B2E",maxHeight:360,display:"flex",alignItems:"center",justifyContent:"center",background:"#111213"}}>
           <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block",maxHeight:360,objectFit:"contain"}}/>
         </div>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Close</button>
-          <button className="btn-primary" style={{flex:2,opacity:sharing?0.6:1}} onClick={shareToPhotos} disabled={sharing}>
-            {sharing?"SHARING...":canNativeShare?"SAVE / SHARE":"DOWNLOAD"}
-          </button>
+          <button className="btn-primary" style={{flex:2,opacity:sharing?0.6:1}} onClick={shareToPhotos} disabled={sharing}>{sharing?"SHARING...":canNativeShare?"SAVE / SHARE":"DOWNLOAD"}</button>
         </div>
       </div>
     </div>
@@ -1299,7 +1221,7 @@ function App(){
   useEffect(()=>{
     if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
       const unlogged=supplements.filter(s=>s.lastLogged!==today());
-      if(supplements.length>0&&unlogged.length>0&&logs.filter(l=>l.date===today()).length===0)
+      if(supplements.length>0&&unlogged.length>0&&logs.filter(l=>l.date===todayISO()).length===0)
         fireNotif("Suppstackd — Log your supplements",`${unlogged.length} supplement${unlogged.length>1?"s":""} not logged today.`,1500);
     }
     if(checkAndTrackActiveDay())setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
@@ -1311,6 +1233,7 @@ function App(){
     setSupplements(prev=>{
       const ex=prev.find(p=>p.id===s.id);
       if(ex)return prev.map(p=>p.id===s.id?s:p);
+      // Always store createdAt as a plain YYYY-MM-DD string for reliable comparisons
       return[...prev,{...s,createdAt:todayISO()}];
     });
     setShowAdd(false);setEditSupp(null);
