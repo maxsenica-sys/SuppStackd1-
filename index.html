@@ -336,9 +336,16 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
   const stripRef=useRef(null);
   const [todayOffscreen,setTodayOffscreen]=useState(false);
 
-  const scrollToToday=()=>{
-    if(todayRef.current)todayRef.current.scrollIntoView({inline:"center",behavior:"smooth"});
+  const snapToToday=()=>{
+    if(todayRef.current){
+      todayRef.current.scrollIntoView({inline:"center",behavior:"smooth"});
+      const now=new Date();
+      setCalendarMonth(now.getMonth());
+      setCalendarYear(now.getFullYear());
+    }
   };
+
+  const scrollToToday=snapToToday;
 
   useEffect(()=>{
     if(todayRef.current)todayRef.current.scrollIntoView({inline:"center",behavior:"instant"});
@@ -346,31 +353,41 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
 
   useEffect(()=>{if(onScrollToToday)onScrollToToday(scrollToToday);},[]);
 
-  // Track whether today pill has scrolled off to the left
+  // Update header month/year to reflect centre-visible date as user scrolls
+  const updateHeaderFromScroll=()=>{
+    const strip=stripRef.current;
+    if(!strip)return;
+    const sr=strip.getBoundingClientRect();
+    const midX=sr.left+sr.width/2;
+    const pills=strip.querySelectorAll("[data-iso]");
+    let closest=null,minDist=Infinity;
+    pills.forEach(el=>{
+      const r=el.getBoundingClientRect();
+      const dist=Math.abs((r.left+r.width/2)-midX);
+      if(dist<minDist){minDist=dist;closest=el;}
+    });
+    if(closest){
+      const iso=closest.getAttribute("data-iso");
+      if(iso){const d=new Date(iso+"T00:00:00");setCalendarMonth(d.getMonth());setCalendarYear(d.getFullYear());}
+    }
+  };
+
+  // Track off-screen state + 2s idle snap back to today unconditionally
   useEffect(()=>{
     const strip=stripRef.current;
     if(!strip)return;
     let snapTimer=null;
     const check=()=>{
       if(!todayRef.current)return;
-      const stripRect=strip.getBoundingClientRect();
-      const todayRect=todayRef.current.getBoundingClientRect();
-      setTodayOffscreen(todayRect.right<stripRect.left+8);
+      const sr=strip.getBoundingClientRect();
+      const tr=todayRef.current.getBoundingClientRect();
+      setTodayOffscreen(tr.right<sr.left+8||tr.left>sr.right-8);
     };
     const onScroll=()=>{
       check();
-      // Clear any pending snap
+      updateHeaderFromScroll();
       if(snapTimer)clearTimeout(snapTimer);
-      // After 1.2s of no scrolling, check if today is visible — if so, snap it to centre
-      snapTimer=setTimeout(()=>{
-        if(!todayRef.current||!stripRef.current)return;
-        const sr=stripRef.current.getBoundingClientRect();
-        const tr=todayRef.current.getBoundingClientRect();
-        const todayVisible=tr.left>=sr.left&&tr.right<=sr.right;
-        if(todayVisible){
-          todayRef.current.scrollIntoView({inline:"center",behavior:"smooth"});
-        }
-      },1200);
+      snapTimer=setTimeout(()=>{snapToToday();},2000);
     };
     strip.addEventListener("scroll",onScroll,{passive:true});
     check();
@@ -417,7 +434,17 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
             const isToday=iso===todayStr;const isSelected=selectedDate===iso;
             const dot=getDotForDate(iso);
             return(
-              <div key={i} onClick={()=>{onDateSelect(iso);setCalendarView("strip");}}
+              <div key={i} onClick={()=>{
+                onDateSelect(iso);
+                setCalendarView("strip");
+                // Scroll strip to this date after switching back
+                setTimeout(()=>{
+                  const strip=document.querySelector(".cal-bar");
+                  if(!strip)return;
+                  const pill=strip.querySelector(`[data-iso="${iso}"]`);
+                  if(pill)pill.scrollIntoView({inline:"center",behavior:"smooth"});
+                },50);
+              }}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"6px 2px",borderRadius:8,cursor:"pointer",background:isToday?"linear-gradient(135deg,#E8A830,#C88820)":isSelected?"rgba(232,168,48,0.18)":"transparent",border:isSelected&&!isToday?"1px solid rgba(232,168,48,0.5)":"1px solid transparent",minHeight:36,transition:"all 0.12s"}}>
                 <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0",lineHeight:1}}>{day}</span>
                 {dot&&<div style={{width:3,height:3,borderRadius:"50%",background:isToday?"#111213":dot,marginTop:2}}/>}
@@ -484,7 +511,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
           const bgColor=isSelected&&!isToday?"rgba(232,168,48,0.18)":isToday?"linear-gradient(135deg,#E8A830,#C88820)":dateState==="full"?"rgba(91,173,114,0.12)":dateState==="partial"?"rgba(232,168,48,0.08)":"transparent";
           const borderColor=isSelected&&!isToday?"1px solid rgba(232,168,48,0.6)":dateState==="full"&&!isToday?"1px solid rgba(91,173,114,0.25)":dateState==="partial"&&!isToday?"1px solid rgba(232,168,48,0.2)":"1px solid transparent";
           return(
-            <div key={i} ref={isToday?todayRef:null} onClick={()=>onDateSelect(iso)}
+            <div key={i} data-iso={iso} ref={isToday?todayRef:null} onClick={()=>onDateSelect(iso)}
               style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",flexShrink:0,transition:"all 0.15s",background:bgColor,border:borderColor,opacity:isPast&&dateState==="none"&&!isSelected?0.4:1}}>
               <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>{DAY_NAMES[d.getDay()]}</span>
               <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>{d.getDate()}</span>
@@ -506,13 +533,12 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
   const todayStr=todayISO();
   const isToday=date===todayStr;
   const isFuture=date>todayStr;
+  const isPast=date<todayStr;
 
-  // Match logs using normalised date
   const dateLogs=logs.filter(l=>{
     try{return(toISODate(l.date)||toISODate(l.ts))===date;}catch{return false;}
   });
 
-  // ── FIX 3: Only show supplements that existed on this date ───────────────
   const supplementsForDate=supplements.filter(s=>{
     const created=toISODate(s.createdAt);
     return created&&created<=date;
@@ -530,6 +556,46 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
     setAddingFor(null);
   };
 
+  // ── Feel score helpers ────────────────────────────────────────────────────
+  // Get previous day's logs to compare feel
+  const prevDate=(()=>{const d=new Date(date+"T00:00:00");d.setDate(d.getDate()-1);return localISO(d);})();
+  const prevLogs=logs.filter(l=>{try{return(toISODate(l.date)||toISODate(l.ts))===prevDate;}catch{return false;}});
+
+  // Overall daily feel = average of all feel scores logged that day
+  const feelScores=dateLogs.map(l=>{
+    if(!l.feel)return null;
+    const vals=Object.values(l.feel).filter(v=>typeof v==="number");
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  }).filter(v=>v!==null);
+  const avgFeel=feelScores.length?feelScores.reduce((a,b)=>a+b,0)/feelScores.length:null;
+
+  const prevFeelScores=prevLogs.map(l=>{
+    if(!l.feel)return null;
+    const vals=Object.values(l.feel).filter(v=>typeof v==="number");
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  }).filter(v=>v!==null);
+  const prevAvgFeel=prevFeelScores.length?prevFeelScores.reduce((a,b)=>a+b,0)/prevFeelScores.length:null;
+
+  const feelEmoji=(score)=>{if(score>=4.5)return"🔥";if(score>=3.5)return"✅";if(score>=2.5)return"😐";if(score>=1.5)return"😕";return"🔻";};
+  const feelLabel=(score)=>{if(score>=4.5)return"Great";if(score>=3.5)return"Good";if(score>=2.5)return"Okay";if(score>=1.5)return"Low";return"Poor";};
+  const feelColor=(score)=>{if(score>=3.5)return"#5BAD72";if(score>=2.5)return"#E8A830";return"#C0392B";};
+
+  // Per-supplement feel change highlights
+  const suppFeelChanges=dateLogs.map(log=>{
+    if(!log.feel)return null;
+    const vals=Object.values(log.feel).filter(v=>typeof v==="number");
+    if(!vals.length)return null;
+    const score=vals.reduce((a,b)=>a+b,0)/vals.length;
+    const prev=prevLogs.find(l=>l.suppId===log.suppId);
+    if(!prev||!prev.feel)return{log,score,delta:null};
+    const prevVals=Object.values(prev.feel).filter(v=>typeof v==="number");
+    if(!prevVals.length)return{log,score,delta:null};
+    const prevScore=prevVals.reduce((a,b)=>a+b,0)/prevVals.length;
+    return{log,score,delta:score-prevScore};
+  }).filter(Boolean);
+
+  const feelChanged=suppFeelChanges.some(f=>f.delta!==null&&Math.abs(f.delta)>=0.5);
+
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px",maxHeight:"85vh",overflowY:"auto"}}>
@@ -540,30 +606,78 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
           </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
         </div>
+
+        {/* ── Daily feel score strip (past dates with logs) ── */}
+        {isPast&&avgFeel!==null&&(
+          <div style={{marginBottom:16}}>
+            <div style={{background:"#111213",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:22}}>{feelEmoji(avgFeel)}</span>
+                <div>
+                  <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"1px",marginBottom:2}}>DAILY FEEL</div>
+                  <div style={{color:feelColor(avgFeel),fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:18,letterSpacing:"0.5px"}}>{feelLabel(avgFeel)}</div>
+                </div>
+              </div>
+              {/* Dot row — 5 dots representing score */}
+              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                {[1,2,3,4,5].map(i=>(
+                  <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<=Math.round(avgFeel)?feelColor(avgFeel):"#2A2B2E",transition:"background 0.2s"}}/>
+                ))}
+              </div>
+              {/* Delta vs previous day */}
+              {prevAvgFeel!==null&&(
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+                  <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px",marginBottom:2}}>VS PREV</div>
+                  <div style={{color:avgFeel>prevAvgFeel?"#5BAD72":avgFeel<prevAvgFeel?"#C0392B":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>
+                    {avgFeel>prevAvgFeel?"↑":avgFeel<prevAvgFeel?"↓":"—"}{Math.abs(avgFeel-prevAvgFeel)>0?` ${Math.abs(avgFeel-prevAvgFeel).toFixed(1)}`:""}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Per-supplement feel changes — only show if something shifted */}
+            {feelChanged&&(
+              <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>
+                {suppFeelChanges.filter(f=>f.delta!==null&&Math.abs(f.delta)>=0.5).map((f,i)=>{
+                  const supp=supplements.find(s=>s.id===f.log.suppId);
+                  return(
+                    <div key={i} style={{background:f.delta>0?"rgba(91,173,114,0.08)":"rgba(192,57,43,0.08)",border:`1px solid ${f.delta>0?"rgba(91,173,114,0.25)":"rgba(192,57,43,0.25)"}`,borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{color:"#C8C9CC",fontSize:12,fontWeight:600}}>{supp?.name||"Unknown"}</span>
+                      <span style={{color:f.delta>0?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{f.delta>0?"↑ IMPROVED":"↓ DECLINED"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Future date: run-out info with urgency colours ── */}
         {isFuture&&(()=>{
           const runOutOnDate=supplements.filter(s=>localISO(calcRunOut(s))===date);
           return(
             <div>
-              {runOutOnDate.length>0&&(
-                <div style={{background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
-                  <p style={{color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"1px",margin:"0 0 8px"}}>RUNS OUT THIS DATE</p>
-                  {runOutOnDate.map(s=>{
-                    const days=daysFromNow(calcRunOut(s));
-                    return(
-                      <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                        <span style={{color:"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15}}>{s.name}</span>
-                        <span style={{color:urgencyColor(days),fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{urgencyLabel(days)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {runOutOnDate.map(s=>{
+                const days=daysFromNow(calcRunOut(s));
+                const col=urgencyColor(days);
+                const colBg=col==="#C0392B"?"rgba(192,57,43,0.08)":col==="#E8A830"?"rgba(232,168,48,0.07)":"rgba(91,173,114,0.07)";
+                const colBorder=col==="#C0392B"?"rgba(192,57,43,0.3)":col==="#E8A830"?"rgba(232,168,48,0.25)":"rgba(91,173,114,0.25)";
+                return(
+                  <div key={s.id} style={{background:colBg,border:`1px solid ${colBorder}`,borderRadius:10,padding:"12px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <p style={{color:col,fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,letterSpacing:"1px",margin:"0 0 4px"}}>RUNS OUT THIS DATE</p>
+                      <span style={{color:"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:16}}>{s.name}</span>
+                    </div>
+                    <span style={{color:col,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,padding:"4px 8px",border:`1px solid ${colBorder}`,borderRadius:6}}>{urgencyLabel(days)}</span>
+                  </div>
+                );
+              })}
               <div style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
                 <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,margin:0,lineHeight:1.6}}>This date is in the future. You can pre-log supplements here if you want to plan ahead.</p>
               </div>
             </div>
           );
         })()}
+
         {dateLogs.length>0&&(
           <div style={{marginBottom:16}}>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>LOGGED</span>
@@ -581,7 +695,6 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
             })}
           </div>
         )}
-        {/* Only show supplements that existed on this date and haven't been logged yet */}
         {supplementsForDate.filter(s=>!loggedSuppIds.has(s.id)).length>0&&(
           <div>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>{dateLogs.length>0?"NOT LOGGED":"SUPPLEMENTS"}</span>
@@ -615,7 +728,6 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
             ))}
           </div>
         )}
-        {/* Message when no supplements existed yet on this date */}
         {supplementsForDate.length===0&&(
           <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,textAlign:"center",padding:"24px 0"}}>No supplements were in your stack on this date.</p>
         )}
@@ -629,14 +741,23 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
 function ProfileOnboarding({onComplete}){
   const [step,setStep]=useState(0);
   const [profile,setProfile]=useState({name:"",email:"",age:""});
+  const [photoPreview,setPhotoPreview]=useState(null);
+  const photoInputRef=useRef(null);
   const set=(k,v)=>setProfile(p=>({...p,[k]:v}));
-  const finish=()=>{save(PROFILE_KEY,{...profile,createdAt:new Date().toISOString()});onComplete(profile);};
+  const finish=(photo)=>{save(PROFILE_KEY,{...profile,photo:photo||photoPreview||null,createdAt:new Date().toISOString()});onComplete({...profile,photo:photo||photoPreview||null});};
+  const handlePhoto=(e)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>setPhotoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
   const steps=[
     <div key={0} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 28px",textAlign:"center"}}>
       <h1 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:42,fontWeight:900,color:"#F0F0F0",marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.05}}>Welcome to<br/><span style={{color:"#E8A830"}}>SUPPSTACKD</span></h1>
       <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.8,marginBottom:40}}>Let's set up your profile so we can personalise your experience.</p>
       <button className="btn-primary" style={{width:"100%",padding:16,fontSize:14}} onClick={()=>setStep(1)}>LET'S GO →</button>
-      <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={finish}>Skip</button>
+      <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={()=>finish(null)}>Skip</button>
     </div>,
     <div key={1} style={{padding:"40px 28px",flex:1}}>
       <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Who are you?</h2>
@@ -645,11 +766,25 @@ function ProfileOnboarding({onComplete}){
       <div className="field"><span className="section-label">EMAIL ADDRESS</span><input className="inp" type="email" placeholder="your@email.com" value={profile.email} onChange={e=>set("email",e.target.value)}/><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>For reorder reminders & product recommendations.</p></div>
       <div className="field"><span className="section-label">AGE (OPTIONAL)</span><input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/></div>
       <div className="field"><span className="section-label">COUNTRY (OPTIONAL)</span><select className="inp" value={profile.country||""} onChange={e=>set("country",e.target.value)}><option value="">Select your country</option>{COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}</select><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to show the right currency symbol.</p></div>
-      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:profile.name.trim()?1:0.4,cursor:profile.name.trim()?"pointer":"not-allowed"}} onClick={()=>profile.name.trim()&&finish()}>{profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"ENTER YOUR NAME TO CONTINUE"}</button>
-      <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={finish}>Skip for now</button>
+      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:profile.name.trim()?1:0.4,cursor:profile.name.trim()?"pointer":"not-allowed"}} onClick={()=>profile.name.trim()&&setStep(2)}>{profile.name.trim()?`NEXT →`:"ENTER YOUR NAME TO CONTINUE"}</button>
+      <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={()=>finish(null)}>Skip for now</button>
+    </div>,
+    <div key={2} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6,alignSelf:"flex-start"}}>Add a photo</h2>
+      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:30,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
+      <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhoto}/>
+      <div onClick={()=>photoInputRef.current?.click()} style={{width:110,height:110,borderRadius:"50%",background:photoPreview?"transparent":"#1C1D1F",border:`2px dashed ${photoPreview?"#E8A830":"#3A3B3E"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,overflow:"hidden",transition:"border-color 0.2s"}}>
+        {photoPreview
+          ?<img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
+          :<div style={{textAlign:"center"}}><div style={{fontSize:28,marginBottom:4}}>📷</div><div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>TAP TO ADD</div></div>
+        }
+      </div>
+      {photoPreview&&<button onClick={()=>setPhotoPreview(null)} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",marginBottom:16}}>Remove photo</button>}
+      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:"auto"}} onClick={()=>finish(photoPreview)}>{profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"CONTINUE"}</button>
+      <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={()=>finish(null)}>Skip photo</button>
     </div>,
   ];
-  const pct=step===0?0:100;
+  const pct=step===0?0:step===1?50:100;
   return(
     <div className="onboard-screen">
       <div className="onboard-progress"><div className="onboard-progress-fill" style={{width:`${pct}%`}}/></div>
@@ -694,7 +829,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
   const currency=CURRENCIES[profile?.country||"Other"]||"$";
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"60vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
+      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#3A3B3E",margin:"0 auto 16px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
@@ -1214,9 +1349,9 @@ function ShareCard({supplements,profile,logs,onClose}){
     const tl=ctx.createLinearGradient(0,0,W,0);
     tl.addColorStop(0,"rgba(232,168,48,0)");tl.addColorStop(0.2,"rgba(232,168,48,0.9)");tl.addColorStop(0.8,"rgba(232,168,48,0.9)");tl.addColorStop(1,"rgba(232,168,48,0)");
     ctx.strokeStyle=tl;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(W,4);ctx.stroke();
-    ctx.fillStyle="rgba(255,255,255,0.12)";ctx.font="700 36px Arial, sans-serif";ctx.letterSpacing="8px";ctx.fillText("SUPPSTACKD",80,100);
+    ctx.fillStyle="rgba(232,168,48,0.7)";ctx.font="800 34px Arial, sans-serif";ctx.letterSpacing="6px";ctx.fillText("SUPPSTACKD",72,96);
     const name=(profile?.name||"MY STACK").toUpperCase();
-    ctx.fillStyle="#F0F0F0";ctx.font="900 130px Arial, sans-serif";ctx.fillText(name,72,320);
+    ctx.fillStyle="#F0F0F0";ctx.font="900 130px Arial, sans-serif";ctx.letterSpacing="0px";ctx.fillText(name,72,320);
     const nameW=Math.min(ctx.measureText(name).width,W-144);
     const ul=ctx.createLinearGradient(72,0,72+nameW,0);
     ul.addColorStop(0,"#E8A830");ul.addColorStop(1,"rgba(232,168,48,0.1)");
@@ -1241,24 +1376,25 @@ function ShareCard({supplements,profile,logs,onClose}){
       const textW=ctx.measureText(label).width;
       const pillW=textW+(pillPad*2);
       if(px+pillW>W-72){px=72;py+=pillH+gap;}
-      if(py>H-300)return;
+      if(py>H-380)return;
       ctx.fillStyle="rgba(255,255,255,0.05)";ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.fill();
       ctx.strokeStyle="rgba(232,168,48,0.3)";ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.stroke();
       ctx.fillStyle="#F0F0F0";ctx.font="700 26px Arial, sans-serif";ctx.fillText(label,px+pillPad,py+pillH/2+9);
       px+=pillW+gap;
     });
     if(supplements.length>10){ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="500 26px Arial, sans-serif";ctx.fillText(`+${supplements.length-10} more`,px,py+pillH/2+9);}
-    const bottomY=H-200;
+    // Bottom — KNOW YOUR STACK only, large and centered
+    const bottomY=H-300;
     ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(72,bottomY);ctx.lineTo(W-72,bottomY);ctx.stroke();
-    ctx.fillStyle="rgba(232,168,48,0.15)";ctx.font="900 80px Arial, sans-serif";ctx.letterSpacing="-2px";
-    const brandW=ctx.measureText("SUPPSTACKD").width;
-    ctx.fillText("SUPPSTACKD",(W-brandW)/2,bottomY+110);
-    ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="500 26px Arial, sans-serif";ctx.letterSpacing="4px";
-    const tagline="KNOW YOUR STACK";const tagW=ctx.measureText(tagline).width;
-    ctx.fillText(tagline,(W-tagW)/2,bottomY+155);
-    const dateStr=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}).toUpperCase();
-    ctx.fillStyle="rgba(255,255,255,0.15)";ctx.font="400 22px Arial, sans-serif";ctx.letterSpacing="1px";
-    const dw=ctx.measureText(dateStr).width;ctx.fillText(dateStr,(W-dw)/2,H-40);
+    ctx.letterSpacing="-4px";
+    ctx.font="900 148px Arial, sans-serif";
+    const kys="KNOW YOUR";const kys2="STACK";
+    const kysW=ctx.measureText(kys).width;const kys2W=ctx.measureText(kys2).width;
+    const scale=Math.min(1,(W-100)/Math.max(kysW,kys2W));
+    ctx.save();ctx.translate(W/2,bottomY+160);ctx.scale(scale,1);
+    ctx.fillStyle="#E8A830";ctx.fillText(kys,-ctx.measureText(kys).width/2,0);
+    ctx.fillStyle="#F0F0F0";ctx.fillText(kys2,-ctx.measureText(kys2).width/2,160);
+    ctx.restore();
     setGenerated(true);
   },[]);
 
@@ -1389,15 +1525,39 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
 function ProfileModal({profile,onClose,onUpdate,isPro}){
   const [editing,setEditing]=useState(false);
   const [form,setForm]=useState({...profile});
+  const [photoPreview,setPhotoPreview]=useState(profile?.photo||null);
+  const photoInputRef=useRef(null);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const currency=CURRENCIES[profile?.country||"Other"]||"£";
-  const handleSave=()=>{onUpdate(form);setEditing(false);};
+  const handlePhotoChange=(e)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{setPhotoPreview(ev.target.result);set("photo",ev.target.result);};
+    reader.readAsDataURL(file);
+  };
+  const handleSave=()=>{onUpdate({...form,photo:photoPreview});setEditing(false);};
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
           <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Profile</h2>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
+        </div>
+        {/* Avatar */}
+        <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+          <div style={{position:"relative"}}>
+            <div style={{width:72,height:72,borderRadius:"50%",background:"#1C1D1F",border:"2px solid #E8A830",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {(photoPreview||profile?.photo)
+                ?<img src={photoPreview||profile.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
+                :<span style={{fontSize:28,color:"#7A7D85"}}>{profile?.name?profile.name[0].toUpperCase():"?"}</span>
+              }
+            </div>
+            {editing&&(
+              <button onClick={()=>photoInputRef.current?.click()} style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:"#E8A830",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>✏️</button>
+            )}
+            <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhotoChange}/>
+          </div>
         </div>
         {!editing?(
           <div>
@@ -1430,7 +1590,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro}){
             <div className="field"><span className="section-label">AGE</span><input className="inp" type="number" value={form.age||""} onChange={e=>set("age",e.target.value)}/></div>
             <div className="field"><span className="section-label">COUNTRY</span><select className="inp" value={form.country||""} onChange={e=>set("country",e.target.value)}><option value="">Select country</option>{COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}</select></div>
             <div className="flex gap-10" style={{marginTop:4}}>
-              <button className="btn-cancel flex-1" onClick={()=>{setForm({...profile});setEditing(false);}}>Cancel</button>
+              <button className="btn-cancel flex-1" onClick={()=>{setForm({...profile});setPhotoPreview(profile?.photo||null);setEditing(false);}}>Cancel</button>
               <button className="btn-primary" style={{flex:2}} onClick={handleSave}>SAVE CHANGES</button>
             </div>
           </div>
@@ -1778,7 +1938,10 @@ function App(){
 
       <div className="bottom-nav">
         <button className="nav-btn" onClick={()=>setShowProfile(true)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          {profile?.photo
+            ?<div style={{width:22,height:22,borderRadius:"50%",overflow:"hidden",border:"1.5px solid #E8A830"}}><img src={profile.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/></div>
+            :<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          }
           <span>PROFILE</span>
         </button>
         <button className="nav-btn" onClick={()=>supplements.length>0?setShowBatchLog(true):setShowAdd(true)}>
