@@ -136,84 +136,82 @@ const SPORTS=["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","F
 
 // ── Supplement Benefits Database ─────────────────────────────────────────────
 const SUPP_BENEFITS={
-  "whey protein concentrate":["Delivers a complete amino acid profile to support muscle repair and growth","Cost-effective protein source with moderate lactose content — suited to most users","Ideal post-workout to kickstart muscle protein synthesis"],
-  "whey protein isolate":["Higher protein purity (90%+) with most lactose and fat removed — better for lactose-sensitive users","Faster absorption rate than concentrate, making it optimal immediately post-training","Supports lean muscle gain with minimal additional calories from fat or carbs"],
-  "whey protein":["Provides all essential amino acids needed for muscle repair and growth","Fast-digesting protein source best used around training sessions","Supports recovery, strength adaptation, and body composition goals"],
-  "casein protein":["Slow-digesting protein that provides a sustained release of amino acids over 5–7 hours","Ideal before sleep to reduce overnight muscle breakdown","Keeps you feeling fuller for longer, useful during calorie-restricted phases"],
-  "plant protein":["Combines multiple plant sources to deliver a complete amino acid profile","Suitable for vegans and those with dairy sensitivities","Supports muscle repair and recovery comparably to whey when intake is sufficient"],
-  "creatine monohydrate":["The most researched form of creatine — proven to increase strength and power output","Increases phosphocreatine stores in muscles, enabling more work during high-intensity efforts","Supports lean muscle gain and faster recovery between sets"],
-  "creatine hcl":["More soluble than monohydrate, requiring a smaller dose with less water retention","May cause less bloating for users sensitive to monohydrate","Delivers the same core strength and power benefits as standard creatine"],
-  "creatine":["Increases muscular energy availability for short, intense bursts of effort","Well-supported for improving strength, power, and high-intensity performance","One of the most studied and effective supplements for body composition"],
-  "pre-workout":["Combines stimulants and performance ingredients to increase energy and focus before training","Typically contains caffeine, beta-alanine, and nitric oxide precursors to enhance output","Can improve endurance, mental drive, and muscle pump during sessions"],
-  "caffeine":["Stimulates the central nervous system to reduce perceived effort and increase alertness","Shown to improve endurance, strength, and reaction time when taken before exercise","Effective at doses of 3–6mg per kg bodyweight; timing matters for sleep quality"],
-  "beta-alanine":["Buffers lactic acid buildup in muscles, delaying the onset of fatigue","Most effective for efforts lasting 1–4 minutes — relevant to high-rep sets and intervals","Responsible for the harmless tingling sensation (paraesthesia) some users experience"],
-  "bcaa":["Provides leucine, isoleucine, and valine — the three amino acids most involved in muscle protein synthesis","Useful for reducing muscle soreness and breakdown during fasted training or long sessions","Leucine in particular acts as a direct trigger for muscle repair signalling"],
-  "eaa":["Contains all nine essential amino acids the body cannot produce itself","More complete than BCAAs for stimulating muscle protein synthesis","Supports recovery, reduces soreness, and maintains muscle mass during calorie deficits"],
-  "l-glutamine":["The most abundant amino acid in muscle tissue — supports recovery after intense training","Helps maintain gut lining integrity, which can be compromised by heavy exercise","May reduce muscle soreness and support immune function during high training volumes"],
-  "citrulline malate":["Increases nitric oxide production, widening blood vessels and improving muscle pump","Reduces ammonia buildup during training, delaying fatigue","Shown to improve rep performance and reduce post-workout soreness"],
-  "l-citrulline":["Precursor to arginine and nitric oxide — supports blood flow and nutrient delivery to muscles","Enhances endurance and power output, particularly in longer training sessions","More bioavailable than arginine supplementation directly"],
-  "arginine":["Precursor to nitric oxide, supporting vasodilation and blood flow during exercise","May support growth hormone release and improve nutrient delivery to working muscles","Less bioavailable than citrulline — often combined with other NO boosters"],
-  "omega-3":["Reduces systemic inflammation, supporting faster recovery between sessions","Supports heart, brain, and joint health with consistent use","EPA and DHA are the active components — look for high combined levels per serving"],
-  "fish oil":["Rich source of EPA and DHA omega-3 fatty acids for anti-inflammatory benefit","Supports cardiovascular health, cognitive function, and joint lubrication","Helps reduce delayed onset muscle soreness (DOMS) over time"],
-  "vitamin d":["Critical for calcium absorption, bone density, and immune system regulation","Deficiency is common in low-sunlight environments and linked to reduced strength and mood","Supports testosterone production and muscle function — often deficient in athletes"],
-  "vitamin d3":["The most bioavailable form of vitamin D — more effective at raising blood levels than D2","Supports immune defence, hormone regulation, and musculoskeletal health","Best taken with a fat-containing meal for optimal absorption"],
-  "vitamin c":["Potent antioxidant that reduces oxidative stress caused by intense exercise","Supports collagen synthesis — important for tendon, ligament, and joint health","Bolsters immune function during periods of heavy training load"],
-  "magnesium":["Involved in over 300 enzymatic processes including muscle contraction and energy production","Deficiency is common in active individuals and linked to cramping, poor sleep, and fatigue","Supports recovery, sleep quality, and nervous system regulation"],
-  "zinc":["Essential mineral for testosterone production, immune function, and protein synthesis","Commonly depleted through sweat — athletes are at higher risk of deficiency","Supports wound healing, enzyme activity, and hormonal balance"],
-  "zma":["Combines zinc, magnesium, and vitamin B6 to address common deficiencies in athletes","Supports natural testosterone levels, sleep quality, and overnight recovery","Often taken before bed to maximise the restorative effects during sleep"],
-  "vitamin b12":["Essential for red blood cell production and oxygen transport to working muscles","Supports nervous system function and energy metabolism","Particularly important for those on plant-based diets who may be deficient"],
-  "iron":["Core component of haemoglobin — required for oxygen delivery to muscles","Deficiency leads to fatigue, reduced endurance, and impaired performance","Most relevant for endurance athletes and menstruating women"],
-  "multivitamin":["Covers common micronutrient gaps that diet alone may not address","Supports energy metabolism, immune function, and overall health maintenance","A useful nutritional insurance policy during high training volumes or restrictive diets"],
-  "ashwagandha":["Adaptogen shown to reduce cortisol and the physiological stress response","Supports natural testosterone levels, strength gains, and recovery in trained individuals","May improve sleep quality, focus, and resilience under mental and physical stress"],
-  "rhodiola rosea":["Adaptogen that reduces fatigue and improves mental and physical performance under stress","Shown to decrease perceived exertion during endurance exercise","Supports focus, mood stability, and resistance to burnout"],
-  "lions mane":["Nootropic mushroom that supports nerve growth factor (NGF) production","Associated with improved focus, memory, and cognitive clarity","May support long-term brain health and reduce mental fatigue"],
-  "cordyceps":["Increases ATP production and oxygen utilisation — directly relevant to endurance performance","Shown to improve VO2 max and reduce fatigue in trained individuals","Supports adrenal health and sustained energy without stimulant-related crashes"],
-  "reishi":["Adaptogenic mushroom that supports immune function and stress resilience","Anti-inflammatory properties may aid recovery and reduce oxidative damage","Often used for sleep quality, hormone balance, and long-term health"],
-  "turkesterone":["Plant-based ecdysteroid that may support muscle protein synthesis and lean mass","Emerging evidence suggests anabolic-like effects without androgenic side effects","Popular in natural bodybuilding for its potential to improve body composition"],
-  "tongkat ali":["Shown to support free testosterone levels by reducing SHBG binding","May improve libido, energy, and body composition in men with low-normal testosterone","Used as a natural hormonal support supplement, particularly during calorie deficits"],
-  "fadogia agrestis":["Used to support luteinising hormone (LH) signalling and testosterone production","Often stacked with tongkat ali for synergistic hormonal support","Emerging supplement — research is still limited; cycle use is typically recommended"],
-  "nmn":["Precursor to NAD+, a molecule critical for cellular energy production and DNA repair","Supports mitochondrial function and may slow age-related decline in energy and recovery","Popular in longevity protocols for its potential to maintain metabolic health"],
-  "nad+":["Central molecule in cellular energy metabolism — levels decline with age","Supports mitochondrial efficiency, DNA repair, and metabolic function","Supplementation aims to restore youthful cellular energy levels"],
-  "resveratrol":["Polyphenol with antioxidant and anti-inflammatory properties","Activates sirtuins involved in longevity and metabolic regulation","Often combined with NMN for synergistic cellular health benefits"],
-  "collagen":["Primary structural protein in connective tissue — supports joints, tendons, and skin","Supplementation provides amino acids (glycine, proline) that support tissue repair","Best taken with vitamin C to enhance collagen synthesis"],
-  "collagen peptides":["Hydrolysed form of collagen with improved bioavailability and absorption","Supports joint comfort, skin elasticity, and connective tissue recovery","Useful for athletes with high joint loading or recovering from injury"],
-  "glucosamine":["Structural component of cartilage — supplementation may slow cartilage breakdown","Commonly used to reduce joint pain and stiffness, particularly in the knees","Most effective when combined with chondroitin for joint health support"],
-  "chondroitin":["Supports cartilage water retention and elasticity, cushioning joints under load","May reduce inflammation and pain in osteoarthritic joints","Often paired with glucosamine for combined joint protection"],
-  "turmeric":["Contains curcumin, a potent anti-inflammatory and antioxidant compound","May reduce joint pain, exercise-induced inflammation, and muscle soreness","Absorption is significantly enhanced when taken with black pepper (piperine)"],
-  "curcumin":["Active compound in turmeric with well-documented anti-inflammatory effects","Inhibits NF-kB pathways involved in chronic inflammation and recovery","Bioavailability is low without piperine or phospholipid complex formulations"],
-  "coq10":["Antioxidant essential for mitochondrial energy production (ATP synthesis)","Supports cardiovascular health and may reduce statin-related muscle fatigue","Levels decline with age — supplementation supports energy and cellular protection"],
-  "berberine":["Plant compound with effects comparable to metformin on blood sugar regulation","Activates AMPK, improving insulin sensitivity and supporting body composition","May benefit gut health, lipid levels, and metabolic markers"],
-  "inositol":["Supports insulin signalling, hormone balance, and neurotransmitter function","Commonly used for PCOS management, anxiety reduction, and sleep support","Myo-inositol form is most studied for hormonal and metabolic benefits"],
-  "lions mane mushroom":["Stimulates nerve growth factor (NGF) for cognitive support and neural repair","Associated with improved memory, focus, and reduced brain fog","May have neuroprotective effects relevant to long-term cognitive health"],
-  "melatonin":["Hormone that regulates the sleep-wake cycle — supports sleep onset and quality","Useful for shift workers, jet lag, or those with disrupted circadian rhythms","Low doses (0.5–1mg) are often as effective as higher doses with fewer side effects"],
-  "5-htp":["Precursor to serotonin, supporting mood regulation and emotional wellbeing","May improve sleep quality by supporting melatonin production","Used to reduce anxiety and support appetite regulation"],
-  "l-theanine":["Amino acid found in green tea that promotes calm alertness without sedation","Synergistic with caffeine — smooths out stimulant edges and improves focus quality","Supports relaxation and sleep when taken alone in higher doses"],
-  "taurine":["Amino acid involved in muscle contraction, hydration, and nervous system function","Acts as an antioxidant and supports cardiovascular and mitochondrial health","Commonly included in pre-workouts; also supports electrolyte balance"],
-  "electrolytes":["Replenish sodium, potassium, and magnesium lost through sweat during exercise","Prevent cramping, maintain fluid balance, and support nerve and muscle function","Particularly important during endurance events, hot conditions, or high sweat rates"],
-  "sodium bicarbonate":["Buffers blood acidity during high-intensity efforts, delaying fatigue","Evidence-backed for improving performance in events lasting 1–7 minutes","Timing and dosing are important — GI discomfort is a common side effect"],
-  "spirulina":["Blue-green algae rich in protein, iron, B vitamins, and antioxidants","Supports immune function, reduces inflammation, and provides dense micronutrient coverage","Popular in plant-based diets as a whole-food nutrient source"],
-  "chlorella":["Detoxifying algae that binds heavy metals and supports gut health","Rich in chlorophyll, vitamins, and minerals with antioxidant properties","Supports immune function and may aid recovery from intense training"],
-  "maca":["Adaptogenic root that supports energy, libido, and hormonal balance","Shown to improve endurance and reduce fatigue in some studies","Popular among athletes for natural energy support without stimulants"],
-  "probiotics":["Support gut microbiome diversity, which influences immunity, digestion, and mood","May reduce GI issues during heavy training and improve nutrient absorption","Strain-specific effects vary — look for multi-strain formulations with proven CFU counts"],
-  "digestive enzymes":["Break down proteins, carbohydrates, and fats to improve nutrient absorption","Useful for those with digestive discomfort, bloating, or high protein intake","Support gut efficiency, particularly when consuming large meals around training"],
-  "fibre":["Supports gut motility, microbiome health, and stable blood sugar levels","Reduces appetite and supports body composition through satiety mechanisms","Soluble and insoluble fibre have complementary roles — variety is key"],
-  "psyllium husk":["Soluble fibre that forms a gel in the gut, slowing digestion and improving stool consistency","Supports cholesterol management and blood sugar regulation","Effective for both constipation and loose stools depending on hydration"],
-  "green tea extract":["Concentrated source of EGCG and caffeine with antioxidant and fat-oxidation properties","May support metabolic rate and fat loss when combined with exercise","Anti-inflammatory and neuroprotective effects support overall health"],
-  "l-carnitine":["Transports fatty acids into mitochondria for use as fuel during exercise","May support fat oxidation, endurance, and recovery when taken consistently","Most effective in individuals with lower baseline carnitine levels (e.g. vegans)"],
-  "cla":["Conjugated linoleic acid shown to modestly support fat loss and lean mass retention","May reduce inflammation and support immune function","Effects are modest — most relevant as part of a broader body composition strategy"],
-  "appetite suppressant":["Reduces hunger signals to support adherence to calorie-controlled diets","Common ingredients include glucomannan, 5-HTP, and green tea extract","Best used as a short-term tool alongside dietary and lifestyle changes"],
-  "fat burner":["Combines thermogenic ingredients to modestly raise metabolic rate and fat oxidation","Typically includes caffeine, green tea, and cayenne — effects are marginal without diet control","Most effective when used alongside a calorie deficit and consistent training"],
-  "protein bar":["Convenient whole-food protein source for hitting daily targets on the go","Macros vary widely — check for adequate protein (20g+) and manageable sugar content","Useful as a meal replacement or post-workout snack when whole food isn't available"],
-  "mass gainer":["High-calorie formula combining protein, carbohydrates, and fats for bulking phases","Supports caloric surplus needed for muscle and weight gain","Most effective for hard gainers who struggle to meet energy needs through food alone"],
-  "testosterone booster":["Combines herbs and minerals (zinc, vitamin D, ashwagandha) that support natural testosterone","Most effective in those with underlying deficiencies rather than optimal levels","Not a replacement for lifestyle factors — sleep, training, and nutrition are primary drivers"],
-  "nitric oxide booster":["Increases nitric oxide production to widen blood vessels and improve muscle pump","Enhances nutrient and oxygen delivery to working muscles during training","Common ingredients include citrulline, arginine, and beetroot extract"],
-  "beetroot":["Rich in dietary nitrates that convert to nitric oxide, improving blood flow and endurance","Shown to reduce oxygen cost of exercise and improve time-trial performance","Most effective for sub-maximal endurance efforts; takes several days of use to peak"],
-  "sleep supplement":["Combines ingredients like magnesium, L-theanine, and melatonin to support sleep onset and quality","Supports overnight recovery, hormone regulation, and next-day performance","Non-habit forming formulas are preferable for regular use"],
-  "vitamin k2":["Works synergistically with vitamin D3 to direct calcium into bones and away from arteries","Supports cardiovascular health and bone density — often deficient alongside vitamin D","The MK-7 form has a longer half-life and is preferred for supplementation"],
-  "iodine":["Essential for thyroid hormone production, which regulates metabolism and energy","Deficiency can impair metabolic rate and cognitive function","Most people get sufficient iodine from diet, but athletes with restricted eating may be at risk"],
-  "selenium":["Antioxidant mineral that supports thyroid function and immune defence","Protects against oxidative damage from intense training","Brazil nuts are a natural source — supplementation should avoid excessive doses"],
+  "whey protein concentrate":["Helps your muscles recover and grow after training","A complete protein with everything your body needs to rebuild","Great everyday protein that works well for most people"],
+  "whey protein isolate":["Faster absorbing than regular whey — great right after a workout","Almost no lactose, so easier on the stomach if dairy bothers you","Very high protein per scoop with less fat and carbs"],
+  "whey protein":["Gives your muscles the building blocks they need to repair and grow","Fast-absorbing — works best taken around your workout","One of the most effective and well-studied proteins out there"],
+  "casein protein":["Digests slowly and feeds your muscles for hours — ideal before bed","Helps stop muscle breakdown overnight while you sleep","Keeps you feeling full longer, useful when cutting calories"],
+  "plant protein":["A complete protein from plants — works just as well as whey when you get enough","Great for vegans or anyone avoiding dairy","Supports muscle recovery and growth the same way animal protein does"],
+  "creatine monohydrate":["The most studied supplement in the world — genuinely works for strength","Helps you lift more and push harder in training","Builds lean muscle over time with consistent use"],
+  "creatine hcl":["Same benefits as regular creatine but easier to digest","Smaller dose needed — less water retention for some people","Good option if regular creatine causes bloating"],
+  "creatine":["Helps you get stronger and perform better in the gym","More energy available for hard efforts — you can do more reps","Consistently shown to improve strength and muscle over time"],
+  "pre-workout":["Gives you energy and focus to train harder","Reduces how tired you feel so you can push through tough sessions","Gets blood flowing to your muscles for a better pump"],
+  "caffeine":["Wakes you up and sharpens your focus before training","Makes hard exercise feel a bit easier","Works best timed 30–45 minutes before you train"],
+  "beta-alanine":["Helps delay the burning feeling in your muscles during hard sets","Lets you keep going a little longer before fatigue kicks in","The tingling feeling you might notice is normal and harmless"],
+  "bcaa":["Three key amino acids your muscles use directly for repair","Helps reduce soreness after training","Useful during fasted workouts to protect muscle"],
+  "eaa":["All the essential amino acids your body can't make itself","More complete than BCAAs for muscle recovery and growth","Helps rebuild muscle and reduce soreness after hard training"],
+  "l-glutamine":["Supports gut health, which can take a hit during heavy training","Helps with recovery and reducing soreness","Your muscles use a lot of this — useful to top up after hard sessions"],
+  "citrulline malate":["Boosts blood flow so your muscles get more oxygen and nutrients","Gives you a better pump and helps delay fatigue","Often reduces soreness in the days after training"],
+  "l-citrulline":["Improves blood flow and muscle pump during training","Helps you sustain effort for longer","More effective than arginine at raising nitric oxide levels"],
+  "arginine":["Supports blood flow to working muscles","May help with pump and nutrient delivery during exercise","Often combined with other ingredients for best effect"],
+  "omega-3":["Reduces inflammation so you recover faster between sessions","Good for your heart, brain, and joints","One of the most widely recommended supplements for overall health"],
+  "fish oil":["Rich source of healthy fats that fight inflammation","Supports joint comfort, heart health, and brain function","Helps reduce muscle soreness over time with regular use"],
+  "vitamin d":["Most people are deficient — especially in low-sunlight countries","Important for strong bones, immune health, and mood","Supports muscle function and hormone balance"],
+  "vitamin d3":["The best form of vitamin D your body can actually use","Take with a meal for better absorption","Supports immunity, energy, and overall wellbeing"],
+  "vitamin c":["Strong antioxidant that helps your body recover from hard training","Supports healthy joints, tendons, and ligaments","Gives your immune system a boost, especially during heavy training blocks"],
+  "magnesium":["Helps muscles relax and recover — important if you cramp often","Supports sleep quality and stress management","Many active people are deficient without knowing it"],
+  "zinc":["Key for hormone health, immune function, and recovery","Sweating a lot can deplete your zinc — athletes often need more","Supports energy and overall wellbeing"],
+  "zma":["Zinc, magnesium and B6 together — a common athlete deficiency combo","Supports better sleep and overnight recovery","Often taken before bed to help the body repair while you rest"],
+  "vitamin b12":["Keeps your energy levels up and supports nerve health","Essential if you eat little or no meat","Helps your body make red blood cells to carry oxygen"],
+  "iron":["Carries oxygen through your blood to your working muscles","Low iron means low energy and poor performance","Worth checking your levels if you feel consistently tired"],
+  "multivitamin":["Fills in any gaps your diet might be missing","Supports energy, immunity, and general health","A simple daily safety net for overall wellbeing"],
+  "ashwagandha":["Helps your body handle stress better — both physical and mental","Supports natural energy and hormone health","Many people notice better sleep and calmer mood with regular use"],
+  "rhodiola rosea":["Reduces fatigue and helps you stay sharp under pressure","Can make hard training feel a little more manageable","Supports mood and mental resilience"],
+  "lions mane":["Supports focus, memory, and mental clarity","May help reduce brain fog over time","Popular for people who want to stay sharp mentally"],
+  "cordyceps":["Supports energy and endurance — popular with athletes","Helps your body use oxygen more efficiently","Natural energy boost without the jittery feeling of caffeine"],
+  "reishi":["Supports immune health and helps manage stress","Known for promoting calm, restful sleep","Used for overall health and long-term wellbeing"],
+  "turkesterone":["Plant-based compound associated with lean muscle and strength gains","No hormonal side effects — considered safe for most people","Popular in natural bodybuilding communities"],
+  "tongkat ali":["Supports healthy testosterone levels, especially when stressed or dieting","Can improve energy, mood, and drive","Often used by men looking for a natural hormonal support"],
+  "fadogia agrestis":["Used to support testosterone and hormonal health","Often stacked with tongkat ali","Still being researched — cycle use is recommended"],
+  "nmn":["Supports cellular energy and helps the body repair itself","Popular in longevity and anti-aging circles","May help maintain energy and metabolism as you get older"],
+  "nad+":["Fuel for your cells — helps them produce energy efficiently","Levels drop with age, which is why people supplement","Supports recovery, metabolism, and overall cellular health"],
+  "resveratrol":["Antioxidant found in red grapes — supports heart and cell health","Often taken for long-term health and longevity benefits","Works well alongside NMN for cellular protection"],
+  "collagen":["The main structural protein in joints, tendons, and skin","Supports joint comfort and flexibility with regular use","Take with vitamin C for best results"],
+  "collagen peptides":["Easier to absorb than standard collagen","Supports joints, skin elasticity, and connective tissue recovery","Useful for athletes with high joint load or anyone recovering from injury"],
+  "glucosamine":["Helps maintain healthy cartilage in your joints","Commonly used for knee comfort and joint longevity","Works best combined with chondroitin"],
+  "chondroitin":["Helps keep joints cushioned and flexible","Reduces stiffness and supports cartilage health over time","Often paired with glucosamine for joint support"],
+  "turmeric":["Natural anti-inflammatory — helps with joint pain and recovery","Take with black pepper to actually absorb it properly","Widely used for reducing everyday aches and inflammation"],
+  "curcumin":["The active ingredient in turmeric — more concentrated form","Reduces inflammation and may help with muscle soreness","Needs black pepper or a special formula to be absorbed well"],
+  "coq10":["Supports energy production inside your cells","Good for heart health and may help with fatigue","Levels drop naturally with age — worth supplementing if energy is low"],
+  "berberine":["Helps regulate blood sugar and supports metabolic health","Works similarly to some diabetes medications — without being one","Good for body composition and gut health"],
+  "inositol":["Supports hormone balance and mood regulation","Commonly used for PCOS, anxiety, and sleep","Helps the body respond to insulin properly"],
+  "lions mane mushroom":["Supports brain health, focus, and memory","May help reduce brain fog","Popular nootropic for mental performance"],
+  "melatonin":["Helps you fall asleep faster — especially useful for shift workers or jet lag","A small dose (0.5–1mg) is often all you need","Not a sleeping pill — helps reset your natural sleep rhythm"],
+  "5-htp":["Supports mood and emotional balance","Helps your brain make serotonin naturally","May also support better sleep quality"],
+  "l-theanine":["Promotes calm focus without making you drowsy","Pairs really well with caffeine to remove the jittery edge","On its own, great for winding down before sleep"],
+  "taurine":["Supports hydration, muscle function, and heart health","Has antioxidant properties and helps with recovery","Commonly added to energy drinks — also available solo"],
+  "electrolytes":["Replaces salts lost through sweat during training","Prevents cramping and keeps you hydrated properly","Essential during long sessions, hot weather, or heavy sweating"],
+  "sodium bicarbonate":["Helps buffer the burning feeling in muscles during intense efforts","Used by athletes in sprint or high-intensity events","Timing the dose right is important — can upset the stomach if taken incorrectly"],
+  "spirulina":["Nutrient-dense algae packed with protein, vitamins, and antioxidants","Supports immune health and reduces inflammation","Popular in plant-based diets as a dense whole-food supplement"],
+  "chlorella":["Supports detox and gut health","Rich in vitamins, minerals, and chlorophyll","Helps the immune system and may aid recovery"],
+  "maca":["Boosts energy and libido naturally","Supports hormone balance without being a hormone itself","Popular for stamina and overall vitality"],
+  "probiotics":["Supports a healthy gut — which affects immunity, mood, and digestion","Helps your body absorb nutrients more effectively","Especially useful during or after antibiotics or periods of high stress"],
+  "digestive enzymes":["Helps your body break down food and get more from what you eat","Reduces bloating and digestive discomfort","Useful if you eat a lot of protein or have a sensitive stomach"],
+  "fibre":["Keeps your gut healthy and digestion regular","Supports healthy blood sugar and appetite control","Most people don't get enough from food alone"],
+  "psyllium husk":["Soluble fibre that helps keep digestion smooth","Supports cholesterol levels and blood sugar balance","Very effective for regularity — drink plenty of water with it"],
+  "green tea extract":["Antioxidant-rich with gentle fat-burning and energy properties","Supports metabolism and overall health","Lower stimulant effect than coffee — good for sensitive people"],
+  "l-carnitine":["Helps your body use fat as fuel during exercise","May support endurance and reduce muscle soreness","Works best with consistent use — not an overnight fix"],
+  "cla":["Supports fat loss and muscle retention during a diet","Has mild anti-inflammatory properties","Best used as part of a broader approach to body composition"],
+  "fat burner":["Combines ingredients that slightly raise your metabolism","Works best alongside a calorie-controlled diet and regular training","Not a magic fix — but can give a small edge when everything else is in place"],
+  "mass gainer":["High-calorie shake to help you eat more when building muscle","Good for people who struggle to consume enough food","Combine with proper training for best results"],
+  "testosterone booster":["Combines natural ingredients to support healthy testosterone levels","Most useful if your levels are low — less noticeable if you're already optimal","Sleep, diet, and training are the biggest factors — this supports them"],
+  "nitric oxide booster":["Increases blood flow so your muscles get more oxygen and nutrients","Gives you a better pump and may improve endurance","Common ingredients include citrulline and beetroot"],
+  "beetroot":["Natural source of nitrates that improve blood flow and endurance","Shown to reduce how hard exercise feels during sustained efforts","Takes a few days of regular use to build up in your system"],
+  "sleep supplement":["Helps you fall asleep and stay asleep more easily","Supports overnight recovery — when most muscle repair happens","Non-habit forming formulas are better for regular use"],
+  "vitamin k2":["Works with vitamin D to keep calcium in your bones, not your arteries","Supports heart and bone health","Often missing from standard multivitamins — worth adding if you take vitamin D"],
+  "iodine":["Essential for thyroid health, which regulates your metabolism","Many people are mildly deficient without knowing it","Important for energy levels and cognitive function"],
+  "selenium":["Antioxidant mineral that protects cells from damage","Supports thyroid health and immune function","Easily overdone — stick to recommended doses"],
+  "protein bar":["Convenient way to hit your protein goals on the go","Check labels — some have more sugar than a chocolate bar","Look for 20g+ protein and minimal junk ingredients"],
 };
-
 function lookupBenefits(name){
   if(!name)return null;
   const n=name.toLowerCase().trim();
@@ -327,20 +325,22 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
     return"none";
   };
 
-  // Future dots: map each supplement's run-out date to its current urgency colour
+  // Future dots: map run-out date → [{name, color}] for tooltip on click
   const futureRunOuts={};
   supplements.forEach(s=>{
     const ro=calcRunOut(s);
     const roISO=localISO(ro);
     const days=daysFromNow(ro);
     const color=urgencyColor(days);
-    if(!futureRunOuts[roISO]){futureRunOuts[roISO]=color;}
-    else{
-      // Show highest urgency (red > amber > green)
-      const priority=(c)=>c==="#C0392B"?2:c==="#E8A830"?1:0;
-      if(priority(color)>priority(futureRunOuts[roISO]))futureRunOuts[roISO]=color;
-    }
+    if(!futureRunOuts[roISO])futureRunOuts[roISO]=[];
+    futureRunOuts[roISO].push({name:s.name,color});
   });
+  // Derive dot colour per date (highest urgency wins)
+  const futureDotColor=(iso)=>{
+    const items=futureRunOuts[iso];if(!items)return null;
+    const priority=(c)=>c==="#C0392B"?2:c==="#E8A830"?1:0;
+    return items.reduce((best,i)=>priority(i.color)>priority(best)?i.color:best,items[0].color);
+  };
 
   const todayRef=useRef(null);
   useEffect(()=>{
@@ -372,7 +372,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate}){
             <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>{d.getDate()}</span>
             {(isPast&&dateState!=="none")&&<div style={{width:4,height:4,borderRadius:"50%",background:dotColor}}/>}
             {isToday&&<div style={{width:4,height:4,borderRadius:"50%",background:"#111213"}}/>}
-            {isFuture&&futureRunOuts[iso]&&<div style={{width:4,height:4,borderRadius:"50%",background:futureRunOuts[iso]}}/>}
+            {isFuture&&futureDotColor(iso)&&<div style={{width:4,height:4,borderRadius:"50%",background:futureDotColor(iso)}}/>}
           </div>
         );
       })}
@@ -387,6 +387,11 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
   const todayStr=todayISO();
   const isToday=date===todayStr;
   const isFuture=date>todayStr;
+
+  // Supplements that run out on this specific future date
+  const runOutOnDate=isFuture?supplements.filter(s=>{
+    return localISO(calcRunOut(s))===date;
+  }):[];
 
   // Match logs using normalised date
   const dateLogs=logs.filter(l=>{
@@ -421,7 +426,22 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
           </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
         </div>
-        {isFuture&&(
+        {isFuture&&runOutOnDate.length>0&&(
+          <div style={{background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+            <p style={{color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"1px",margin:"0 0 8px"}}>RUNS OUT THIS DATE</p>
+            {runOutOnDate.map(s=>{
+              const days=daysFromNow(calcRunOut(s));
+              const color=urgencyColor(days);
+              return(
+                <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <span style={{color:"#F0F0F0",fontWeight:700,fontSize:13}}>{s.name}</span>
+                  <span style={{color,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{urgencyLabel(days)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {isFuture&&runOutOnDate.length===0&&(
           <div style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
             <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,margin:0,lineHeight:1.6}}>This date is in the future. You can pre-log supplements here if you want to plan ahead.</p>
           </div>
@@ -556,7 +576,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
   const currency=CURRENCIES[profile?.country||"Other"]||"$";
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"60vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
+      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"88vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#3A3B3E",margin:"0 auto 16px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
@@ -598,13 +618,16 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
           </div>
         )}
         {(()=>{const benefits=lookupBenefits(supp.name);if(!benefits)return null;return(
-          <div style={{marginTop:14}}>
-            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:8}}>BENEFITS</span>
-            <div style={{background:"#111213",borderRadius:10,padding:"10px 14px"}}>
+          <div style={{marginTop:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,letterSpacing:"2px",color:"#E8A830",textTransform:"uppercase"}}>Benefits</span>
+              <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(232,168,48,0.4),transparent)"}}/>
+            </div>
+            <div style={{background:"linear-gradient(135deg,rgba(232,168,48,0.07),rgba(232,168,48,0.03))",border:"1px solid rgba(232,168,48,0.2)",borderRadius:12,padding:"14px 16px"}}>
               {benefits.map((b,i)=>(
-                <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:i<benefits.length-1?8:0}}>
-                  <span style={{color:"#E8A830",fontSize:8,marginTop:3,flexShrink:0}}>◆</span>
-                  <span style={{color:"#C8C9CC",fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:1.6}}>{b}</span>
+                <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<benefits.length-1?12:0}}>
+                  <span style={{color:"#E8A830",fontSize:14,flexShrink:0,marginTop:1}}>◆</span>
+                  <span style={{fontFamily:"'Barlow',sans-serif",fontWeight:600,fontSize:14,color:"#E8C97A",lineHeight:1.5}}>{b}</span>
                 </div>
               ))}
             </div>
@@ -783,6 +806,8 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const [startedMode,setStartedMode]=useState("amount");
   const [amountLeft,setAmountLeft]=useState("");
   const [daysAlready,setDaysAlready]=useState("");
+  const [originalForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:null);
+  const handleUndo=()=>{if(originalForm)setForm({...originalForm});setSubmitted(false);};
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const touch=(k)=>setTouched(t=>({...t,[k]:true}));
   const calcConsumed=()=>{const total=parseFloat(form.totalAmount)||0,serving=parseFloat(form.servingSize)||0,perDay=parseFloat(form.servingsPerDay)||1;if(startedMode==="amount"){const left=parseFloat(amountLeft)||0;return Math.max(0,total-left);}else{const days=parseInt(daysAlready)||0;return Math.min(total,days*serving*perDay);}};
@@ -853,6 +878,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
         {submitted&&!isValid&&<div style={{background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.3)",borderRadius:10,padding:"11px 14px",marginBottom:16}}><p style={{color:"#C0392B",fontSize:12,fontFamily:"'Space Mono',monospace",margin:0}}>Please fix the highlighted fields above before saving.</p></div>}
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Cancel</button>
+          {isEdit&&<button onClick={handleUndo} title="Undo all changes" style={{padding:"12px 14px",borderRadius:10,border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,cursor:"pointer",flexShrink:0}}>↩</button>}
           <button onClick={handleSave} style={{flex:2,padding:12,borderRadius:10,cursor:isValid?"pointer":"not-allowed",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:isValid?"none":"1px solid #2A2B2E",background:isValid?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:isValid?"#111213":"#7A7D85",opacity:isValid?1:0.5,transition:"all 0.2s"}}>{isEdit?"SAVE CHANGES":"ADD SUPPLEMENT"}</button>
         </div>
         {!isValid&&<p style={{textAlign:"center",color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:10,letterSpacing:"0.5px"}}>Fill in all required (*) fields to continue</p>}
@@ -1104,17 +1130,21 @@ function ShareCard({supplements,profile,logs,onClose}){
       px+=pillW+gap;
     });
     if(supplements.length>10){ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="500 26px Arial, sans-serif";ctx.fillText(`+${supplements.length-10} more`,px,py+pillH/2+9);}
-    const bottomY=H-200;
+    // Bottom — SUPPSTACKD top-left style in gold, KNOW YOUR STACK large and centred only
+    const bottomY=H-260;
     ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(72,bottomY);ctx.lineTo(W-72,bottomY);ctx.stroke();
-    ctx.fillStyle="rgba(232,168,48,0.15)";ctx.font="900 80px Arial, sans-serif";ctx.letterSpacing="-2px";
-    const brandW=ctx.measureText("SUPPSTACKD").width;
-    ctx.fillText("SUPPSTACKD",(W-brandW)/2,bottomY+110);
-    ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="500 26px Arial, sans-serif";ctx.letterSpacing="4px";
-    const tagline="KNOW YOUR STACK";const tagW=ctx.measureText(tagline).width;
-    ctx.fillText(tagline,(W-tagW)/2,bottomY+155);
-    const dateStr=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}).toUpperCase();
-    ctx.fillStyle="rgba(255,255,255,0.15)";ctx.font="400 22px Arial, sans-serif";ctx.letterSpacing="1px";
-    const dw=ctx.measureText(dateStr).width;ctx.fillText(dateStr,(W-dw)/2,H-40);
+    // SUPPSTACKD top-left in gold accent
+    ctx.fillStyle="rgba(232,168,48,0.55)";ctx.font="800 38px Arial, sans-serif";ctx.letterSpacing="6px";ctx.fillText("SUPPSTACKD",72,bottomY+70);
+    // KNOW YOUR STACK — large, bold, centred, only text at bottom
+    ctx.fillStyle="#E8A830";ctx.font="900 110px Arial, sans-serif";ctx.letterSpacing="-3px";
+    const kys="KNOW YOUR STACK";
+    // Scale to fit width
+    ctx.font="900 96px Arial, sans-serif";ctx.letterSpacing="-2px";
+    const kysW=ctx.measureText(kys).width;
+    const kysScale=Math.min(1,(W-100)/kysW);
+    ctx.save();ctx.translate(W/2,bottomY+190);ctx.scale(kysScale,1);
+    ctx.fillText(kys,-ctx.measureText(kys).width/2,0);
+    ctx.restore();
     setGenerated(true);
   },[]);
 
