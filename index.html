@@ -580,46 +580,6 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
     setAddingFor(null);
   };
 
-  // ── Feel score helpers ────────────────────────────────────────────────────
-  // Get previous day's logs to compare feel
-  const prevDate=(()=>{const d=new Date(date+"T00:00:00");d.setDate(d.getDate()-1);return localISO(d);})();
-  const prevLogs=logs.filter(l=>{try{return(toISODate(l.date)||toISODate(l.ts))===prevDate;}catch{return false;}});
-
-  // Overall daily feel = average of all feel scores logged that day
-  const feelScores=dateLogs.map(l=>{
-    if(!l.feel)return null;
-    const vals=Object.values(l.feel).filter(v=>typeof v==="number");
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
-  }).filter(v=>v!==null);
-  const avgFeel=feelScores.length?feelScores.reduce((a,b)=>a+b,0)/feelScores.length:null;
-
-  const prevFeelScores=prevLogs.map(l=>{
-    if(!l.feel)return null;
-    const vals=Object.values(l.feel).filter(v=>typeof v==="number");
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
-  }).filter(v=>v!==null);
-  const prevAvgFeel=prevFeelScores.length?prevFeelScores.reduce((a,b)=>a+b,0)/prevFeelScores.length:null;
-
-  const feelEmoji=(score)=>{if(score>=4.5)return"🔥";if(score>=3.5)return"✅";if(score>=2.5)return"😐";if(score>=1.5)return"😕";return"🔻";};
-  const feelLabel=(score)=>{if(score>=4.5)return"Great";if(score>=3.5)return"Good";if(score>=2.5)return"Okay";if(score>=1.5)return"Low";return"Poor";};
-  const feelColor=(score)=>{if(score>=3.5)return"#5BAD72";if(score>=2.5)return"#E8A830";return"#C0392B";};
-
-  // Per-supplement feel change highlights
-  const suppFeelChanges=dateLogs.map(log=>{
-    if(!log.feel)return null;
-    const vals=Object.values(log.feel).filter(v=>typeof v==="number");
-    if(!vals.length)return null;
-    const score=vals.reduce((a,b)=>a+b,0)/vals.length;
-    const prev=prevLogs.find(l=>l.suppId===log.suppId);
-    if(!prev||!prev.feel)return{log,score,delta:null};
-    const prevVals=Object.values(prev.feel).filter(v=>typeof v==="number");
-    if(!prevVals.length)return{log,score,delta:null};
-    const prevScore=prevVals.reduce((a,b)=>a+b,0)/prevVals.length;
-    return{log,score,delta:score-prevScore};
-  }).filter(Boolean);
-
-  const feelChanged=suppFeelChanges.some(f=>f.delta!==null&&Math.abs(f.delta)>=0.5);
-
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px",maxHeight:"85vh",overflowY:"auto"}}>
@@ -630,68 +590,6 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
           </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
         </div>
-
-        {/* ── Daily feel score strip (past/today with logs) ── */}
-        {(isPast||isToday)&&avgFeel!==null&&(
-          <div style={{marginBottom:16}}>
-            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:22}}>{feelEmoji(avgFeel)}</span>
-                <div>
-                  <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"1px",marginBottom:2}}>DAILY FEEL</div>
-                  <div style={{color:feelColor(avgFeel),fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:18,letterSpacing:"0.5px"}}>{feelLabel(avgFeel)}</div>
-                </div>
-              </div>
-              <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                {[1,2,3,4,5].map(i=>(
-                  <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<=Math.round(avgFeel)?feelColor(avgFeel):"#2A2B2E",transition:"background 0.2s"}}/>
-                ))}
-              </div>
-              {prevAvgFeel!==null&&(
-                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
-                  <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px",marginBottom:2}}>VS PREV</div>
-                  <div style={{color:avgFeel>prevAvgFeel?"#5BAD72":avgFeel<prevAvgFeel?"#C0392B":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>
-                    {avgFeel>prevAvgFeel?"↑":avgFeel<prevAvgFeel?"↓":"—"}{Math.abs(avgFeel-prevAvgFeel)>0?` ${Math.abs(avgFeel-prevAvgFeel).toFixed(1)}`:""}
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* Per-supplement metric changes — only when something shifted ≥0.5 */}
-            {feelChanged&&(
-              <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>
-                {suppFeelChanges.filter(f=>f.delta!==null&&Math.abs(f.delta)>=0.5).map((f,i)=>{
-                  const supp=supplements.find(s=>s.id===f.log.suppId);
-                  const metrics=[{k:"energy",l:"NRG"},{k:"recovery",l:"REC"},{k:"mood",l:"MOD"},{k:"sleep",l:"SLP"}];
-                  const prevLog=prevLogs.find(l=>l.suppId===f.log.suppId);
-                  return(
-                    <div key={i} style={{background:f.delta>0?"rgba(91,173,114,0.07)":"rgba(192,57,43,0.07)",border:`1px solid ${f.delta>0?"rgba(91,173,114,0.22)":"rgba(192,57,43,0.22)"}`,borderRadius:9,padding:"9px 12px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                        <span style={{color:"#C8C9CC",fontSize:12,fontWeight:700}}>{supp?.name||"Unknown"}</span>
-                        <span style={{color:f.delta>0?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>{f.delta>0?"↑ FEEL IMPROVED":"↓ FEEL DECLINED"}</span>
-                      </div>
-                      <div style={{display:"flex",gap:10}}>
-                        {metrics.map(({k,l})=>{
-                          const cur=f.log.feel?.[k];
-                          const prev=prevLog?.feel?.[k];
-                          if(cur==null)return null;
-                          const diff=prev!=null?cur-prev:null;
-                          const changed=diff!=null&&Math.abs(diff)>=0.5;
-                          return(
-                            <div key={k} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-                              <span style={{fontFamily:"'Space Mono',monospace",fontSize:7,color:"#4A4B4F"}}>{l}</span>
-                              <span style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:cur>=4?"#5BAD72":cur>=3?"#E8A830":"#C0392B"}}>{cur}</span>
-                              {changed&&<span style={{fontFamily:"'Space Mono',monospace",fontSize:7,color:diff>0?"#5BAD72":"#C0392B"}}>{diff>0?`+${diff.toFixed(0)}`:diff.toFixed(0)}</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── Future date: run-out info with urgency colours ── */}
         {isFuture&&(()=>{
@@ -784,7 +682,8 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   const canvasRef=useRef(null);
   const imgRef=useRef(null);
   const stateRef=useRef({offsetX:0,offsetY:0,scale:1,initScale:1,dragging:false,lastX:0,lastY:0,lastDist:0,pinching:false,rafId:null});
-  const SIZE=280;
+  const SIZE=280;     // display size (px)
+  const RES=840;      // internal render resolution (3× for crisp output)
 
   // Draw directly from stateRef — no React re-renders in the hot path
   const draw=()=>{
@@ -792,22 +691,26 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const img=imgRef.current;
     if(!canvas||!img)return;
     const ctx=canvas.getContext("2d");
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
     const {offsetX,offsetY,scale}=stateRef.current;
-    ctx.clearRect(0,0,SIZE,SIZE);
-    const iw=img.width*scale,ih=img.height*scale;
-    ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
-    // Subtle dim only outside circle — image stays visible underneath
+    // scale is in display-pixel space; convert offset to RES space
+    const R=RES/SIZE;
+    ctx.clearRect(0,0,RES,RES);
+    const iw=img.width*scale*R,ih=img.height*scale*R;
+    ctx.drawImage(img,RES/2-iw/2+offsetX*R,RES/2-ih/2+offsetY*R,iw,ih);
+    // Subtle dim outside circle
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0,0,SIZE,SIZE);
-    ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2,true);
+    ctx.rect(0,0,RES,RES);
+    ctx.arc(RES/2,RES/2,RES/2-3,0,Math.PI*2,true);
     ctx.closePath();
     ctx.fillStyle="rgba(0,0,0,0.42)";
     ctx.fill();
     ctx.restore();
     // Gold ring
-    ctx.strokeStyle="#E8A830";ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle="#E8A830";ctx.lineWidth=5;
+    ctx.beginPath();ctx.arc(RES/2,RES/2,RES/2-4,0,Math.PI*2);ctx.stroke();
   };
 
   const scheduleDraw=()=>{
@@ -819,6 +722,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const img=new Image();
     img.onload=()=>{
       imgRef.current=img;
+      // initScale in display-pixel space so image fills the circle
       const s=Math.max(SIZE/img.width,SIZE/img.height);
       stateRef.current.scale=s;
       stateRef.current.initScale=s;
@@ -876,21 +780,24 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   };
 
   const handleConfirm=()=>{
-    const out=document.createElement("canvas");out.width=SIZE;out.height=SIZE;
+    const out=document.createElement("canvas");out.width=RES;out.height=RES;
     const ctx=out.getContext("2d");
-    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2,0,Math.PI*2);ctx.clip();
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    ctx.beginPath();ctx.arc(RES/2,RES/2,RES/2,0,Math.PI*2);ctx.clip();
     const {offsetX,offsetY,scale}=stateRef.current;
     const img=imgRef.current;
-    const iw=img.width*scale,ih=img.height*scale;
-    ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
+    const R=RES/SIZE;
+    const iw=img.width*scale*R,ih=img.height*scale*R;
+    ctx.drawImage(img,RES/2-iw/2+offsetX*R,RES/2-ih/2+offsetY*R,iw,ih);
     onConfirm(out.toDataURL("image/png"));
   };
 
   return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
       <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",textAlign:"center",margin:0}}>DRAG TO REPOSITION · PINCH TO ZOOM</p>
-      <canvas ref={canvasRef} width={SIZE} height={SIZE}
-        style={{borderRadius:"50%",cursor:"grab",touchAction:"none",display:"block",maxWidth:"100%"}}
+      <canvas ref={canvasRef} width={RES} height={RES}
+        style={{borderRadius:"50%",cursor:"grab",touchAction:"none",display:"block",width:SIZE,height:SIZE}}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}/>
       <div style={{display:"flex",gap:8,width:"100%"}}>
@@ -972,9 +879,10 @@ function ProgressRing({pct,color,size=58}){
 }
 
 // ── SupplementDetailSheet ─────────────────────────────────────────────────────
-function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
+function SupplementDetailSheet({supp,logs,onClose,onEdit,profile,supplements}){
   const sheetRef=useRef(null);
   const dragStartY=useRef(null);
+  const [showCardPreview,setShowCardPreview]=useState(false);
   const handleTouchStart=(e)=>{dragStartY.current=e.touches[0].clientY;};
   const handleTouchMove=(e)=>{
     if(dragStartY.current===null)return;
@@ -1009,6 +917,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
             {supp.brand&&<span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.brand} · {supp.type}</span>}
           </div>
           <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setShowCardPreview(true)} style={{padding:"5px 10px",borderRadius:8,border:"1px solid rgba(232,168,48,0.4)",background:"rgba(232,168,48,0.07)",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",letterSpacing:"0.3px"}}>SHARE</button>
             <button onClick={onEdit} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>
             <button onClick={onClose} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"transparent",color:"#7A7D85",fontSize:18,cursor:"pointer",lineHeight:1}}>✕</button>
           </div>
@@ -1060,15 +969,16 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
         );})()}
       </div>
     </div>
+    {showCardPreview&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowCardPreview(false)}/>}
   );
 }
 
-function StackCardList({displaySupps,onLog,onEdit,onDelete,onView,logs}){
-  return(<div style={{paddingBottom:160}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView} logs={logs}/>)}</div>);
+function StackCardList({displaySupps,onLog,onEdit,onDelete,onView,logs,onShare}){
+  return(<div style={{paddingBottom:160}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView} logs={logs} onShare={onShare}/>)}</div>);
 }
 
 // ── SupplementCard ────────────────────────────────────────────────────────────
-function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
+function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs,onShare}){
   const runOut=calcRunOut(supp),days=daysFromNow(runOut);
   const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
   const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
@@ -1098,8 +1008,13 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
           <button style={{padding:"5px 10px",border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}} onClick={()=>onEdit(supp)}>EDIT</button>
         </div>
       </div>
-      <div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/></div>
-
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{flex:1,height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/></div>
+        {onShare&&<button onClick={()=>onShare()} style={{flexShrink:0,padding:"3px 8px",border:"1px solid rgba(232,168,48,0.25)",background:"transparent",borderRadius:5,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          <span style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:"#E8A830",letterSpacing:"0.3px"}}>SHARE</span>
+        </button>}
+      </div>
     </div>
   );
 }
@@ -2310,7 +2225,7 @@ function App(){
                 <button className="btn-primary" style={{padding:"14px 32px",fontSize:13,letterSpacing:"0.5px"}} onClick={()=>setShowAdd(true)}>+ ADD SUPPLEMENT</button>
               </div>
             )}
-            {supplements.length>0&&<StackCardList displaySupps={displaySupps} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp} onView={setViewSupp} logs={logs}/>}
+            {supplements.length>0&&<StackCardList displaySupps={displaySupps} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp} onView={setViewSupp} logs={logs} onShare={()=>setShowShare(true)}/>}
           </>}
         </div>
       </div>
@@ -2348,7 +2263,7 @@ function App(){
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
-      {viewSupp&&<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} onClose={()=>setViewSupp(null)} onEdit={()=>{setEditSupp(viewSupp);setViewSupp(null);}}/>}
+      {viewSupp&&<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} supplements={supplements} onClose={()=>setViewSupp(null)} onEdit={()=>{setEditSupp(viewSupp);setViewSupp(null);}}/>}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
