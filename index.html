@@ -44,7 +44,7 @@
     .shell-scroll::-webkit-scrollbar { display: none; }
     .card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
     .supp-card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 12px; margin-bottom: 6px; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(4px); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(2px); }
     .modal-box { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 18px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
     .inp { padding: 9px 12px; background: #111213; border: 1px solid #2A2B2E; border-radius: 9px; color: #F0F0F0; font-size: 14px; font-family: 'Space Mono', monospace; outline: none; width: 100%; display: block; transition: border-color 0.2s; }
     .inp:focus { border-color: rgba(232,168,48,0.4); }
@@ -631,10 +631,10 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"2px 4px"}}>✕</button>
         </div>
 
-        {/* ── Daily feel score strip (past dates with logs) ── */}
-        {isPast&&avgFeel!==null&&(
+        {/* ── Daily feel score strip (past/today with logs) ── */}
+        {(isPast||isToday)&&avgFeel!==null&&(
           <div style={{marginBottom:16}}>
-            <div style={{background:"#111213",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontSize:22}}>{feelEmoji(avgFeel)}</span>
                 <div>
@@ -642,13 +642,11 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                   <div style={{color:feelColor(avgFeel),fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:18,letterSpacing:"0.5px"}}>{feelLabel(avgFeel)}</div>
                 </div>
               </div>
-              {/* Dot row — 5 dots representing score */}
               <div style={{display:"flex",gap:4,alignItems:"center"}}>
                 {[1,2,3,4,5].map(i=>(
                   <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<=Math.round(avgFeel)?feelColor(avgFeel):"#2A2B2E",transition:"background 0.2s"}}/>
                 ))}
               </div>
-              {/* Delta vs previous day */}
               {prevAvgFeel!==null&&(
                 <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
                   <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px",marginBottom:2}}>VS PREV</div>
@@ -658,15 +656,35 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                 </div>
               )}
             </div>
-            {/* Per-supplement feel changes — only show if something shifted */}
+            {/* Per-supplement metric changes — only when something shifted ≥0.5 */}
             {feelChanged&&(
               <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>
                 {suppFeelChanges.filter(f=>f.delta!==null&&Math.abs(f.delta)>=0.5).map((f,i)=>{
                   const supp=supplements.find(s=>s.id===f.log.suppId);
+                  const metrics=[{k:"energy",l:"NRG"},{k:"recovery",l:"REC"},{k:"mood",l:"MOD"},{k:"sleep",l:"SLP"}];
+                  const prevLog=prevLogs.find(l=>l.suppId===f.log.suppId);
                   return(
-                    <div key={i} style={{background:f.delta>0?"rgba(91,173,114,0.08)":"rgba(192,57,43,0.08)",border:`1px solid ${f.delta>0?"rgba(91,173,114,0.25)":"rgba(192,57,43,0.25)"}`,borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <span style={{color:"#C8C9CC",fontSize:12,fontWeight:600}}>{supp?.name||"Unknown"}</span>
-                      <span style={{color:f.delta>0?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{f.delta>0?"↑ IMPROVED":"↓ DECLINED"}</span>
+                    <div key={i} style={{background:f.delta>0?"rgba(91,173,114,0.07)":"rgba(192,57,43,0.07)",border:`1px solid ${f.delta>0?"rgba(91,173,114,0.22)":"rgba(192,57,43,0.22)"}`,borderRadius:9,padding:"9px 12px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <span style={{color:"#C8C9CC",fontSize:12,fontWeight:700}}>{supp?.name||"Unknown"}</span>
+                        <span style={{color:f.delta>0?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>{f.delta>0?"↑ FEEL IMPROVED":"↓ FEEL DECLINED"}</span>
+                      </div>
+                      <div style={{display:"flex",gap:10}}>
+                        {metrics.map(({k,l})=>{
+                          const cur=f.log.feel?.[k];
+                          const prev=prevLog?.feel?.[k];
+                          if(cur==null)return null;
+                          const diff=prev!=null?cur-prev:null;
+                          const changed=diff!=null&&Math.abs(diff)>=0.5;
+                          return(
+                            <div key={k} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+                              <span style={{fontFamily:"'Space Mono',monospace",fontSize:7,color:"#4A4B4F"}}>{l}</span>
+                              <span style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:cur>=4?"#5BAD72":cur>=3?"#E8A830":"#C0392B"}}>{cur}</span>
+                              {changed&&<span style={{fontFamily:"'Space Mono',monospace",fontSize:7,color:diff>0?"#5BAD72":"#C0392B"}}>{diff>0?`+${diff.toFixed(0)}`:diff.toFixed(0)}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
@@ -778,13 +796,16 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     ctx.clearRect(0,0,SIZE,SIZE);
     const iw=img.width*scale,ih=img.height*scale;
     ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
-    // Dim mask outside circle
+    // Subtle dim only outside circle — image stays visible underneath
     ctx.save();
-    ctx.fillStyle="rgba(8,11,15,0.72)";
-    ctx.fillRect(0,0,SIZE,SIZE);
-    ctx.globalCompositeOperation="destination-out";
-    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();
+    ctx.rect(0,0,SIZE,SIZE);
+    ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2,true);
+    ctx.closePath();
+    ctx.fillStyle="rgba(0,0,0,0.42)";
+    ctx.fill();
     ctx.restore();
+    // Gold ring
     ctx.strokeStyle="#E8A830";ctx.lineWidth=2.5;
     ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2);ctx.stroke();
   };
@@ -862,7 +883,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const img=imgRef.current;
     const iw=img.width*scale,ih=img.height*scale;
     ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
-    onConfirm(out.toDataURL("image/jpeg",0.92));
+    onConfirm(out.toDataURL("image/png"));
   };
 
   return(
@@ -979,7 +1000,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
   const dailyCostVal=supp.price&&supp.totalAmount?(supp.price/Math.floor(supp.totalAmount/supp.servingSize))*supp.servingsPerDay:null;
   const currency=CURRENCIES[profile?.country||"Other"]||"$";
   return(
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#3A3B3E",margin:"0 auto 16px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
@@ -1043,7 +1064,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
 }
 
 function StackCardList({displaySupps,onLog,onEdit,onDelete,onView,logs}){
-  return(<div style={{paddingBottom:120}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView} logs={logs}/>)}</div>);
+  return(<div style={{paddingBottom:160}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView} logs={logs}/>)}</div>);
 }
 
 // ── SupplementCard ────────────────────────────────────────────────────────────
@@ -1055,20 +1076,6 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
   const pct=totalDays>0?Math.max(0,Math.min(100,(daysRemaining/totalDays)*100)):0;
   const color=urgencyColor(days);
   const logged=supp.lastLogged===today();
-
-  // Feel score: average of last 7 logs for this supplement that have feel data
-  const recentFeel=(()=>{
-    if(!logs)return null;
-    const suppLogs=logs.filter(l=>l.suppId===supp.id&&l.feel).slice(-7);
-    if(!suppLogs.length)return null;
-    const keys=["energy","recovery","mood","sleep"];
-    const avgs={};let hasAny=false;
-    keys.forEach(k=>{
-      const vals=suppLogs.map(l=>l.feel?.[k]).filter(v=>v!=null);
-      if(vals.length){avgs[k]=vals.reduce((a,b)=>a+b,0)/vals.length;hasAny=true;}
-    });
-    return hasAny?avgs:null;
-  })();
 
   return(
     <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5}}>
@@ -1091,18 +1098,8 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
           <button style={{padding:"5px 10px",border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}} onClick={()=>onEdit(supp)}>EDIT</button>
         </div>
       </div>
-      <div style={{height:2,background:"#2A2B2E",borderRadius:2,marginBottom:recentFeel?6:0}}><div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/></div>
-      {recentFeel&&(
-        <div style={{display:"flex",gap:10,paddingTop:5,borderTop:"1px solid #222325"}}>
-          {[{k:"energy",l:"NRG"},{k:"recovery",l:"REC"},{k:"mood",l:"MOD"},{k:"sleep",l:"SLP"}].map(({k,l})=>recentFeel[k]!=null?(
-            <div key={k} style={{display:"flex",alignItems:"center",gap:3}}>
-              <span style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:"#4A4B4F",letterSpacing:"0.3px"}}>{l}</span>
-              <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,color:recentFeel[k]>=4?"#5BAD72":recentFeel[k]>=3?"#E8A830":"#C0392B"}}>{recentFeel[k].toFixed(1)}</span>
-            </div>
-          ):null)}
-          <span style={{fontFamily:"'Space Mono',monospace",fontSize:7,color:"#3A3B3E",marginLeft:"auto",alignSelf:"center"}}>7-DAY AVG</span>
-        </div>
-      )}
+      <div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:2,transition:"width 0.6s ease"}}/></div>
+
     </div>
   );
 }
@@ -1536,29 +1533,32 @@ function ShareCard({supplements,profile,logs,onClose}){
   const drawCard=(photoImg)=>{
     const canvas=canvasRef.current;
     if(!canvas)return;
-    const W=canvas.width=1080;
-    const H=canvas.height=1920;
+    const SCALE=2;
+    const W=canvas.width=1080*SCALE;
+    const H=canvas.height=1920*SCALE;
     const ctx=canvas.getContext("2d");
+    ctx.scale(SCALE,SCALE);
+    const RW=1080,RH=1920;
 
     // ── Background ──
-    const bg=ctx.createLinearGradient(0,0,0,H);
+    const bg=ctx.createLinearGradient(0,0,0,RH);
     bg.addColorStop(0,"#080B0F");bg.addColorStop(0.55,"#0C1622");bg.addColorStop(1,"#060A0D");
-    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=bg;ctx.fillRect(0,0,RW,RH);
 
     // Diagonal texture lines
     ctx.save();
-    const dl=ctx.createLinearGradient(0,0,W,H);
+    const dl=ctx.createLinearGradient(0,0,RW,RH);
     dl.addColorStop(0,"rgba(232,168,48,0)");dl.addColorStop(0.5,"rgba(232,168,48,0.035)");dl.addColorStop(1,"rgba(232,168,48,0)");
     ctx.strokeStyle=dl;
-    [[W*1.5,-80,-W*0.3,H+80,220],[W*1.8,-80,W*0.05,H+80,90]].forEach(([x1,y1,x2,y2,w])=>{
+    [[RW*1.5,-80,-RW*0.3,RH+80,220],[RW*1.8,-80,RW*0.05,RH+80,90]].forEach(([x1,y1,x2,y2,w])=>{
       ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
     });
     ctx.restore();
 
     // Top gold rule
-    const tl=ctx.createLinearGradient(0,0,W,0);
+    const tl=ctx.createLinearGradient(0,0,RW,0);
     tl.addColorStop(0,"rgba(232,168,48,0)");tl.addColorStop(0.15,"rgba(232,168,48,0.85)");tl.addColorStop(0.85,"rgba(232,168,48,0.85)");tl.addColorStop(1,"rgba(232,168,48,0)");
-    ctx.strokeStyle=tl;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,2);ctx.lineTo(W,2);ctx.stroke();
+    ctx.strokeStyle=tl;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,2);ctx.lineTo(RW,2);ctx.stroke();
 
     // ── Wordmark ──
     ctx.font="700 26px 'Barlow Condensed',sans-serif";
@@ -1569,10 +1569,9 @@ function ShareCard({supplements,profile,logs,onClose}){
 
     // ── Profile photo block (conditional) ──
     if(photoImg&&showPhoto){
-      const PR=120;const PX=W/2;const PY=cursorY+PR;
+      const PR=120;const PX=RW/2;const PY=cursorY+PR;
       ctx.save();ctx.beginPath();ctx.arc(PX,PY,PR,0,Math.PI*2);ctx.clip();
       ctx.drawImage(photoImg,PX-PR,PY-PR,PR*2,PR*2);ctx.restore();
-      // Ring
       ctx.strokeStyle="#E8A830";ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(PX,PY,PR+4,0,Math.PI*2);ctx.stroke();
       cursorY=PY+PR+60;
@@ -1580,26 +1579,23 @@ function ShareCard({supplements,profile,logs,onClose}){
 
     // ── Name ──
     const nameRaw=(profile?.name||"My Stack").toUpperCase();
-    const FONT_NAME="900 88px 'Barlow Condensed',sans-serif";
-    ctx.font=FONT_NAME;ctx.letterSpacing="-1px";ctx.textAlign="center";
-    // Scale name to fit
+    ctx.font="900 88px 'Barlow Condensed',sans-serif";ctx.letterSpacing="-1px";ctx.textAlign="center";
     const rawW=ctx.measureText(nameRaw).width;
-    const maxW=W-144;
-    if(rawW>maxW){ctx.save();ctx.translate(W/2,cursorY);ctx.scale(maxW/rawW,1);ctx.fillStyle="#F0F0F0";ctx.fillText(nameRaw,0,0);ctx.restore();}
-    else{ctx.fillStyle="#F0F0F0";ctx.fillText(nameRaw,W/2,cursorY);}
+    const maxW=RW-144;
+    if(rawW>maxW){ctx.save();ctx.translate(RW/2,cursorY);ctx.scale(maxW/rawW,1);ctx.fillStyle="#F0F0F0";ctx.fillText(nameRaw,0,0);ctx.restore();}
+    else{ctx.fillStyle="#F0F0F0";ctx.fillText(nameRaw,RW/2,cursorY);}
     cursorY+=16;
 
-    // Name underline
     const drawnW=Math.min(rawW,maxW);
-    const ul=ctx.createLinearGradient(W/2-drawnW/2,0,W/2+drawnW/2,0);
+    const ul=ctx.createLinearGradient(RW/2-drawnW/2,0,RW/2+drawnW/2,0);
     ul.addColorStop(0,"rgba(232,168,48,0)");ul.addColorStop(0.25,"#E8A830");ul.addColorStop(0.75,"#E8A830");ul.addColorStop(1,"rgba(232,168,48,0)");
     ctx.strokeStyle=ul;ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(W/2-drawnW/2,cursorY);ctx.lineTo(W/2+drawnW/2,cursorY);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(RW/2-drawnW/2,cursorY);ctx.lineTo(RW/2+drawnW/2,cursorY);ctx.stroke();
     cursorY+=64;
 
     // ── Stats row ──
     const stats=[{label:"DAY STREAK",value:`${streak}`},{label:"DAYS ON STACK",value:`${daysOnStack}`},{label:"SUPPLEMENTS",value:`${supplements.length}`}];
-    const statColW=(W-144)/3;
+    const statColW=(RW-144)/3;
     stats.forEach((s,i)=>{
       const x=72+(i*statColW);const sw=statColW-16;
       ctx.fillStyle="rgba(255,255,255,0.04)";ctx.beginPath();ctx.roundRect(x,cursorY,sw,140,12);ctx.fill();
@@ -1614,10 +1610,9 @@ function ShareCard({supplements,profile,logs,onClose}){
 
     // ── Divider ──
     ctx.strokeStyle="rgba(255,255,255,0.07)";ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(72,cursorY);ctx.lineTo(W-72,cursorY);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(72,cursorY);ctx.lineTo(RW-72,cursorY);ctx.stroke();
     cursorY+=44;
 
-    // Section header
     ctx.font="400 20px 'Space Mono',monospace";ctx.letterSpacing="4px";
     ctx.fillStyle="rgba(232,168,48,0.55)";ctx.fillText("MY STACK",72,cursorY);
     cursorY+=44;
@@ -1626,12 +1621,12 @@ function ShareCard({supplements,profile,logs,onClose}){
     let px=72,py=cursorY;
     const pillH=62,pillPad=26,gap=10;
     ctx.font="700 24px 'Barlow Condensed',sans-serif";ctx.letterSpacing="1px";
-    const maxPillY=H-220;
+    const maxPillY=RH-220;
     supplements.slice(0,14).forEach(s=>{
       const label=s.name.toUpperCase();
       const tw=ctx.measureText(label).width;
       const pw=tw+(pillPad*2);
-      if(px+pw>W-72){px=72;py+=pillH+gap;}
+      if(px+pw>RW-72){px=72;py+=pillH+gap;}
       if(py+pillH>maxPillY)return;
       ctx.fillStyle="rgba(255,255,255,0.05)";ctx.beginPath();ctx.roundRect(px,py,pw,pillH,8);ctx.fill();
       ctx.strokeStyle="rgba(232,168,48,0.28)";ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(px,py,pw,pillH,8);ctx.stroke();
@@ -1641,38 +1636,29 @@ function ShareCard({supplements,profile,logs,onClose}){
     });
     if(supplements.length>14){
       ctx.fillStyle="rgba(255,255,255,0.22)";ctx.font="400 20px 'Space Mono',monospace";ctx.letterSpacing="0px";
-      const moreX=px>W-200?72:px;const moreY=py+pillH/2+7;
+      const moreX=px>RW-200?72:px;const moreY=py+pillH/2+7;
       if(moreY<maxPillY)ctx.fillText(`+${supplements.length-14} more`,moreX,moreY);
     }
 
-    // ── Footer: KNOW YOUR STACK ──
-    const footY=H-120;
+    // ── Footer ──
+    const footY=RH-120;
     ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(72,footY-28);ctx.lineTo(W-72,footY-28);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(72,footY-28);ctx.lineTo(RW-72,footY-28);ctx.stroke();
 
-    // Inline single line — fits cleanly
-    const footStr="KNOW YOUR STACK.";
-    ctx.font="800 56px 'Barlow Condensed',sans-serif";ctx.letterSpacing="4px";
-    ctx.textAlign="center";
-    const footW=ctx.measureText(footStr).width;
-    // Two-tone: "KNOW YOUR " gold, "STACK." white
-    const splitAt=footStr.indexOf("STACK");
-    const part1=footStr.slice(0,splitAt);
-    const part2=footStr.slice(splitAt);
+    const part1="KNOW YOUR ";const part2="STACK.";
     ctx.font="800 56px 'Barlow Condensed',sans-serif";ctx.letterSpacing="4px";
     const p1W=ctx.measureText(part1).width;
     const p2W=ctx.measureText(part2).width;
-    const totalW=p1W+p2W;
-    const startX=W/2-totalW/2;
+    const startX=RW/2-(p1W+p2W)/2;
     ctx.textAlign="left";
     ctx.fillStyle="#E8A830";ctx.fillText(part1,startX,footY);
     ctx.fillStyle="rgba(240,240,240,0.75)";ctx.fillText(part2,startX+p1W,footY);
 
     // Bottom gold rule
-    const bl=ctx.createLinearGradient(0,0,W,0);
+    const bl=ctx.createLinearGradient(0,0,RW,0);
     bl.addColorStop(0,"rgba(232,168,48,0)");bl.addColorStop(0.15,"rgba(232,168,48,0.5)");bl.addColorStop(0.85,"rgba(232,168,48,0.5)");bl.addColorStop(1,"rgba(232,168,48,0)");
     ctx.strokeStyle=bl;ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(0,H-3);ctx.lineTo(W,H-3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,RH-3);ctx.lineTo(RW,RH-3);ctx.stroke();
   };
 
   // Redraw whenever showPhoto toggles
@@ -1869,7 +1855,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
     reader.readAsText(file);e.target.value="";
   };
   return(
-    <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center"}}>
       {/* Fullscreen photo overlay */}
       {viewingPhoto&&(photoPreview||profile?.photo)&&(
         <div onClick={()=>setViewingPhoto(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -2007,7 +1993,6 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                 </div>
               ))}
             </div>
-            {feelLogs.length>0&&(<div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:12}}><p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"0 0 4px"}}>FEEL LOGS SO FAR</p><p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,margin:0}}>{feelLogs.length} / 3 needed to unlock preview</p></div>)}
             <button style={{width:"100%",padding:"10px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
           </div>
         ):(
@@ -2181,10 +2166,20 @@ function App(){
   useEffect(()=>{window._openFeedback=openManualFeedback;},[]);
 
   useEffect(()=>{
-    if(typeof Notification!=="undefined"&&Notification.permission==="granted"){
-      const unlogged=supplements.filter(s=>s.lastLogged!==today());
-      if(supplements.length>0&&unlogged.length>0&&logs.filter(l=>l.date===todayISO()).length===0)
-        fireNotif("Suppstackd — Log your supplements",`${unlogged.length} supplement${unlogged.length>1?"s":""} not logged today.`,1500);
+    // Schedule midday notification in local timezone
+    if(typeof Notification!=="undefined"&&Notification.permission==="granted"&&supplements.length>0){
+      const now=new Date();
+      const midday=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12,0,0);
+      const msUntilMidday=midday-now;
+      // Only schedule if midday hasn't passed yet today, and supplements are unlogged
+      if(msUntilMidday>0){
+        const t=setTimeout(()=>{
+          const unlogged=supplements.filter(s=>s.lastLogged!==today());
+          if(unlogged.length>0)
+            fireNotif("Suppstackd — Log your supplements",`${unlogged.length} supplement${unlogged.length>1?"s":""} not logged today.`);
+        },msUntilMidday);
+        return()=>clearTimeout(t);
+      }
     }
     if(checkAndTrackActiveDay())setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
   },[]);
