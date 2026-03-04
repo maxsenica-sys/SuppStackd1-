@@ -600,7 +600,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
   }).filter(v=>v!==null);
   const prevAvgFeel=prevFeelScores.length?prevFeelScores.reduce((a,b)=>a+b,0)/prevFeelScores.length:null;
 
-  const feelEmoji=(score)=>{if(score>=4.5)return"🔥";if(score>=3.5)return"✅";if(score>=2.5)return"😐";if(score>=1.5)return"😕";return"🔻";};
+  const feelEmoji=(score)=>{if(score>=4.5)return"🔥";return"";};
   const feelLabel=(score)=>{if(score>=4.5)return"Great";if(score>=3.5)return"Good";if(score>=2.5)return"Okay";if(score>=1.5)return"Low";return"Poor";};
   const feelColor=(score)=>{if(score>=3.5)return"#5BAD72";if(score>=2.5)return"#E8A830";return"#C0392B";};
 
@@ -636,10 +636,13 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
           <div style={{marginBottom:16}}>
             <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:22}}>{feelEmoji(avgFeel)}</span>
+                {feelEmoji(avgFeel)&&<span style={{fontSize:22}}>{feelEmoji(avgFeel)}</span>}
                 <div>
                   <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"1px",marginBottom:2}}>DAILY FEEL</div>
-                  <div style={{color:feelColor(avgFeel),fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:18,letterSpacing:"0.5px"}}>{feelLabel(avgFeel)}</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:6}}>
+                    <span style={{color:feelColor(avgFeel),fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:18,letterSpacing:"0.5px"}}>{feelLabel(avgFeel)}</span>
+                    <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{avgFeel.toFixed(1)}/5</span>
+                  </div>
                 </div>
               </div>
               <div style={{display:"flex",gap:4,alignItems:"center"}}>
@@ -713,7 +716,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                 <div key={i} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}</p>
-                    <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount}${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
+                    <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount} ${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
                   </div>
                   <button onClick={()=>onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
                 </div>
@@ -769,6 +772,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   const imgRef=useRef(null);
   const stateRef=useRef({offsetX:0,offsetY:0,scale:1,initScale:1,dragging:false,lastX:0,lastY:0,lastDist:0,pinching:false,rafId:null});
   const SIZE=280;
+  const EXPORT_SIZE=600;
 
   // Draw directly from stateRef — no React re-renders in the hot path
   const draw=()=>{
@@ -860,13 +864,14 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   };
 
   const handleConfirm=()=>{
-    const out=document.createElement("canvas");out.width=SIZE;out.height=SIZE;
+    const scale=EXPORT_SIZE/SIZE;
+    const out=document.createElement("canvas");out.width=EXPORT_SIZE;out.height=EXPORT_SIZE;
     const ctx=out.getContext("2d");
-    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2,0,Math.PI*2);ctx.clip();
-    const {offsetX,offsetY,scale}=stateRef.current;
+    ctx.beginPath();ctx.arc(EXPORT_SIZE/2,EXPORT_SIZE/2,EXPORT_SIZE/2,0,Math.PI*2);ctx.clip();
+    const {offsetX,offsetY,scale:s}=stateRef.current;
     const img=imgRef.current;
-    const iw=img.width*scale,ih=img.height*scale;
-    ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
+    const iw=img.width*s*scale,ih=img.height*s*scale;
+    ctx.drawImage(img,EXPORT_SIZE/2-iw/2+offsetX*scale,EXPORT_SIZE/2-ih/2+offsetY*scale,iw,ih);
     onConfirm(out.toDataURL("image/png"));
   };
 
@@ -1069,7 +1074,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
             <h3 style={{fontSize:15,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
             <span style={{fontSize:10,color:color,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
           </div>
-          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)}{supp.unit==="count"?" count":supp.unit} left · out {formatDate(runOut)}</span>
+          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit} left · out {formatDate(runOut)}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
           <div style={{position:"relative"}}>
@@ -1249,12 +1254,29 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
         <div className="field" style={{position:"relative"}}>
           <span className="section-label">SUPPLEMENT NAME *</span>
           <input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamins" value={form.name}
-            onChange={e=>{set("name",e.target.value);const v=e.target.value.trim();if(v.length>0){const matches=SUPP_DATABASE.filter(s=>s.toLowerCase().includes(v.toLowerCase())).slice(0,6);setSuggestions(matches);setShowSuggestions(matches.length>0);}else{setShowSuggestions(false);}}}
-            onFocus={()=>{if(form.name.trim()&&suggestions.length>0)setShowSuggestions(true);}}
+            onChange={e=>{
+              set("name",e.target.value);
+              const v=e.target.value.trim();
+              if(v.length>=2){
+                const vl=v.toLowerCase();
+                const scored=SUPP_DATABASE.map(s=>{
+                  const sl=s.toLowerCase();
+                  if(sl===vl)return{s,score:4};
+                  if(sl.startsWith(vl))return{s,score:3};
+                  if(sl.split(/[\s\-]+/).some(w=>w.startsWith(vl)))return{s,score:2};
+                  if(sl.includes(vl))return{s,score:1};
+                  return null;
+                }).filter(Boolean).sort((a,b)=>b.score-a.score||a.s.localeCompare(b.s));
+                const matches=scored.map(x=>x.s);
+                setSuggestions(matches);
+                setShowSuggestions(matches.length>0);
+              }else{setShowSuggestions(false);}
+            }}
+            onFocus={()=>{if(form.name.trim().length>=2&&suggestions.length>0)setShowSuggestions(true);}}
             onBlur={()=>setTimeout(()=>setShowSuggestions(false),150)}
             autoComplete="off"/>
           {showSuggestions&&(
-            <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:200,background:"#1C1D1F",border:"1px solid #3A3B3E",borderRadius:10,overflow:"hidden",boxShadow:"0 8px 24px rgba(0,0,0,0.5)",marginTop:2}}>
+            <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:200,background:"#1C1D1F",border:"1px solid #3A3B3E",borderRadius:10,overflow:"hidden",boxShadow:"0 8px 24px rgba(0,0,0,0.5)",marginTop:2,maxHeight:252,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
               {suggestions.map(s=>(
                 <div key={s} onMouseDown={()=>{set("name",s);setShowSuggestions(false);}}
                   style={{padding:"10px 14px",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,color:"#F0F0F0",borderBottom:"1px solid #2A2B2E",transition:"background 0.1s"}}
@@ -1677,8 +1699,17 @@ function ShareCard({supplements,profile,logs,onClose}){
   };
 
   const canNativeShare=typeof navigator.share!=="undefined";
+  const [fullscreen,setFullscreen]=useState(false);
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      {/* Fullscreen preview overlay */}
+      {fullscreen&&(
+        <div onClick={()=>setFullscreen(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.97)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+          <div style={{position:"absolute",top:20,right:20,color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.5px",opacity:0.7}}>TAP TO CLOSE</div>
+          <canvas ref={null} style={{display:"none"}}/>
+          <img src={canvasRef.current?.toDataURL("image/png")} style={{maxWidth:"100%",maxHeight:"90vh",borderRadius:12,objectFit:"contain",boxShadow:"0 0 60px rgba(232,168,48,0.15)"}} alt="Stack Card"/>
+        </div>
+      )}
       <div className="modal-box" style={{maxWidth:420}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
           <h2 style={{fontSize:20,fontWeight:700,color:"#F0F0F0",margin:0}}>Stack Card</h2>
@@ -1693,9 +1724,13 @@ function ShareCard({supplements,profile,logs,onClose}){
             <span style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px",color:showPhoto?"#E8A830":"#7A7D85"}}>INCLUDE PROFILE PHOTO</span>
           </button>
         )}
-        <div style={{borderRadius:12,overflow:"hidden",marginBottom:14,border:"1px solid #2A2B2E",maxHeight:340,display:"flex",alignItems:"center",justifyContent:"center",background:"#060A0D"}}>
+        <div onClick={()=>setFullscreen(true)} style={{borderRadius:12,overflow:"hidden",marginBottom:6,border:"1px solid rgba(232,168,48,0.25)",maxHeight:340,display:"flex",alignItems:"center",justifyContent:"center",background:"#060A0D",cursor:"zoom-in",position:"relative"}}>
           <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block",maxHeight:340,objectFit:"contain"}}/>
+          <div style={{position:"absolute",bottom:8,right:8,background:"rgba(0,0,0,0.6)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:6,padding:"3px 8px",pointerEvents:"none"}}>
+            <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px"}}>TAP TO PREVIEW</span>
+          </div>
         </div>
+        <p style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",marginBottom:12,textAlign:"center"}}>TAP IMAGE FOR FULL PREVIEW</p>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Close</button>
           <button className="btn-primary" style={{flex:2,opacity:sharing?0.6:1}} onClick={shareToPhotos} disabled={sharing}>{sharing?"SHARING...":canNativeShare?"SAVE / SHARE":"DOWNLOAD"}</button>
@@ -1752,7 +1787,7 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
                       <span style={{color:row.taken?"#F0F0F0":"#4A4B4F",fontWeight:700,fontSize:12,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{row.name}</span>
                       {row.taken&&<>
                         <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))} style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>−</button>
-                        <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount}{row.unit==="count"?" count":row.unit}</span>
+                        <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount} {row.unit==="count"?"count":row.unit}</span>
                         <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)} style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>+</button>
                       </>}
                       <button onClick={()=>updateRow(row.suppId,"taken",!row.taken)} style={{padding:"3px 8px",borderRadius:5,fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #C0392B",background:row.taken?"rgba(91,173,114,0.12)":"rgba(192,57,43,0.08)",color:row.taken?"#5BAD72":"#C0392B",flexShrink:0,transition:"all 0.12s"}}>{row.taken?"TAKEN":"SKIP"}</button>
