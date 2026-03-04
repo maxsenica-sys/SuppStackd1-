@@ -129,6 +129,8 @@ const PROFILE_KEY="suppstackd_v1_profile";
 const FEEL_KEY="suppstackd_v1_feel";
 const SUPPLEMENT_TYPES=["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
 const UNITS=["g","kg","mg","ml","lb","oz","fl oz","count"];
+const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey Isolate","Casein Protein","Plant Protein","Pea Protein","Collagen Peptides","BCAA","EAA","Beta-Alanine","L-Citrulline","Citrulline Malate","L-Arginine","L-Glutamine","HMB","Pre-Workout","Caffeine","L-Theanine","Alpha GPC","Lion's Mane","Ashwagandha","Rhodiola Rosea","Panax Ginseng","Maca Root","Magnesium Glycinate","Magnesium Citrate","Magnesium Malate","Zinc","Zinc Bisglycinate","Iron","Calcium","Vitamin D3","Vitamin D3 + K2","Vitamin K2","Vitamin C","Vitamin B12","Vitamin B6","Vitamin A","Vitamin E","B Complex","Multivitamin","Omega-3","Fish Oil","Krill Oil","Algae Oil","Probiotics","Prebiotics","Psyllium Husk","Fiber","Electrolytes","Sodium","Potassium","Magnesium","Selenium","Iodine","Chromium","CoQ10","NAC","NMN","NR","Resveratrol","Quercetin","Berberine","Inositol","Melatonin","5-HTP","GABA","Valerian Root","Turmeric","Curcumin","Ginger","Milk Thistle","Saw Palmetto","Fenugreek","Tongkat Ali","Fadogia Agrestis","Shilajit","Boron","Glucosamine","Chondroitin","MSM","Collagen Type II","Hyaluronic Acid","Biotin","Spirulina","Chlorella","Matcha","Green Tea Extract","Caffeine Anhydrous"];
+
 const DEV_PRO_MODE=false;
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
 const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
@@ -281,7 +283,7 @@ let installPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;});
 
 // ── CalendarBar ───────────────────────────────────────────────────────────────
-function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,setCalendarView,calendarMonth,setCalendarMonth,calendarYear,setCalendarYear,onScrollToToday}){
+function CalendarBar({logs,supplements,onDateSelect,selectedDate,lockedDate,calendarView,setCalendarView,calendarMonth,setCalendarMonth,calendarYear,setCalendarYear,onScrollToToday,onJumpToToday}){
   const DAY_NAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"];
   const SHORT_MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -372,7 +374,25 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
     }
   };
 
-  // Track off-screen state + 2s idle snap back to today unconditionally
+  // Scroll strip to a specific ISO date pill
+  const snapToDate=(iso)=>{
+    const strip=stripRef.current;
+    if(!strip)return;
+    const pill=strip.querySelector(`[data-iso="${iso}"]`);
+    if(pill)pill.scrollIntoView({inline:"center",behavior:"smooth"});
+    const d=new Date(iso+"T00:00:00");
+    setCalendarMonth(d.getMonth());
+    setCalendarYear(d.getFullYear());
+  };
+
+  // When lockedDate changes (new date selected), scroll the strip to it
+  useEffect(()=>{
+    if(lockedDate&&lockedDate!==todayStr){
+      setTimeout(()=>snapToDate(lockedDate),50);
+    }
+  },[lockedDate]);
+
+  // Track off-screen state + 2s idle snap — only snap when nothing is locked
   useEffect(()=>{
     const strip=stripRef.current;
     if(!strip)return;
@@ -386,13 +406,16 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
     const onScroll=()=>{
       check();
       updateHeaderFromScroll();
-      if(snapTimer)clearTimeout(snapTimer);
-      snapTimer=setTimeout(()=>{snapToToday();},2000);
+      // Only auto-snap back to today if no date is locked
+      if(!lockedDate){
+        if(snapTimer)clearTimeout(snapTimer);
+        snapTimer=setTimeout(()=>{snapToToday();},2000);
+      }
     };
     strip.addEventListener("scroll",onScroll,{passive:true});
     check();
     return()=>{strip.removeEventListener("scroll",onScroll);if(snapTimer)clearTimeout(snapTimer);};
-  },[]);
+  },[lockedDate]);
 
   // Build today pill style (same as the in-strip today pill)
   const todayDateState=getDateState(todayStr,false);
@@ -507,14 +530,15 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,calendarView,se
           const isPast=d<now;
           const dateState=getDateState(iso,isPast);
           const isSelected=selectedDate===iso;
+          const isLocked=lockedDate===iso&&iso!==todayStr;
           const dotColor=isToday?"#111213":dateState==="full"?"#5BAD72":"#E8A830";
-          const bgColor=isSelected&&!isToday?"rgba(232,168,48,0.18)":isToday?"linear-gradient(135deg,#E8A830,#C88820)":dateState==="full"?"rgba(91,173,114,0.12)":dateState==="partial"?"rgba(232,168,48,0.08)":"transparent";
-          const borderColor=isSelected&&!isToday?"1px solid rgba(232,168,48,0.6)":dateState==="full"&&!isToday?"1px solid rgba(91,173,114,0.25)":dateState==="partial"&&!isToday?"1px solid rgba(232,168,48,0.2)":"1px solid transparent";
+          const bgColor=isLocked?"rgba(232,168,48,0.22)":isSelected&&!isToday?"rgba(232,168,48,0.18)":isToday?"linear-gradient(135deg,#E8A830,#C88820)":dateState==="full"?"rgba(91,173,114,0.12)":dateState==="partial"?"rgba(232,168,48,0.08)":"transparent";
+          const borderColor=isLocked?"1px solid rgba(232,168,48,0.7)":isSelected&&!isToday?"1px solid rgba(232,168,48,0.6)":dateState==="full"&&!isToday?"1px solid rgba(91,173,114,0.25)":dateState==="partial"&&!isToday?"1px solid rgba(232,168,48,0.2)":"1px solid transparent";
           return(
             <div key={i} data-iso={iso} ref={isToday?todayRef:null} onClick={()=>onDateSelect(iso)}
               style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,minWidth:40,padding:"8px 4px",borderRadius:10,cursor:"pointer",flexShrink:0,transition:"all 0.15s",background:bgColor,border:borderColor,opacity:isPast&&dateState==="none"&&!isSelected?0.4:1}}>
-              <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isSelected?"#E8A830":"#7A7D85"}}>{DAY_NAMES[d.getDay()]}</span>
-              <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0"}}>{d.getDate()}</span>
+              <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",textTransform:"uppercase",color:isToday?"#111213":isLocked?"#E8A830":isSelected?"#E8A830":"#7A7D85"}}>{DAY_NAMES[d.getDay()]}</span>
+              <span style={{fontFamily:"'Barlow Condensed',monospace",fontWeight:700,fontSize:16,lineHeight:1,color:isToday?"#111213":isLocked?"#E8A830":isSelected?"#E8A830":"#F0F0F0"}}>{d.getDate()}</span>
               {(isPast&&dateState!=="none")&&<div style={{width:4,height:4,borderRadius:"50%",background:dotColor}}/>}
               {isToday&&<div style={{width:4,height:4,borderRadius:"50%",background:"#111213"}}/>}
               {isFuture&&futureRunOuts[iso]&&<div style={{width:4,height:4,borderRadius:"50%",background:futureRunOuts[iso]}}/>}
@@ -737,11 +761,87 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
   );
 }
 
+// ── PhotoCropEditor ───────────────────────────────────────────────────────────
+function PhotoCropEditor({src,onConfirm,onCancel}){
+  const canvasRef=useRef(null);
+  const [offset,setOffset]=useState({x:0,y:0});
+  const [scale,setScale]=useState(1);
+  const imgRef=useRef(null);
+  const dragging=useRef(false);
+  const lastPos=useRef(null);
+  const lastDist=useRef(null);
+  const SIZE=260;
+  useEffect(()=>{
+    const img=new Image();
+    img.onload=()=>{
+      imgRef.current=img;
+      // Auto-fit: scale so image fills the circle
+      const s=Math.max(SIZE/img.width,SIZE/img.height);
+      setScale(s);
+      setOffset({x:0,y:0});
+    };
+    img.src=src;
+  },[src]);
+  const draw=()=>{
+    const canvas=canvasRef.current;
+    if(!canvas||!imgRef.current)return;
+    const ctx=canvas.getContext("2d");
+    const img=imgRef.current;
+    ctx.clearRect(0,0,SIZE,SIZE);
+    const iw=img.width*scale,ih=img.height*scale;
+    ctx.drawImage(img,SIZE/2-iw/2+offset.x,SIZE/2-ih/2+offset.y,iw,ih);
+    // dim outside circle
+    ctx.save();
+    ctx.fillStyle="rgba(10,10,10,0.65)";
+    ctx.fillRect(0,0,SIZE,SIZE);
+    ctx.globalCompositeOperation="destination-out";
+    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2-3,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    // gold border
+    ctx.strokeStyle="#E8A830";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2-3,0,Math.PI*2);ctx.stroke();
+  };
+  useEffect(()=>{draw();},[offset,scale]);
+  const onMouseDown=(e)=>{dragging.current=true;lastPos.current={x:e.clientX,y:e.clientY};};
+  const onMouseMove=(e)=>{if(!dragging.current)return;const dx=e.clientX-lastPos.current.x,dy=e.clientY-lastPos.current.y;setOffset(o=>({x:o.x+dx,y:o.y+dy}));lastPos.current={x:e.clientX,y:e.clientY};};
+  const onMouseUp=()=>{dragging.current=false;};
+  const onTouchStart=(e)=>{if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;lastDist.current=Math.sqrt(dx*dx+dy*dy);}else{lastPos.current={x:e.touches[0].clientX,y:e.touches[0].clientY};}};
+  const onTouchMove=(e)=>{e.preventDefault();if(e.touches.length===2&&lastDist.current!==null){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const dist=Math.sqrt(dx*dx+dy*dy);setScale(s=>Math.max(0.3,Math.min(5,s*(dist/lastDist.current))));lastDist.current=dist;}else if(e.touches.length===1&&lastPos.current){const dx=e.touches[0].clientX-lastPos.current.x,dy=e.touches[0].clientY-lastPos.current.y;setOffset(o=>({x:o.x+dx,y:o.y+dy}));lastPos.current={x:e.touches[0].clientX,y:e.touches[0].clientY};}};
+  const onTouchEnd=()=>{lastPos.current=null;lastDist.current=null;};
+  const handleConfirm=()=>{
+    const out=document.createElement("canvas");out.width=SIZE;out.height=SIZE;
+    const ctx=out.getContext("2d");
+    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2,0,Math.PI*2);ctx.clip();
+    const img=imgRef.current;const iw=img.width*scale,ih=img.height*scale;
+    ctx.drawImage(img,SIZE/2-iw/2+offset.x,SIZE/2-ih/2+offset.y,iw,ih);
+    onConfirm(out.toDataURL("image/jpeg",0.9));
+  };
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14}}>
+      <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",textAlign:"center",margin:0}}>DRAG TO REPOSITION · PINCH TO ZOOM</p>
+      <canvas ref={canvasRef} width={SIZE} height={SIZE}
+        style={{borderRadius:"50%",cursor:"grab",touchAction:"none",border:"2px solid rgba(232,168,48,0.3)",maxWidth:"100%"}}
+        onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}/>
+      <div style={{display:"flex",alignItems:"center",gap:10,width:"100%"}}>
+        <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,flexShrink:0}}>ZOOM</span>
+        <input type="range" min="0.3" max="5" step="0.05" value={scale} onChange={e=>setScale(parseFloat(e.target.value))} style={{flex:1,accentColor:"#E8A830"}}/>
+        <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,flexShrink:0,minWidth:32}}>{(scale*100).toFixed(0)}%</span>
+      </div>
+      <div style={{display:"flex",gap:8,width:"100%"}}>
+        <button onClick={onCancel} className="btn-cancel" style={{flex:1}}>Cancel</button>
+        <button onClick={handleConfirm} className="btn-primary" style={{flex:2}}>USE PHOTO</button>
+      </div>
+    </div>
+  );
+}
+
 // ── ProfileOnboarding ─────────────────────────────────────────────────────────
 function ProfileOnboarding({onComplete}){
   const [step,setStep]=useState(0);
   const [profile,setProfile]=useState({name:"",email:"",age:""});
   const [photoPreview,setPhotoPreview]=useState(null);
+  const [cropSrc,setCropSrc]=useState(null);
   const photoInputRef=useRef(null);
   const set=(k,v)=>setProfile(p=>({...p,[k]:v}));
   const finish=(photo)=>{save(PROFILE_KEY,{...profile,photo:photo||photoPreview||null,createdAt:new Date().toISOString()});onComplete({...profile,photo:photo||photoPreview||null});};
@@ -749,7 +849,7 @@ function ProfileOnboarding({onComplete}){
     const file=e.target.files?.[0];
     if(!file)return;
     const reader=new FileReader();
-    reader.onload=(ev)=>setPhotoPreview(ev.target.result);
+    reader.onload=(ev)=>setCropSrc(ev.target.result);
     reader.readAsDataURL(file);
   };
   const steps=[
@@ -771,17 +871,23 @@ function ProfileOnboarding({onComplete}){
     </div>,
     <div key={2} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
       <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6,alignSelf:"flex-start"}}>Add a photo</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:30,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
+      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:24,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
       <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhoto}/>
-      <div onClick={()=>photoInputRef.current?.click()} style={{width:110,height:110,borderRadius:"50%",background:photoPreview?"transparent":"#1C1D1F",border:`2px dashed ${photoPreview?"#E8A830":"#3A3B3E"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,overflow:"hidden",transition:"border-color 0.2s"}}>
-        {photoPreview
-          ?<img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
-          :<div style={{textAlign:"center"}}><div style={{fontSize:28,marginBottom:4}}>📷</div><div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>TAP TO ADD</div></div>
-        }
-      </div>
-      {photoPreview&&<button onClick={()=>setPhotoPreview(null)} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",marginBottom:16}}>Remove photo</button>}
-      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:"auto"}} onClick={()=>finish(photoPreview)}>{profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"CONTINUE"}</button>
-      <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={()=>finish(null)}>Skip photo</button>
+      {cropSrc?(
+        <PhotoCropEditor src={cropSrc} onConfirm={(cropped)=>{setPhotoPreview(cropped);setCropSrc(null);}} onCancel={()=>setCropSrc(null)}/>
+      ):(
+        <>
+          <div onClick={()=>photoInputRef.current?.click()} style={{width:110,height:110,borderRadius:"50%",background:photoPreview?"transparent":"#1C1D1F",border:`2px dashed ${photoPreview?"#E8A830":"#3A3B3E"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,overflow:"hidden",transition:"border-color 0.2s"}}>
+            {photoPreview
+              ?<img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
+              :<div style={{textAlign:"center"}}><div style={{fontSize:28,marginBottom:4}}>📷</div><div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>TAP TO ADD</div></div>
+            }
+          </div>
+          {photoPreview&&<button onClick={()=>setPhotoPreview(null)} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",marginBottom:16}}>Remove photo</button>}
+          <button className="btn-primary" style={{width:"100%",padding:14,marginTop:"auto"}} onClick={()=>finish(photoPreview)}>{profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"CONTINUE"}</button>
+          <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={()=>finish(null)}>Skip photo</button>
+        </>
+      )}
     </div>,
   ];
   const pct=step===0?0:step===1?50:100;
@@ -1053,6 +1159,8 @@ function LogModal({supp,onClose,onSave,todayFeel}){
 function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const isEdit=!!supp;
   const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null});
+  const [suggestions,setSuggestions]=useState([]);
+  const [showSuggestions,setShowSuggestions]=useState(false);
   const [touched,setTouched]=useState({});
   const [submitted,setSubmitted]=useState(false);
   const [alreadyStarted,setAlreadyStarted]=useState(false);
@@ -1086,7 +1194,27 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
           </div>
           {!isEdit&&<div><div className="flex" style={{justifyContent:"space-between",marginBottom:4}}><span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",letterSpacing:1}}>REQUIRED FIELDS</span><span style={{color:isValid?"#5BAD72":"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{completed}/{reqFields.length}</span></div><div style={{height:2,background:"#2A2B2E",borderRadius:2}}><div style={{height:"100%",borderRadius:2,transition:"width 0.3s ease,background 0.3s",width:`${progPct}%`,background:isValid?"#5BAD72":"#E8A830"}}/></div></div>}
         </div>
-        <div className="field"><span className="section-label">SUPPLEMENT NAME *</span><input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamins" value={form.name} onChange={e=>set("name",e.target.value)} onBlur={()=>touch("name")}/>{showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}</div>
+        <div className="field" style={{position:"relative"}}>
+          <span className="section-label">SUPPLEMENT NAME *</span>
+          <input className={ic("name")} placeholder="e.g. Whey Protein, Creatine, Vitamins" value={form.name}
+            onChange={e=>{set("name",e.target.value);const v=e.target.value.trim();if(v.length>0){const matches=SUPP_DATABASE.filter(s=>s.toLowerCase().includes(v.toLowerCase())).slice(0,6);setSuggestions(matches);setShowSuggestions(matches.length>0);}else{setShowSuggestions(false);}}}
+            onFocus={()=>{if(form.name.trim()&&suggestions.length>0)setShowSuggestions(true);}}
+            onBlur={()=>setTimeout(()=>setShowSuggestions(false),150)}
+            autoComplete="off"/>
+          {showSuggestions&&(
+            <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:200,background:"#1C1D1F",border:"1px solid #3A3B3E",borderRadius:10,overflow:"hidden",boxShadow:"0 8px 24px rgba(0,0,0,0.5)",marginTop:2}}>
+              {suggestions.map(s=>(
+                <div key={s} onMouseDown={()=>{set("name",s);setShowSuggestions(false);}}
+                  style={{padding:"10px 14px",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,color:"#F0F0F0",borderBottom:"1px solid #2A2B2E",transition:"background 0.1s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="#2A2B2E"}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
+          {showErr("name")&&<div className="err-msg">⚠ {errors.name}</div>}
+        </div>
         <div className="field"><span className="section-label">BRAND (OPTIONAL)</span><input className="inp" placeholder="e.g. Optimum Nutrition, MyProtein" value={form.brand} onChange={e=>set("brand",e.target.value)}/></div>
         <div className="flex gap-10">
           <div className="field flex-1"><span className="section-label">TYPE</span><select className="inp" value={form.type} onChange={e=>set("type",e.target.value)}>{SUPPLEMENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
@@ -1314,8 +1442,9 @@ function FeedbackInbox({onClose}){
 // ── ShareCard ─────────────────────────────────────────────────────────────────
 function ShareCard({supplements,profile,logs,onClose}){
   const canvasRef=useRef(null);
-  const [generated,setGenerated]=useState(false);
   const [sharing,setSharing]=useState(false);
+  const [showPhoto,setShowPhoto]=useState(true);
+  const hasPhoto=!!(profile?.photo);
 
   const streak=(()=>{
     const dates=[...new Set(logs.map(l=>l.date))].sort();
@@ -1331,72 +1460,163 @@ function ShareCard({supplements,profile,logs,onClose}){
     return Math.max(1,Math.round((new Date()-first)/86400000));
   })();
 
-  useEffect(()=>{
+  const drawCard=(photoImg)=>{
     const canvas=canvasRef.current;
     if(!canvas)return;
     const W=canvas.width=1080;
     const H=canvas.height=1920;
     const ctx=canvas.getContext("2d");
+
+    // ── Background ──
     const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,"#0A0D10");bg.addColorStop(0.5,"#0D1B2A");bg.addColorStop(1,"#060A0E");
+    bg.addColorStop(0,"#080B0F");bg.addColorStop(0.55,"#0C1622");bg.addColorStop(1,"#060A0D");
     ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+    // Diagonal texture lines
     ctx.save();
-    const lg=ctx.createLinearGradient(0,0,W,0);
-    lg.addColorStop(0,"rgba(232,168,48,0)");lg.addColorStop(0.5,"rgba(232,168,48,0.06)");lg.addColorStop(1,"rgba(232,168,48,0)");
-    ctx.strokeStyle=lg;
-    [[W*1.5,-100,-W*0.3,H+100,160],[W*1.7,-100,-W*0.1,H+100,80],[W*2,-100,W*0.2,H+100,40]].forEach(([x1,y1,x2,y2,w])=>{ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});
+    const dl=ctx.createLinearGradient(0,0,W,H);
+    dl.addColorStop(0,"rgba(232,168,48,0)");dl.addColorStop(0.5,"rgba(232,168,48,0.035)");dl.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=dl;
+    [[W*1.5,-80,-W*0.3,H+80,220],[W*1.8,-80,W*0.05,H+80,90]].forEach(([x1,y1,x2,y2,w])=>{
+      ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    });
     ctx.restore();
+
+    // Top gold rule
     const tl=ctx.createLinearGradient(0,0,W,0);
-    tl.addColorStop(0,"rgba(232,168,48,0)");tl.addColorStop(0.2,"rgba(232,168,48,0.9)");tl.addColorStop(0.8,"rgba(232,168,48,0.9)");tl.addColorStop(1,"rgba(232,168,48,0)");
-    ctx.strokeStyle=tl;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(W,4);ctx.stroke();
-    ctx.fillStyle="rgba(232,168,48,0.7)";ctx.font="800 34px Arial, sans-serif";ctx.letterSpacing="6px";ctx.fillText("SUPPSTACKD",72,96);
-    const name=(profile?.name||"MY STACK").toUpperCase();
-    ctx.fillStyle="#F0F0F0";ctx.font="900 130px Arial, sans-serif";ctx.letterSpacing="0px";ctx.fillText(name,72,320);
-    const nameW=Math.min(ctx.measureText(name).width,W-144);
-    const ul=ctx.createLinearGradient(72,0,72+nameW,0);
-    ul.addColorStop(0,"#E8A830");ul.addColorStop(1,"rgba(232,168,48,0.1)");
-    ctx.strokeStyle=ul;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(72,345);ctx.lineTo(72+nameW,345);ctx.stroke();
-    ctx.fillStyle="rgba(255,255,255,0.35)";ctx.font="500 32px Arial, sans-serif";ctx.letterSpacing="2px";ctx.fillText("MY SUPPLEMENT STACK",72,420);
+    tl.addColorStop(0,"rgba(232,168,48,0)");tl.addColorStop(0.15,"rgba(232,168,48,0.85)");tl.addColorStop(0.85,"rgba(232,168,48,0.85)");tl.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=tl;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,2);ctx.lineTo(W,2);ctx.stroke();
+
+    // ── Wordmark ──
+    ctx.font="700 26px 'Barlow Condensed',sans-serif";
+    ctx.letterSpacing="10px";ctx.fillStyle="rgba(232,168,48,0.5)";
+    ctx.fillText("SUPPSTACKD",72,76);
+
+    let cursorY=140;
+
+    // ── Profile photo block (conditional) ──
+    if(photoImg&&showPhoto){
+      const PR=120;const PX=W/2;const PY=cursorY+PR;
+      ctx.save();ctx.beginPath();ctx.arc(PX,PY,PR,0,Math.PI*2);ctx.clip();
+      ctx.drawImage(photoImg,PX-PR,PY-PR,PR*2,PR*2);ctx.restore();
+      // Ring
+      ctx.strokeStyle="#E8A830";ctx.lineWidth=4;
+      ctx.beginPath();ctx.arc(PX,PY,PR+4,0,Math.PI*2);ctx.stroke();
+      cursorY=PY+PR+60;
+    }
+
+    // ── Name ──
+    const nameRaw=(profile?.name||"My Stack").toUpperCase();
+    const FONT_NAME="900 88px 'Barlow Condensed',sans-serif";
+    ctx.font=FONT_NAME;ctx.letterSpacing="-1px";ctx.textAlign="center";
+    // Scale name to fit
+    const rawW=ctx.measureText(nameRaw).width;
+    const maxW=W-144;
+    if(rawW>maxW){ctx.save();ctx.translate(W/2,cursorY);ctx.scale(maxW/rawW,1);ctx.fillStyle="#F0F0F0";ctx.fillText(nameRaw,0,0);ctx.restore();}
+    else{ctx.fillStyle="#F0F0F0";ctx.fillText(nameRaw,W/2,cursorY);}
+    cursorY+=16;
+
+    // Name underline
+    const drawnW=Math.min(rawW,maxW);
+    const ul=ctx.createLinearGradient(W/2-drawnW/2,0,W/2+drawnW/2,0);
+    ul.addColorStop(0,"rgba(232,168,48,0)");ul.addColorStop(0.25,"#E8A830");ul.addColorStop(0.75,"#E8A830");ul.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=ul;ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(W/2-drawnW/2,cursorY);ctx.lineTo(W/2+drawnW/2,cursorY);ctx.stroke();
+    cursorY+=64;
+
+    // ── Stats row ──
     const stats=[{label:"DAY STREAK",value:`${streak}`},{label:"DAYS ON STACK",value:`${daysOnStack}`},{label:"SUPPLEMENTS",value:`${supplements.length}`}];
-    const statW=(W-144)/3;
+    const statColW=(W-144)/3;
     stats.forEach((s,i)=>{
-      const x=72+(i*statW);
-      ctx.fillStyle="rgba(255,255,255,0.04)";ctx.beginPath();ctx.roundRect(x,490,statW-16,130,12);ctx.fill();
-      ctx.strokeStyle="rgba(232,168,48,0.15)";ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,490,statW-16,130,12);ctx.stroke();
-      ctx.fillStyle="#E8A830";ctx.font="800 62px Arial, sans-serif";ctx.letterSpacing="0px";ctx.fillText(s.value,x+20,566);
-      ctx.fillStyle="rgba(255,255,255,0.3)";ctx.font="500 22px Arial, sans-serif";ctx.letterSpacing="1px";ctx.fillText(s.label,x+20,600);
+      const x=72+(i*statColW);const sw=statColW-16;
+      ctx.fillStyle="rgba(255,255,255,0.04)";ctx.beginPath();ctx.roundRect(x,cursorY,sw,140,12);ctx.fill();
+      ctx.strokeStyle="rgba(232,168,48,0.15)";ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,cursorY,sw,140,12);ctx.stroke();
+      ctx.font="900 64px 'Barlow Condensed',sans-serif";ctx.letterSpacing="-1px";ctx.textAlign="center";
+      ctx.fillStyle="#E8A830";ctx.fillText(s.value,x+sw/2,cursorY+86);
+      ctx.font="400 20px 'Space Mono',monospace";ctx.letterSpacing="1.5px";ctx.textAlign="center";
+      ctx.fillStyle="rgba(255,255,255,0.3)";ctx.fillText(s.label,x+sw/2,cursorY+122);
     });
-    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(72,656);ctx.lineTo(W-72,656);ctx.stroke();
-    ctx.fillStyle="rgba(232,168,48,0.6)";ctx.font="700 26px Arial, sans-serif";ctx.letterSpacing="4px";ctx.fillText("SUPPLEMENTS",72,720);
-    let px=72,py=760;
-    const pillH=72,pillPad=28,gap=14;
-    ctx.font="700 26px Arial, sans-serif";ctx.letterSpacing="0px";
-    supplements.slice(0,10).forEach(s=>{
+    ctx.textAlign="left";ctx.letterSpacing="0px";
+    cursorY+=172;
+
+    // ── Divider ──
+    ctx.strokeStyle="rgba(255,255,255,0.07)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(72,cursorY);ctx.lineTo(W-72,cursorY);ctx.stroke();
+    cursorY+=44;
+
+    // Section header
+    ctx.font="400 20px 'Space Mono',monospace";ctx.letterSpacing="4px";
+    ctx.fillStyle="rgba(232,168,48,0.55)";ctx.fillText("MY STACK",72,cursorY);
+    cursorY+=44;
+
+    // ── Supplement pills ──
+    let px=72,py=cursorY;
+    const pillH=62,pillPad=26,gap=10;
+    ctx.font="700 24px 'Barlow Condensed',sans-serif";ctx.letterSpacing="1px";
+    const maxPillY=H-220;
+    supplements.slice(0,14).forEach(s=>{
       const label=s.name.toUpperCase();
-      const textW=ctx.measureText(label).width;
-      const pillW=textW+(pillPad*2);
-      if(px+pillW>W-72){px=72;py+=pillH+gap;}
-      if(py>H-380)return;
-      ctx.fillStyle="rgba(255,255,255,0.05)";ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.fill();
-      ctx.strokeStyle="rgba(232,168,48,0.3)";ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(px,py,pillW,pillH,10);ctx.stroke();
-      ctx.fillStyle="#F0F0F0";ctx.font="700 26px Arial, sans-serif";ctx.fillText(label,px+pillPad,py+pillH/2+9);
-      px+=pillW+gap;
+      const tw=ctx.measureText(label).width;
+      const pw=tw+(pillPad*2);
+      if(px+pw>W-72){px=72;py+=pillH+gap;}
+      if(py+pillH>maxPillY)return;
+      ctx.fillStyle="rgba(255,255,255,0.05)";ctx.beginPath();ctx.roundRect(px,py,pw,pillH,8);ctx.fill();
+      ctx.strokeStyle="rgba(232,168,48,0.28)";ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(px,py,pw,pillH,8);ctx.stroke();
+      ctx.fillStyle="#E8E8E8";ctx.font="700 24px 'Barlow Condensed',sans-serif";ctx.letterSpacing="1px";
+      ctx.fillText(label,px+pillPad,py+pillH/2+9);
+      px+=pw+gap;
     });
-    if(supplements.length>10){ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="500 26px Arial, sans-serif";ctx.fillText(`+${supplements.length-10} more`,px,py+pillH/2+9);}
-    // Bottom — KNOW YOUR STACK only, large and centered
-    const bottomY=H-300;
-    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(72,bottomY);ctx.lineTo(W-72,bottomY);ctx.stroke();
-    ctx.letterSpacing="-4px";
-    ctx.font="900 148px Arial, sans-serif";
-    const kys="KNOW YOUR";const kys2="STACK";
-    const kysW=ctx.measureText(kys).width;const kys2W=ctx.measureText(kys2).width;
-    const scale=Math.min(1,(W-100)/Math.max(kysW,kys2W));
-    ctx.save();ctx.translate(W/2,bottomY+160);ctx.scale(scale,1);
-    ctx.fillStyle="#E8A830";ctx.fillText(kys,-ctx.measureText(kys).width/2,0);
-    ctx.fillStyle="#F0F0F0";ctx.fillText(kys2,-ctx.measureText(kys2).width/2,160);
-    ctx.restore();
-    setGenerated(true);
-  },[]);
+    if(supplements.length>14){
+      ctx.fillStyle="rgba(255,255,255,0.22)";ctx.font="400 20px 'Space Mono',monospace";ctx.letterSpacing="0px";
+      const moreX=px>W-200?72:px;const moreY=py+pillH/2+7;
+      if(moreY<maxPillY)ctx.fillText(`+${supplements.length-14} more`,moreX,moreY);
+    }
+
+    // ── Footer: KNOW YOUR STACK ──
+    const footY=H-120;
+    ctx.strokeStyle="rgba(255,255,255,0.06)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(72,footY-28);ctx.lineTo(W-72,footY-28);ctx.stroke();
+
+    // Inline single line — fits cleanly
+    const footStr="KNOW YOUR STACK.";
+    ctx.font="800 56px 'Barlow Condensed',sans-serif";ctx.letterSpacing="4px";
+    ctx.textAlign="center";
+    const footW=ctx.measureText(footStr).width;
+    // Two-tone: "KNOW YOUR " gold, "STACK." white
+    const splitAt=footStr.indexOf("STACK");
+    const part1=footStr.slice(0,splitAt);
+    const part2=footStr.slice(splitAt);
+    ctx.font="800 56px 'Barlow Condensed',sans-serif";ctx.letterSpacing="4px";
+    const p1W=ctx.measureText(part1).width;
+    const p2W=ctx.measureText(part2).width;
+    const totalW=p1W+p2W;
+    const startX=W/2-totalW/2;
+    ctx.textAlign="left";
+    ctx.fillStyle="#E8A830";ctx.fillText(part1,startX,footY);
+    ctx.fillStyle="rgba(240,240,240,0.75)";ctx.fillText(part2,startX+p1W,footY);
+
+    // Bottom gold rule
+    const bl=ctx.createLinearGradient(0,0,W,0);
+    bl.addColorStop(0,"rgba(232,168,48,0)");bl.addColorStop(0.15,"rgba(232,168,48,0.5)");bl.addColorStop(0.85,"rgba(232,168,48,0.5)");bl.addColorStop(1,"rgba(232,168,48,0)");
+    ctx.strokeStyle=bl;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,H-3);ctx.lineTo(W,H-3);ctx.stroke();
+  };
+
+  // Redraw whenever showPhoto toggles
+  useEffect(()=>{
+    if(!canvasRef.current)return;
+    // Wait for Barlow Condensed to be ready
+    document.fonts.load("900 64px 'Barlow Condensed'").then(()=>{
+      if(hasPhoto&&showPhoto){
+        const img=new Image();
+        img.onload=()=>drawCard(img);
+        img.onerror=()=>drawCard(null);
+        img.src=profile.photo;
+      } else {
+        drawCard(null);
+      }
+    });
+  },[showPhoto]);
 
   const shareToPhotos=async()=>{
     setSharing(true);
@@ -1415,10 +1635,21 @@ function ShareCard({supplements,profile,logs,onClose}){
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{maxWidth:420}}>
-        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Your Stack Card</h2>
-        <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:18,lineHeight:1.6}}>Full iPhone screen format — save to photos or share anywhere.</p>
-        <div style={{borderRadius:12,overflow:"hidden",marginBottom:18,border:"1px solid #2A2B2E",maxHeight:360,display:"flex",alignItems:"center",justifyContent:"center",background:"#111213"}}>
-          <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block",maxHeight:360,objectFit:"contain"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <h2 style={{fontSize:20,fontWeight:700,color:"#F0F0F0",margin:0}}>Stack Card</h2>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
+        </div>
+        <p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginBottom:14,lineHeight:1.6}}>iPhone share format · save or send anywhere</p>
+        {/* Photo toggle — only show if profile has a photo */}
+        {hasPhoto&&(
+          <button onClick={()=>setShowPhoto(v=>!v)}
+            style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",marginBottom:14,background:showPhoto?"rgba(232,168,48,0.07)":"transparent",border:`1px solid ${showPhoto?"rgba(232,168,48,0.35)":"#2A2B2E"}`,borderRadius:9,cursor:"pointer",transition:"all 0.15s"}}>
+            <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${showPhoto?"#E8A830":"#4A4B4F"}`,background:showPhoto?"#E8A830":"transparent",transition:"all 0.15s",flexShrink:0}}/>
+            <span style={{fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px",color:showPhoto?"#E8A830":"#7A7D85"}}>INCLUDE PROFILE PHOTO</span>
+          </button>
+        )}
+        <div style={{borderRadius:12,overflow:"hidden",marginBottom:14,border:"1px solid #2A2B2E",maxHeight:340,display:"flex",alignItems:"center",justifyContent:"center",background:"#060A0D"}}>
+          <canvas ref={canvasRef} style={{width:"100%",height:"auto",display:"block",maxHeight:340,objectFit:"contain"}}/>
         </div>
         <div className="flex gap-10">
           <button className="btn-cancel flex-1" onClick={onClose}>Close</button>
@@ -1428,6 +1659,7 @@ function ShareCard({supplements,profile,logs,onClose}){
     </div>
   );
 }
+
 
 // ── BatchLogModal ─────────────────────────────────────────────────────────────
 function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
@@ -1526,6 +1758,8 @@ function ProfileModal({profile,onClose,onUpdate,isPro}){
   const [editing,setEditing]=useState(false);
   const [form,setForm]=useState({...profile});
   const [photoPreview,setPhotoPreview]=useState(profile?.photo||null);
+  const [cropSrc,setCropSrc]=useState(null);
+  const [viewingPhoto,setViewingPhoto]=useState(false);
   const photoInputRef=useRef(null);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const currency=CURRENCIES[profile?.country||"Other"]||"£";
@@ -1533,12 +1767,28 @@ function ProfileModal({profile,onClose,onUpdate,isPro}){
     const file=e.target.files?.[0];
     if(!file)return;
     const reader=new FileReader();
-    reader.onload=(ev)=>{setPhotoPreview(ev.target.result);set("photo",ev.target.result);};
+    reader.onload=(ev)=>setCropSrc(ev.target.result);
     reader.readAsDataURL(file);
   };
   const handleSave=()=>{onUpdate({...form,photo:photoPreview});setEditing(false);};
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      {/* Fullscreen photo overlay */}
+      {viewingPhoto&&(photoPreview||profile?.photo)&&(
+        <div onClick={()=>setViewingPhoto(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <img src={photoPreview||profile.photo} style={{width:"85vw",height:"85vw",maxWidth:340,maxHeight:340,borderRadius:"50%",objectFit:"cover",border:"3px solid #E8A830",boxShadow:"0 0 40px rgba(232,168,48,0.3)"}} alt="Profile"/>
+          <div style={{position:"absolute",top:20,right:20,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px"}}>TAP TO CLOSE</div>
+        </div>
+      )}
+      {/* Crop editor overlay */}
+      {cropSrc&&(
+        <div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(10,10,10,0.97)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{width:"100%",maxWidth:340}}>
+            <h3 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,color:"#F0F0F0",textAlign:"center",marginBottom:16}}>CROP PHOTO</h3>
+            <PhotoCropEditor src={cropSrc} onConfirm={(cropped)=>{setPhotoPreview(cropped);set("photo",cropped);setCropSrc(null);}} onCancel={()=>setCropSrc(null)}/>
+          </div>
+        </div>
+      )}
       <div className="modal-box" style={{padding:"18px 20px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
           <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Profile</h2>
@@ -1547,7 +1797,8 @@ function ProfileModal({profile,onClose,onUpdate,isPro}){
         {/* Avatar */}
         <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
           <div style={{position:"relative"}}>
-            <div style={{width:72,height:72,borderRadius:"50%",background:"#1C1D1F",border:"2px solid #E8A830",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div onClick={()=>{if(!editing&&(photoPreview||profile?.photo))setViewingPhoto(true);}}
+              style={{width:72,height:72,borderRadius:"50%",background:"#1C1D1F",border:"2px solid #E8A830",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:(!editing&&(photoPreview||profile?.photo))?"zoom-in":"default"}}>
               {(photoPreview||profile?.photo)
                 ?<img src={photoPreview||profile.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
                 :<span style={{fontSize:28,color:"#7A7D85"}}>{profile?.name?profile.name[0].toUpperCase():"?"}</span>
@@ -1779,6 +2030,7 @@ function App(){
   const [filter,setFilter]=useState("all");
   const [sortBy,setSortBy]=useState("runout");
   const [selectedDate,setSelectedDate]=useState(null);
+  const [lockedDate,setLockedDate]=useState(null);
   const [viewSupp,setViewSupp]=useState(null);
   const [calendarView,setCalendarView]=useState("strip");
   const [calendarMonth,setCalendarMonth]=useState(new Date().getMonth());
@@ -1882,10 +2134,11 @@ function App(){
               </span>
               <span style={{color:"#7A7D85",fontSize:10,marginTop:1}}>{calendarView==="strip"?"▾":"▴"}</span>
             </button>
+            {lockedDate&&<button onClick={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:"9px",letterSpacing:"0.5px",border:"1px solid rgba(232,168,48,0.4)",background:"rgba(232,168,48,0.08)",color:"#E8A830",flexShrink:0}}>TODAY</button>}
             <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830",flexShrink:0}}>SHARE</button>
           </div>
 
-          <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} onDateSelect={d=>setSelectedDate(selectedDate===d?null:d)} calendarView={calendarView} setCalendarView={setCalendarView} calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth} calendarYear={calendarYear} setCalendarYear={setCalendarYear} onScrollToToday={fn=>{scrollTodayRef.current=fn;}}/>
+          <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} lockedDate={lockedDate} onDateSelect={d=>{const newDate=selectedDate===d?null:d;setSelectedDate(newDate);setLockedDate(newDate);}} calendarView={calendarView} setCalendarView={setCalendarView} calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth} calendarYear={calendarYear} setCalendarYear={setCalendarYear} onScrollToToday={fn=>{scrollTodayRef.current=fn;}} onJumpToToday={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}}/>
 
           <div className="flex gap-8" style={{marginBottom:10}}>
             {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map(t=>(
