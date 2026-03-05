@@ -825,20 +825,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                   );
                 })()}
             </div>
-            {/* Per-supplement feel changes — only when something shifted ≥0.5 */}
-            {feelChanged&&(
-              <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>
-                {suppFeelChanges.filter(f=>f.delta!==null&&Math.abs(f.delta)>=0.5).map((f,i)=>{
-                  const supp=supplements.find(s=>s.id===f.log.suppId);
-                  return(
-                    <div key={i} style={{background:f.delta>0?"rgba(91,173,114,0.07)":"rgba(192,57,43,0.07)",border:`1px solid ${f.delta>0?"rgba(91,173,114,0.22)":"rgba(192,57,43,0.22)"}`,borderRadius:9,padding:"9px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <span style={{color:"#C8C9CC",fontSize:12,fontWeight:700}}>{supp?.name||"Unknown"}</span>
-                      <span style={{color:f.delta>0?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>{f.delta>0?"↑ FEEL IMPROVED":"↓ FEEL DECLINED"}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+
           </div>
         )}
 
@@ -984,6 +971,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   const stateRef=useRef({offsetX:0,offsetY:0,scale:1,initScale:1,dragging:false,lastX:0,lastY:0,lastDist:0,pinching:false,rafId:null});
   const SIZE=280;
   const EXPORT_SIZE=900;
+  const DPR=typeof window!=="undefined"?(window.devicePixelRatio||1):1;
 
   // Draw directly from stateRef — no React re-renders in the hot path
   const draw=()=>{
@@ -992,21 +980,23 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     if(!canvas||!img)return;
     const ctx=canvas.getContext("2d");
     const {offsetX,offsetY,scale}=stateRef.current;
-    ctx.clearRect(0,0,SIZE,SIZE);
-    const iw=img.width*scale,ih=img.height*scale;
-    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
+    // Use DPR-scaled coordinates for crisp rendering
+    const S=SIZE*DPR;
+    ctx.clearRect(0,0,S,S);
+    const iw=img.width*scale*DPR,ih=img.height*scale*DPR;
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,S/2-iw/2+offsetX*DPR,S/2-ih/2+offsetY*DPR,iw,ih);
     // Subtle dim only outside circle — image stays visible underneath
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0,0,SIZE,SIZE);
-    ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2,true);
+    ctx.rect(0,0,S,S);
+    ctx.arc(S/2,S/2,S/2-2,0,Math.PI*2,true);
     ctx.closePath();
     ctx.fillStyle="rgba(0,0,0,0.42)";
     ctx.fill();
     ctx.restore();
     // Gold ring
-    ctx.strokeStyle="#E8A830";ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.arc(SIZE/2,SIZE/2,SIZE/2-2,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle="#E8A830";ctx.lineWidth=2.5*DPR;
+    ctx.beginPath();ctx.arc(S/2,S/2,S/2-2,0,Math.PI*2);ctx.stroke();
   };
 
   const scheduleDraw=()=>{
@@ -1018,7 +1008,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const img=new Image();
     img.onload=()=>{
       imgRef.current=img;
-      const s=Math.max(SIZE/img.width,SIZE/img.height);
+      const s=Math.max((SIZE*DPR)/img.width,(SIZE*DPR)/img.height);
       stateRef.current.scale=s;
       stateRef.current.initScale=s;
       stateRef.current.offsetX=0;
@@ -1089,13 +1079,13 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
       <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",textAlign:"center",margin:0}}>DRAG TO REPOSITION · PINCH TO ZOOM</p>
-      <canvas ref={canvasRef} width={SIZE} height={SIZE}
-        style={{borderRadius:"50%",cursor:"grab",touchAction:"none",display:"block",maxWidth:"100%"}}
+      <canvas ref={canvasRef} width={SIZE*DPR} height={SIZE*DPR}
+        style={{borderRadius:"50%",cursor:"grab",touchAction:"none",display:"block",width:SIZE,height:SIZE,maxWidth:"100%"}}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}/>
       <div style={{display:"flex",gap:8,width:"100%"}}>
-        <button onClick={onCancel} className="btn-cancel" style={{flex:1}}>Cancel</button>
-        <button onClick={handleReset} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #3A3B3E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>CANCEL</button>
+        <button onClick={onCancel} className="btn-cancel" style={{flex:1}}>CANCEL</button>
+        <button onClick={handleReset} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #3A3B3E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>RESET</button>
         <button onClick={handleConfirm} className="btn-primary" style={{flex:2}}>USE PHOTO</button>
       </div>
     </div>
@@ -1275,7 +1265,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
   const daysRemaining=Math.max(0,daysFromNow(calcRunOut(supp)));
   const pct=totalDays>0?Math.max(0,Math.min(100,(daysRemaining/totalDays)*100)):0;
   const color=urgencyColor(days);
-  const logged=supp.lastLogged===today();
+  const todayIso=todayISO();const logged=logs?logs.some(l=>l.suppId===supp.id&&(l.date===todayIso||toISODate(l.ts)===todayIso)):supp.lastLogged===today();
 
   return(
     <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5}}>
@@ -1969,8 +1959,9 @@ function ShareCard({supplements,profile,logs,onClose}){
 
 // ── BatchLogModal ─────────────────────────────────────────────────────────────
 function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
-  const unlogged=supplements.filter(s=>s.lastLogged!==today()).sort((a,b)=>a.name.localeCompare(b.name));
-  const alreadyLogged=supplements.filter(s=>s.lastLogged===today());
+  const tISO=todayISO();
+  const unlogged=supplements.filter(s=>!logs.some(l=>l.suppId===s.id&&(l.date===tISO||toISODate(l.ts)===tISO))).sort((a,b)=>a.name.localeCompare(b.name));
+  const alreadyLogged=supplements.filter(s=>logs.some(l=>l.suppId===s.id&&(l.date===tISO||toISODate(l.ts)===tISO)));
   // status: "taken" | "later" | "skip"
   const [rows,setRows]=useState(()=>unlogged.map(s=>({suppId:s.id,name:s.name,unit:s.unit,servingSize:s.servingSize,status:"taken",amount:s.servingSize,notes:""})));
   const isFirstLog=!todayFeel;
@@ -2593,6 +2584,12 @@ function App(){
   const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
   const todayFeelLog=(()=>{
     const tISO=todayISO();
+    // Check feels storage first (most reliable source after logging)
+    const feels=load(FEEL_KEY,[]);
+    const storedFeel=feels.find(f=>f.date===tISO);
+    if(storedFeel&&(storedFeel.energy||storedFeel.recovery||storedFeel.mood||storedFeel.sleep))
+      return{energy:storedFeel.energy,recovery:storedFeel.recovery,mood:storedFeel.mood,sleep:storedFeel.sleep};
+    // Fallback: check logs
     const todayLogs=logs.filter(l=>l.date===tISO&&l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
     if(!todayLogs.length)return null;
     return todayLogs[todayLogs.length-1].feel;
@@ -2605,8 +2602,10 @@ function App(){
     <div id="root" className="visible">
       <div className="shell">
         <div className="shell-fixed">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,marginTop:4}}>
-            <button className="btn-icon" onClick={()=>setShowNotif(true)} style={{fontSize:"15px",background:"transparent",border:"1px solid #2A2B2E",flexShrink:0}}>🔔</button>
+          <div style={{position:"relative",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8,marginTop:4,height:36}}>
+            {/* Left side — bell */}
+            <button className="btn-icon" onClick={()=>setShowNotif(true)} style={{fontSize:"15px",background:"transparent",border:"1px solid #2A2B2E",position:"absolute",left:0}}>🔔</button>
+            {/* Centre — month/year always perfectly centred */}
             <button onClick={()=>setCalendarView(v=>v==="strip"?"month":v==="month"?"year":"strip")}
               style={{background:"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,transition:"background 0.15s"}}
               onMouseEnter={e=>e.currentTarget.style.background="rgba(232,168,48,0.08)"}
@@ -2616,8 +2615,11 @@ function App(){
               </span>
               <span style={{color:"#7A7D85",fontSize:10,marginTop:1}}>{calendarView==="strip"?"▾":"▴"}</span>
             </button>
-            {lockedDate&&<button onClick={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:"9px",letterSpacing:"0.5px",border:"1px solid rgba(232,168,48,0.4)",background:"rgba(232,168,48,0.08)",color:"#E8A830",flexShrink:0}}>TODAY</button>}
-            <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830",flexShrink:0}}>SHARE</button>
+            {/* Right side — TODAY (if applicable) + SHARE */}
+            <div style={{position:"absolute",right:0,display:"flex",alignItems:"center",gap:6}}>
+              {lockedDate&&lockedDate!==todayISO()&&<button onClick={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:"9px",letterSpacing:"0.5px",border:"1px solid rgba(232,168,48,0.4)",background:"rgba(232,168,48,0.08)",color:"#E8A830",flexShrink:0}}>TODAY</button>}
+              <button className="btn-icon" onClick={()=>setShowShare(true)} style={{fontSize:"9px",letterSpacing:"0.5px",borderColor:"rgba(232,168,48,0.4)",color:"#E8A830",flexShrink:0}}>SHARE</button>
+            </div>
           </div>
 
           <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} lockedDate={lockedDate} onDateSelect={d=>{const newDate=selectedDate===d?null:d;setSelectedDate(newDate);setLockedDate(newDate);}} calendarView={calendarView} setCalendarView={setCalendarView} calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth} calendarYear={calendarYear} setCalendarYear={setCalendarYear} onScrollToToday={fn=>{scrollTodayRef.current=fn;}} onJumpToToday={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}}/>
@@ -2650,7 +2652,8 @@ function App(){
                 background:"#E8A830",
                 transition:tabDragX===0?"width 0.2s,margin 0.2s":"none",
                 width:`${Math.abs(tabDragX)*50}%`,
-                marginLeft:tabDragX<0?(tab==="stack"?"50%":"0%"):(tab==="history"?"50%":"0%"),
+                // Fill FROM the side you're swiping toward
+                marginLeft:tabDragX<0?"50%":"0%",
               }}/>
             </div>
           </div>
