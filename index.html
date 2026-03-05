@@ -44,9 +44,9 @@
     .shell-scroll::-webkit-scrollbar { display: none; }
     .card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
     .supp-card { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 12px; margin-bottom: 6px; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(2px); }
-    .modal-box { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 18px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
-    .inp { padding: 9px 12px; background: #111213; border: 1px solid #2A2B2E; border-radius: 9px; color: #F0F0F0; font-size: 14px; font-family: 'Space Mono', monospace; outline: none; width: 100%; display: block; transition: border-color 0.2s; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(2px); overflow: hidden; }
+    .modal-box { background: #1C1D1F; border: 1px solid #2A2B2E; border-radius: 18px; padding: 16px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; }
+    .inp { padding: 8px 10px; background: #111213; border: 1px solid #2A2B2E; border-radius: 9px; color: #F0F0F0; font-size: 13px; font-family: 'Space Mono', monospace; outline: none; width: 100%; display: block; transition: border-color 0.2s; box-sizing: border-box; }
     .inp:focus { border-color: rgba(232,168,48,0.4); }
     .inp.valid { border-color: rgba(91,173,114,0.4); }
     .inp.error { border-color: #C0392B; }
@@ -56,11 +56,11 @@
     .btn-cancel { padding: 12px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 10px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: 13px; }
     .btn-icon { padding: 9px 11px; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; border-radius: 9px; cursor: pointer; font-size: 11px; font-family: 'Space Mono', monospace; }
     .btn-step { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #2A2B2E; background: #111213; color: #F0F0F0; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; flex-shrink: 0; }
-    .section-label { color: #7A7D85; font-size: 10px; font-family: 'Space Mono', monospace; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
+    .section-label { color: #7A7D85; font-size: 9px; font-family: 'Space Mono', monospace; letter-spacing: 1.5px; margin-bottom: 4px; display: block; }
     .field { margin-bottom: 10px; }
     .err-msg { color: #C0392B; font-size: 10px; font-family: 'Space Mono', monospace; margin-top: 5px; letter-spacing: 0.5px; }
     .flex { display: flex; } .flex-1 { flex: 1; } .gap-8 { gap: 8px; } .gap-10 { gap: 10px; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0A0A0A; border-top: 1px solid #2A2B2E; display: flex; justify-content: space-around; align-items: center; padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 48; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0A0A0A; border-top: 1px solid #2A2B2E; display: flex; justify-content: space-around; align-items: center; padding: 4px 0 calc(4px + env(safe-area-inset-bottom, 0px)); z-index: 48; }
     .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; background: transparent; border: none; cursor: pointer; padding: 2px 20px; }
     .nav-btn span { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 0.8px; }
     .nav-btn.active span { color: #E8A830; }
@@ -537,7 +537,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,lockedDate,cale
   // When lockedDate changes (new date selected), scroll the strip to it
   useEffect(()=>{
     if(lockedDate&&lockedDate!==todayStr){
-      setTimeout(()=>snapToDate(lockedDate),50);
+      setTimeout(()=>snapToDate(lockedDate),150);
     }
   },[lockedDate]);
 
@@ -558,7 +558,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,lockedDate,cale
       // Only auto-snap back to today if no date is locked
       if(!lockedDate){
         if(snapTimer)clearTimeout(snapTimer);
-        snapTimer=setTimeout(()=>{snapToToday();},2000);
+        snapTimer=setTimeout(()=>{snapToToday();},4000);
       }
     };
     strip.addEventListener("scroll",onScroll,{passive:true});
@@ -615,7 +615,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,lockedDate,cale
                   if(!strip)return;
                   const pill=strip.querySelector(`[data-iso="${iso}"]`);
                   if(pill)pill.scrollIntoView({inline:"center",behavior:"smooth"});
-                },50);
+                },150);
               }}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"6px 2px",borderRadius:8,cursor:"pointer",background:isToday?"linear-gradient(135deg,#E8A830,#C88820)":isSelected?"rgba(232,168,48,0.18)":"transparent",border:isSelected&&!isToday?"1px solid rgba(232,168,48,0.5)":"1px solid transparent",minHeight:36,transition:"all 0.12s"}}>
                 <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:15,color:isToday?"#111213":isSelected?"#E8A830":"#F0F0F0",lineHeight:1}}>{day}</span>
@@ -817,7 +817,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                   const delta=Math.abs(avgFeel-prevAvgFeel);
                   return(
                     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
-                      <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px",marginBottom:2}}>VS PREV</div>
+                      <div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px",marginBottom:2}}>VS PREV DAY</div>
                       <div style={{color:up?"#5BAD72":dn?"#C0392B":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>
                         {up?"↑":dn?"↓":"—"}{delta>0?` ${delta.toFixed(1)}`:""}
                       </div>
@@ -983,7 +983,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   const imgRef=useRef(null);
   const stateRef=useRef({offsetX:0,offsetY:0,scale:1,initScale:1,dragging:false,lastX:0,lastY:0,lastDist:0,pinching:false,rafId:null});
   const SIZE=280;
-  const EXPORT_SIZE=600;
+  const EXPORT_SIZE=900;
 
   // Draw directly from stateRef — no React re-renders in the hot path
   const draw=()=>{
@@ -994,7 +994,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const {offsetX,offsetY,scale}=stateRef.current;
     ctx.clearRect(0,0,SIZE,SIZE);
     const iw=img.width*scale,ih=img.height*scale;
-    ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,SIZE/2-iw/2+offsetX,SIZE/2-ih/2+offsetY,iw,ih);
     // Subtle dim only outside circle — image stays visible underneath
     ctx.save();
     ctx.beginPath();
@@ -1082,8 +1082,8 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const {offsetX,offsetY,scale:s}=stateRef.current;
     const img=imgRef.current;
     const iw=img.width*s*scale,ih=img.height*s*scale;
-    ctx.drawImage(img,EXPORT_SIZE/2-iw/2+offsetX*scale,EXPORT_SIZE/2-ih/2+offsetY*scale,iw,ih);
-    onConfirm(out.toDataURL("image/png"));
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,EXPORT_SIZE/2-iw/2+offsetX*scale,EXPORT_SIZE/2-ih/2+offsetY*scale,iw,ih);
+    onConfirm(out.toDataURL("image/jpeg",0.97));
   };
 
   return(
@@ -1095,7 +1095,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}/>
       <div style={{display:"flex",gap:8,width:"100%"}}>
         <button onClick={onCancel} className="btn-cancel" style={{flex:1}}>Cancel</button>
-        <button onClick={handleReset} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #3A3B3E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>RESET</button>
+        <button onClick={handleReset} style={{flex:1,padding:12,borderRadius:10,border:"1px solid #3A3B3E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12,cursor:"pointer"}}>CANCEL</button>
         <button onClick={handleConfirm} className="btn-primary" style={{flex:2}}>USE PHOTO</button>
       </div>
     </div>
@@ -1454,7 +1454,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div className="modal-box" style={{padding:"12px 14px"}}>
+      <div className="modal-box" style={{padding:"10px 12px",maxHeight:"92vh",overflowY:"auto",overflowX:"hidden"}}>
         <div style={{marginBottom:14}}>
           <div className="flex" style={{justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>{isEdit?"Edit Supplement":"Add Supplement"}</h2>
@@ -1505,16 +1505,16 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
           <div className="field flex-1"><span className="section-label">TYPE</span><select className="inp" value={form.type} onChange={e=>set("type",e.target.value)}>{SUPPLEMENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div className="field flex-1"><span className="section-label">UNIT</span><select className="inp" value={form.unit} onChange={e=>set("unit",e.target.value)}>{UNITS.map(u=><option key={u}>{u}</option>)}</select></div>
         </div>
-        <div className="field"><span className="section-label">TOTAL AMOUNT IN CONTAINER ({form.unit}) *</span><input type="number" className={ic("totalAmount")} placeholder="e.g. 1000" min="0" value={form.totalAmount} onChange={e=>set("totalAmount",e.target.value)} onBlur={()=>touch("totalAmount")}/>{showErr("totalAmount")&&<div className="err-msg">⚠ {errors.totalAmount}</div>}</div>
-        <div className="flex gap-10">
-          <div className="field flex-1"><span className="section-label">SERVING SIZE ({form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder="e.g. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
-          <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="e.g. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
+        <div className="flex gap-6">
+          <div className="field flex-1"><span className="section-label">TOTAL ({form.unit}) *</span><input type="number" className={ic("totalAmount")} placeholder="1000" min="0" value={form.totalAmount} onChange={e=>set("totalAmount",e.target.value)} onBlur={()=>touch("totalAmount")}/>{showErr("totalAmount")&&<div className="err-msg">⚠ {errors.totalAmount}</div>}</div>
+          <div className="field flex-1"><span className="section-label">SERVING *</span><input type="number" className={ic("servingSize")} placeholder="25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
+          <div className="field flex-1"><span className="section-label">/ DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
-        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to calculate your daily stack cost.</p></div>
+        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
         <div className="field">
           <span className="section-label">DATE ADDED</span>
           <input type="date" className="inp" value={form.customDate||todayISO()} onChange={e=>set("customDate",e.target.value)} style={{colorScheme:"dark"}}/>
-          <p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Set a past or future date — affects history and calendar.</p>
+          
         </div>
         {!isEdit&&(
           <div style={{marginBottom:16}}>
@@ -1636,7 +1636,7 @@ function SupplementHistory({supplements,onAddNew}){
           <option value="used">FILTER: MOST USED</option>
           <option value="name">FILTER: NAME</option>
         </select>
-        <button onClick={onAddNew} style={{marginLeft:"auto",padding:"6px 18px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.4)",background:"rgba(232,168,48,0.08)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
+        <button onClick={onAddNew} style={{marginLeft:"auto",padding:"7px 22px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.5)",background:"rgba(232,168,48,0.11)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
       </div>
       {supplements.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No supplements tracked yet.</p>}
       {[...supplements].sort((a,b)=>{
@@ -1668,7 +1668,7 @@ function SupplementHistory({supplements,onAddNew}){
             <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
               <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>📦 {s.totalAmount} {s.unit==="count"?"count":s.unit} container</span>
               <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>💊 {s.servingSize} {s.unit==="count"?"count":s.unit} × {s.servingsPerDay}/day</span>
-              {totalUsed>0&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>✓ {totalUsed.toFixed(0)} {s.unit==="count"?"count":s.unit} used</span>}
+              {totalUsed>0&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{totalUsed.toFixed(0)} {s.unit==="count"?"count":s.unit} used</span>}
               <span style={{color:urgencyColor(days),fontSize:11,fontFamily:"'Space Mono',monospace"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
               {lastLog&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>Last: {lastLog.date}</span>}
             </div>
@@ -2622,26 +2622,37 @@ function App(){
 
           <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} lockedDate={lockedDate} onDateSelect={d=>{const newDate=selectedDate===d?null:d;setSelectedDate(newDate);setLockedDate(newDate);}} calendarView={calendarView} setCalendarView={setCalendarView} calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth} calendarYear={calendarYear} setCalendarYear={setCalendarYear} onScrollToToday={fn=>{scrollTodayRef.current=fn;}} onJumpToToday={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}}/>
 
-          {/* ── Tab switcher with sliding pill indicator ── */}
-          <div style={{position:"relative",display:"flex",background:"#111213",border:"1px solid #2A2B2E",borderRadius:12,padding:3,marginBottom:10,userSelect:"none"}}>
-            {/* Sliding gold pill — moves with drag in real time */}
-            <div style={{
-              position:"absolute",top:3,bottom:3,
-              width:"calc(50% - 3px)",
-              borderRadius:9,
-              background:"rgba(232,168,48,0.08)",
-              border:"1px solid #E8A830",
-              transition:tabDragX===0?"transform 0.25s cubic-bezier(0.4,0,0.2,1)":"none",
-              transform:`translateX(calc(${tab==="stack"?0:100}% + ${tabDragX*100}% + ${tab==="stack"?tabDragX*3:tabDragX*3}px))`,
-              pointerEvents:"none",
-              willChange:"transform",
-            }}/>
-            {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map((t,i)=>(
-              <button key={t.id} onClick={()=>{setTab(t.id);setTabDragX(0);setSlideDir(null);if(t.id!=="stack")setFilter("all");}}
-                style={{flex:1,padding:"8px 0",borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:"none",background:"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"color 0.2s",position:"relative",zIndex:1}}>
-                {t.label}
-              </button>
-            ))}
+          {/* ── Tab switcher with clean sliding pill ── */}
+          <div style={{marginBottom:10,userSelect:"none"}}>
+            <div style={{position:"relative",display:"flex",background:"#111213",border:"1px solid #2A2B2E",borderRadius:12,padding:3}}>
+              {/* Pill slides only on commit — no live drag */}
+              <div style={{
+                position:"absolute",top:3,bottom:3,
+                width:"calc(50% - 3px)",
+                borderRadius:9,
+                background:"rgba(232,168,48,0.08)",
+                border:"1px solid #E8A830",
+                transition:"transform 0.28s cubic-bezier(0.4,0,0.2,1)",
+                transform:`translateX(${tab==="stack"?"0%":"100%"})`,
+                pointerEvents:"none",
+              }}/>
+              {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map((t)=>(
+                <button key={t.id} onClick={()=>{setTab(t.id);setSlideDir(null);if(t.id!=="stack")setFilter("all");}}
+                  style={{flex:1,padding:"8px 0",borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:"none",background:"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"color 0.28s",position:"relative",zIndex:1}}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {/* Swipe progress bar — shows during active horizontal drag */}
+            <div style={{height:2,marginTop:4,borderRadius:2,background:"#1C1D1F",overflow:"hidden",opacity:Math.abs(tabDragX)>0.05?1:0,transition:"opacity 0.15s"}}>
+              <div style={{
+                height:"100%",borderRadius:2,
+                background:"#E8A830",
+                transition:tabDragX===0?"width 0.2s,margin 0.2s":"none",
+                width:`${Math.abs(tabDragX)*50}%`,
+                marginLeft:tabDragX<0?(tab==="stack"?"50%":"0%"):(tab==="history"?"50%":"0%"),
+              }}/>
+            </div>
           </div>
 
           {tab==="stack"&&supplements.length>0&&(
@@ -2673,9 +2684,7 @@ function App(){
 
         <div className="shell-scroll"
           onTouchStart={e=>{
-            // Only track single-finger touches
             if(e.touches.length!==1)return;
-            // Lock out if any modal is open
             const anyModal=showAdd||showBatchLog||showCostBreakdown||showShare||showProfile||showInsights||showNotif||showFeedback||showInbox||!!logSupp||!!editSupp||!!viewSupp||!!selectedDate;
             if(anyModal)return;
             swipeTouchRef.current={startX:e.touches[0].clientX,startY:e.touches[0].clientY,locked:false,axis:null};
@@ -2686,24 +2695,20 @@ function App(){
             const dx=e.touches[0].clientX-t.startX;
             const dy=e.touches[0].clientY-t.startY;
             const adx=Math.abs(dx),ady=Math.abs(dy);
-            // Axis not yet determined
             if(!t.axis){
-              if(adx<6&&ady<6)return; // too small to tell
+              if(adx<6&&ady<6)return;
               t.axis=adx>ady?"x":"y";
             }
-            if(t.axis==="y"){t.locked=true;return;} // vertical scroll — lock out
-            // Horizontal swipe — must be clearly more horizontal than vertical
-            if(adx<ady*2.5){t.locked=true;return;}
-            // Prevent page scroll while we handle swipe
+            if(t.axis==="y"){t.locked=true;setTabDragX(0);return;}
+            if(adx<ady*2.5){t.locked=true;setTabDragX(0);return;}
             e.preventDefault();
-            // Clamp drag to valid direction only
-            const atStart=tab==="stack";
-            const atEnd=tab==="history";
-            if(atStart&&dx>0)return;  // can't swipe right from first tab
-            if(atEnd&&dx<0)return;    // can't swipe left from last tab
-            // Normalise to -1..1 range over 120px
-            const norm=Math.max(-1,Math.min(1,dx/120));
-            setTabDragX(norm);
+            // Only track in valid direction
+            const canGoHistory=tab==="stack"&&dx<0;
+            const canGoStack=tab==="history"&&dx>0;
+            if(!canGoHistory&&!canGoStack){setTabDragX(0);return;}
+            // Progress: 0→1 over 100px, direction sign matches intent
+            const progress=Math.min(1,adx/100);
+            setTabDragX(dx<0?-progress:progress);
           }}
           onTouchEnd={e=>{
             const t=swipeTouchRef.current;
@@ -2712,21 +2717,17 @@ function App(){
             const dy=e.changedTouches[0].clientY-t.startY;
             const adx=Math.abs(dx),ady=Math.abs(dy);
             swipeTouchRef.current=null;
-            // Only commit if it was a clean horizontal swipe
+            setTabDragX(0);
             if(!t.locked&&t.axis==="x"&&adx>=80&&adx>ady*2.5){
               if(dx<0&&tab==="stack"){
-                // Swipe left → history
                 setSlideDir("left");
                 setTab("history");
                 setFilter("all");
               } else if(dx>0&&tab==="history"){
-                // Swipe right → stack
                 setSlideDir("right");
                 setTab("stack");
               }
             }
-            // Snap indicator back
-            setTabDragX(0);
           }}>
           <div style={{
             animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
@@ -2758,13 +2759,13 @@ function App(){
           <span>PROFILE</span>
         </button>
         <button className="nav-btn" onClick={()=>supplements.length>0?setShowBatchLog(true):setShowAdd(true)} style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:0,flex:"0 0 auto"}}>
-          <div style={{width:62,height:62,borderRadius:"50%",background:supplements.length>0&&supplements.every(s=>s.lastLogged===today())?"#1C1D1F":"linear-gradient(135deg,#E8A830,#C88820)",border:supplements.length>0&&supplements.every(s=>s.lastLogged===today())?"2px solid #3A3B3E":"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:supplements.length>0&&!supplements.every(s=>s.lastLogged===today())?"0 4px 20px rgba(232,168,48,0.35)":"none",transition:"all 0.2s",marginBottom:4}}>
-            {supplements.length>0&&supplements.every(s=>s.lastLogged===today())
+          <div style={{width:62,height:62,borderRadius:"50%",background:supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"#1C1D1F":"linear-gradient(135deg,#E8A830,#C88820)",border:supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"2px solid #3A3B3E":"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:supplements.length>0&&!supplements.every(s=>s.lastLogged===today())?"0 4px 20px rgba(232,168,48,0.35)":"none",transition:"all 0.2s",marginBottom:4}}>
+            {supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))
               ?<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5BAD72" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               :<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111213" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             }
           </div>
-          <span style={{fontFamily:"'Space Mono',monospace",fontSize:"8px",letterSpacing:"0.8px",color:supplements.length>0&&supplements.every(s=>s.lastLogged===today())?"#5BAD72":"#E8A830"}}>{supplements.length>0&&supplements.every(s=>s.lastLogged===today())?"LOGGED":"LOG ALL"}</span>
+          <span style={{fontFamily:"'Space Mono',monospace",fontSize:"8px",letterSpacing:"0.8px",color:supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"#5BAD72":"#E8A830"}}>{supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"LOGGED":"LOG ALL"}</span>
         </button>
         <button className="nav-btn" onClick={()=>setShowInsights(true)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
