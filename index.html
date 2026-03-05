@@ -77,6 +77,14 @@
     .sport-btn.selected { border-color: #E8A830; background: rgba(232,168,48,0.1); color: #E8A830; }
     .goal-btn { padding: 12px 16px; border-radius: 12px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.5px; transition: all 0.15s; border: 1px solid #2A2B2E; background: transparent; color: #7A7D85; text-align: left; width: 100%; margin-bottom: 8px; }
     .goal-btn.selected { border-color: #E8A830; background: rgba(232,168,48,0.08); color: #E8A830; }
+    @keyframes tabSlideleft {
+      from { opacity: 0.4; transform: translateX(32px); }
+      to   { opacity: 1;   transform: translateX(0); }
+    }
+    @keyframes tabSlideright {
+      from { opacity: 0.4; transform: translateX(-32px); }
+      to   { opacity: 1;   transform: translateX(0); }
+    }
   </style>
 </head>
 <body>
@@ -1963,13 +1971,41 @@ function ShareCard({supplements,profile,logs,onClose}){
 function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
   const unlogged=supplements.filter(s=>s.lastLogged!==today()).sort((a,b)=>a.name.localeCompare(b.name));
   const alreadyLogged=supplements.filter(s=>s.lastLogged===today());
-  const [rows,setRows]=useState(()=>unlogged.map(s=>({suppId:s.id,name:s.name,unit:s.unit,servingSize:s.servingSize,taken:true,amount:s.servingSize,notes:""})));
+  // status: "taken" | "later" | "skip"
+  const [rows,setRows]=useState(()=>unlogged.map(s=>({suppId:s.id,name:s.name,unit:s.unit,servingSize:s.servingSize,status:"taken",amount:s.servingSize,notes:""})));
   const isFirstLog=!todayFeel;
   const [feel,setFeel]=useState(todayFeel||{energy:null,recovery:null,mood:null,sleep:null});
   const [feelChanged,setFeelChanged]=useState(false);
   const updateRow=(suppId,field,value)=>setRows(prev=>prev.map(r=>r.suppId===suppId?{...r,[field]:value}:r));
-  const handleSaveAll=()=>onSaveAll(rows,feel);
-  const allSkipped=rows.every(r=>!r.taken);
+
+  // Cycle through: taken → later → skip → taken
+  const cycleStatus=(suppId)=>{
+    setRows(prev=>prev.map(r=>{
+      if(r.suppId!==suppId)return r;
+      const next=r.status==="taken"?"later":r.status==="later"?"skip":"taken";
+      return{...r,status:next};
+    }));
+  };
+
+  // Only rows actually being saved (taken or skip) — "later" rows are excluded
+  const activeRows=rows.filter(r=>r.status!=="later");
+  const takenRows=rows.filter(r=>r.status==="taken");
+  const allLater=rows.every(r=>r.status==="later");
+
+  const handleSaveAll=()=>{
+    // Pass only taken+skip rows to the save handler
+    onSaveAll(activeRows.map(r=>({...r,taken:r.status==="taken"})),feel);
+  };
+
+  // Status pill styling
+  const statusStyle=(status)=>{
+    if(status==="taken")return{border:"1px solid #5BAD72",background:"rgba(91,173,114,0.12)",color:"#5BAD72"};
+    if(status==="later")return{border:"1px solid #4A4B4F",background:"transparent",color:"#4A4B4F"};
+    return{border:"1px solid #C0392B",background:"rgba(192,57,43,0.08)",color:"#C0392B"};
+  };
+  const statusLabel=(status)=>status==="taken"?"TAKEN":status==="later"?"LATER":"SKIP";
+  const rowBorderLeft=(status)=>status==="taken"?"#E8A830":status==="later"?"#2A2B2E":"#3A3B3E";
+
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div className="modal-box" style={{padding:"18px 20px",maxHeight:"88vh",overflowY:"auto"}}>
@@ -1980,6 +2016,7 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
           </div>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
         </div>
+
         {alreadyLogged.length>0&&(
           <div style={{marginBottom:12}}>
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:6}}>ALREADY LOGGED TODAY</span>
@@ -1988,6 +2025,7 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
             </div>
           </div>
         )}
+
         {unlogged.length===0?(
           <div style={{textAlign:"center",padding:"30px 0"}}>
             <p style={{color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,marginBottom:6}}>ALL LOGGED ✓</p>
@@ -1996,25 +2034,62 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
           </div>
         ):(
           <>
+            {/* Legend */}
+            <div style={{display:"flex",gap:8,marginBottom:10,padding:"8px 10px",background:"#111213",borderRadius:9,border:"1px solid #2A2B2E"}}>
+              <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.5px",marginRight:4,alignSelf:"center"}}>TAP STATUS TO CYCLE:</span>
+              {[{s:"taken",label:"TAKEN"},{s:"later",label:"LATER"},{s:"skip",label:"SKIP"}].map(({s,label})=>(
+                <span key={s} style={{...statusStyle(s),borderRadius:5,padding:"2px 7px",fontFamily:"'Space Mono',monospace",fontSize:8,fontWeight:700,letterSpacing:"0.3px"}}>{label}</span>
+              ))}
+            </div>
+
             <div style={{marginBottom:12}}>
-              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:6}}>TO LOG</span>
-              <div style={{maxHeight:168,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px"}}>TO LOG</span>
+                {rows.some(r=>r.status==="later")&&(
+                  <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>
+                    {rows.filter(r=>r.status==="later").length} saved for later
+                  </span>
+                )}
+              </div>
+              <div style={{maxHeight:210,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
                 {rows.map((row)=>(
-                  <div key={row.suppId} style={{background:row.taken?"#1C1D1F":"#111213",border:row.taken?"1px solid #2A2B2E":"1px solid #1C1D1F",borderLeft:`3px solid ${row.taken?"#E8A830":"#3A3B3E"}`,borderRadius:8,padding:"7px 10px",marginBottom:5,transition:"all 0.15s"}}>
+                  <div key={row.suppId} style={{
+                    background:row.status==="taken"?"#1C1D1F":"#111213",
+                    border:row.status==="taken"?"1px solid #2A2B2E":"1px solid #1C1D1F",
+                    borderLeft:`3px solid ${rowBorderLeft(row.status)}`,
+                    borderRadius:8,padding:"7px 10px",marginBottom:5,
+                    transition:"all 0.15s",
+                    opacity:row.status==="later"?0.45:1
+                  }}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{color:row.taken?"#F0F0F0":"#4A4B4F",fontWeight:700,fontSize:12,flex:1,minWidth:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{row.name}</span>
-                      {row.taken&&<>
+                      <span style={{
+                        color:row.status==="taken"?"#F0F0F0":"#4A4B4F",
+                        fontWeight:700,fontSize:12,flex:1,minWidth:0,
+                        whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
+                        textDecoration:row.status==="later"?"line-through":"none"
+                      }}>{row.name}</span>
+
+                      {row.status==="taken"&&<>
                         <button onClick={()=>updateRow(row.suppId,"amount",Math.max(0,row.amount-row.servingSize))} style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>−</button>
                         <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,minWidth:36,textAlign:"center",flexShrink:0}}>{row.amount} {row.unit==="count"?"count":row.unit}</span>
                         <button onClick={()=>updateRow(row.suppId,"amount",row.amount+row.servingSize)} style={{width:22,height:22,borderRadius:5,border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>+</button>
                       </>}
-                      <button onClick={()=>updateRow(row.suppId,"taken",!row.taken)} style={{padding:"3px 8px",borderRadius:5,fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",border:row.taken?"1px solid #5BAD72":"1px solid #C0392B",background:row.taken?"rgba(91,173,114,0.12)":"rgba(192,57,43,0.08)",color:row.taken?"#5BAD72":"#C0392B",flexShrink:0,transition:"all 0.12s"}}>{row.taken?"TAKEN":"SKIP"}</button>
+
+                      {/* 3-state cycle button */}
+                      <button onClick={()=>cycleStatus(row.suppId)} style={{
+                        padding:"3px 8px",borderRadius:5,
+                        fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,
+                        cursor:"pointer",flexShrink:0,transition:"all 0.12s",
+                        ...statusStyle(row.status)
+                      }}>{statusLabel(row.status)}</button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            {!allSkipped&&(
+
+            {/* Feel scores — only show if something is being logged now */}
+            {takenRows.length>0&&(
               <div style={{marginBottom:14}}>
                 <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px",display:"block",marginBottom:8}}>HOW ARE YOU FEELING?</span>
                 {isFirstLog?(
@@ -2040,9 +2115,22 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
                 )}
               </div>
             )}
+
             <div style={{display:"flex",gap:8}}>
               <button onClick={onClose} className="btn-cancel" style={{flex:1,padding:"11px 0"}}>Cancel</button>
-              <button onClick={handleSaveAll} className="btn-primary" style={{flex:2,padding:"11px 0"}}>LOG {rows.filter(r=>r.taken).length} SUPPLEMENT{rows.filter(r=>r.taken).length!==1?"S":""}</button>
+              <button
+                onClick={handleSaveAll}
+                disabled={allLater}
+                className="btn-primary"
+                style={{flex:2,padding:"11px 0",opacity:allLater?0.4:1,cursor:allLater?"not-allowed":"pointer"}}
+              >
+                {allLater
+                  ?"SET AT LEAST ONE"
+                  :takenRows.length>0
+                    ?`LOG ${takenRows.length} · SKIP ${activeRows.length-takenRows.length}`
+                    :`SKIP ${activeRows.length}`
+                }
+              </button>
             </div>
           </>
         )}
@@ -2368,6 +2456,9 @@ function App(){
   const [logs,setLogs]=useState(()=>load(LOG_KEY,[]));
   const [profile,setProfile]=useState(()=>load(PROFILE_KEY,null));
   const [tab,setTab]=useState("stack");
+  const [slideDir,setSlideDir]=useState(null); // "left" | "right" | null
+  const [tabDragX,setTabDragX]=useState(0);    // live drag offset for indicator (-1 to 1)
+  const swipeTouchRef=useRef(null);            // {startX, startY, locked, axis}
   const [showAdd,setShowAdd]=useState(false);
   const [showCostBreakdown,setShowCostBreakdown]=useState(false);
   const [showShare,setShowShare]=useState(false);
@@ -2478,8 +2569,23 @@ function App(){
     setLogs(prev=>[...prev,entry]);setSelectedDate(null);
   };
   const deleteLog=(log)=>{
-    setSupplements(prev=>prev.map(s=>s.id!==log.suppId?s:{...s,consumed:Math.max(0,s.consumed-(log.taken?log.amount:0))}));
-    setLogs(prev=>prev.filter(l=>!(l.suppId===log.suppId&&l.ts===log.ts)));
+    const tISO=todayISO();
+    const isToday=(toISODate(log.date)||toISODate(log.ts))===tISO;
+    // Remove the log entry first, then figure out side-effects
+    setLogs(prev=>{
+      const updated=prev.filter(l=>!(l.suppId===log.suppId&&l.ts===log.ts));
+      const stillHasTodayLog=updated.some(l=>(toISODate(l.date)||toISODate(l.ts))===tISO&&l.suppId===log.suppId);
+      setSupplements(sp=>sp.map(s=>{
+        if(s.id!==log.suppId)return s;
+        return{
+          ...s,
+          consumed:Math.max(0,s.consumed-(log.taken?log.amount:0)),
+          // Clear lastLogged only if this was today's log and no other today-logs remain
+          lastLogged:isToday&&!stillHasTodayLog?null:s.lastLogged
+        };
+      }));
+      return updated;
+    });
   };
   const updateProfile=(updated)=>{setProfile(updated);save(PROFILE_KEY,updated);};
 
@@ -2516,9 +2622,25 @@ function App(){
 
           <CalendarBar logs={logs} supplements={supplements} selectedDate={selectedDate} lockedDate={lockedDate} onDateSelect={d=>{const newDate=selectedDate===d?null:d;setSelectedDate(newDate);setLockedDate(newDate);}} calendarView={calendarView} setCalendarView={setCalendarView} calendarMonth={calendarMonth} setCalendarMonth={setCalendarMonth} calendarYear={calendarYear} setCalendarYear={setCalendarYear} onScrollToToday={fn=>{scrollTodayRef.current=fn;}} onJumpToToday={()=>{setSelectedDate(null);setLockedDate(null);if(scrollTodayRef.current)scrollTodayRef.current();}}/>
 
-          <div className="flex gap-8" style={{marginBottom:10}}>
-            {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map(t=>(
-              <button key={t.id} onClick={()=>{setTab(t.id);if(t.id!=="stack")setFilter("all");}} style={{flex:1,padding:"8px 0",borderRadius:10,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:tab===t.id?"1px solid #E8A830":"1px solid #2A2B2E",background:tab===t.id?"rgba(232,168,48,0.08)":"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"all 0.2s"}}>{t.label}</button>
+          {/* ── Tab switcher with sliding pill indicator ── */}
+          <div style={{position:"relative",display:"flex",background:"#111213",border:"1px solid #2A2B2E",borderRadius:12,padding:3,marginBottom:10,userSelect:"none"}}>
+            {/* Sliding gold pill — moves with drag in real time */}
+            <div style={{
+              position:"absolute",top:3,bottom:3,
+              width:"calc(50% - 3px)",
+              borderRadius:9,
+              background:"rgba(232,168,48,0.08)",
+              border:"1px solid #E8A830",
+              transition:tabDragX===0?"transform 0.25s cubic-bezier(0.4,0,0.2,1)":"none",
+              transform:`translateX(calc(${tab==="stack"?0:100}% + ${tabDragX*100}% + ${tab==="stack"?tabDragX*3:tabDragX*3}px))`,
+              pointerEvents:"none",
+              willChange:"transform",
+            }}/>
+            {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map((t,i)=>(
+              <button key={t.id} onClick={()=>{setTab(t.id);setTabDragX(0);setSlideDir(null);if(t.id!=="stack")setFilter("all");}}
+                style={{flex:1,padding:"8px 0",borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:"none",background:"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"color 0.2s",position:"relative",zIndex:1}}>
+                {t.label}
+              </button>
             ))}
           </div>
 
@@ -2549,7 +2671,66 @@ function App(){
           )}
         </div>
 
-        <div className="shell-scroll">
+        <div className="shell-scroll"
+          onTouchStart={e=>{
+            // Only track single-finger touches
+            if(e.touches.length!==1)return;
+            // Lock out if any modal is open
+            const anyModal=showAdd||showBatchLog||showCostBreakdown||showShare||showProfile||showInsights||showNotif||showFeedback||showInbox||!!logSupp||!!editSupp||!!viewSupp||!!selectedDate;
+            if(anyModal)return;
+            swipeTouchRef.current={startX:e.touches[0].clientX,startY:e.touches[0].clientY,locked:false,axis:null};
+          }}
+          onTouchMove={e=>{
+            const t=swipeTouchRef.current;
+            if(!t||t.locked)return;
+            const dx=e.touches[0].clientX-t.startX;
+            const dy=e.touches[0].clientY-t.startY;
+            const adx=Math.abs(dx),ady=Math.abs(dy);
+            // Axis not yet determined
+            if(!t.axis){
+              if(adx<6&&ady<6)return; // too small to tell
+              t.axis=adx>ady?"x":"y";
+            }
+            if(t.axis==="y"){t.locked=true;return;} // vertical scroll — lock out
+            // Horizontal swipe — must be clearly more horizontal than vertical
+            if(adx<ady*2.5){t.locked=true;return;}
+            // Prevent page scroll while we handle swipe
+            e.preventDefault();
+            // Clamp drag to valid direction only
+            const atStart=tab==="stack";
+            const atEnd=tab==="history";
+            if(atStart&&dx>0)return;  // can't swipe right from first tab
+            if(atEnd&&dx<0)return;    // can't swipe left from last tab
+            // Normalise to -1..1 range over 120px
+            const norm=Math.max(-1,Math.min(1,dx/120));
+            setTabDragX(norm);
+          }}
+          onTouchEnd={e=>{
+            const t=swipeTouchRef.current;
+            if(!t){setTabDragX(0);return;}
+            const dx=e.changedTouches[0].clientX-t.startX;
+            const dy=e.changedTouches[0].clientY-t.startY;
+            const adx=Math.abs(dx),ady=Math.abs(dy);
+            swipeTouchRef.current=null;
+            // Only commit if it was a clean horizontal swipe
+            if(!t.locked&&t.axis==="x"&&adx>=80&&adx>ady*2.5){
+              if(dx<0&&tab==="stack"){
+                // Swipe left → history
+                setSlideDir("left");
+                setTab("history");
+                setFilter("all");
+              } else if(dx>0&&tab==="history"){
+                // Swipe right → stack
+                setSlideDir("right");
+                setTab("stack");
+              }
+            }
+            // Snap indicator back
+            setTabDragX(0);
+          }}>
+          <div style={{
+            animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
+          }} onAnimationEnd={()=>setSlideDir(null)}>
           {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
@@ -2564,6 +2745,7 @@ function App(){
             )}
             {supplements.length>0&&<StackCardList displaySupps={displaySupps} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp} onView={setViewSupp} logs={logs}/>}
           </>}
+          </div>
         </div>
       </div>
 
