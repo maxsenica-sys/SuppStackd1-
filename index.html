@@ -80,6 +80,147 @@
   </style>
 </head>
 <body>
+<script>
+// ── Service Worker for background notifications ───────────────────────────────
+// Injected as a blob so it works from a single HTML file
+const SW_SCRIPT = `
+const CACHE = 'suppstackd-sw-v1';
+const NOTIF_STORE = 'suppstackd_sw_notifs';
+
+// Listen for messages from the main app
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SCHEDULE_NOTIFS') {
+    // Store supplement data in cache storage for later use
+    caches.open(NOTIF_STORE).then(cache => {
+      cache.put('/__sw_data__', new Response(JSON.stringify(e.data.payload)));
+    });
+    scheduleNotifs(e.data.payload);
+  }
+});
+
+// On SW activation, reload stored data and reschedule
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.open(NOTIF_STORE).then(cache =>
+      cache.match('/__sw_data__').then(res => {
+        if (res) res.json().then(data => scheduleNotifs(data));
+      })
+    )
+  );
+});
+
+// Clear old timers map on each schedule call
+const timers = [];
+function scheduleNotifs(data) {
+  // Clear any existing timers
+  timers.forEach(t => clearTimeout(t));
+  timers.length = 0;
+
+  const { supplements, scheduledTime } = data;
+  if (!supplements || !supplements.length) return;
+
+  const now = Date.now();
+
+  // ── Daily log reminder at scheduled time ──
+  if (scheduledTime && scheduledTime > now) {
+    timers.push(setTimeout(() => {
+      caches.open(NOTIF_STORE).then(cache =>
+        cache.match('/__sw_data__').then(res => {
+          if (!res) return;
+          res.json().then(d => {
+            const unlogged = (d.supplements || []).filter(s => s.lastLogged !== d.todayStr);
+            if (unlogged.length > 0) {
+              self.registration.showNotification('Suppstackd', {
+                body: unlogged.length === 1
+                  ? unlogged[0].name + ' not logged today.'
+                  : unlogged.length + ' supplements not logged today.',
+                tag: 'suppstackd-daily',
+                silent: false
+              });
+            }
+          });
+        })
+      );
+    }, scheduledTime - now));
+  }
+
+  // ── Low stock alerts — fire after short delay on load ──
+  const critical = supplements.filter(s => {
+    if (!s.totalAmount || !s.servingSize || !s.servingsPerDay) return false;
+    const rem = (s.totalAmount || 0) - (s.consumed || 0);
+    const daysLeft = rem <= 0 ? 0 : Math.ceil(rem / (s.servingSize * s.servingsPerDay));
+    return daysLeft >= 0 && daysLeft <= 7;
+  });
+
+  if (critical.length > 0) {
+    // Only fire if not already shown today
+    const todayKey = new Date().toISOString().slice(0, 10);
+    caches.open(NOTIF_STORE).then(cache =>
+      cache.match('/__sw_lastLowAlert__').then(res => {
+        if (res) {
+          res.text().then(t => {
+            if (t === todayKey) return; // already shown today
+            sendLowStockNotif(cache, critical, todayKey);
+          });
+        } else {
+          sendLowStockNotif(cache, critical, todayKey);
+        }
+      })
+    );
+  }
+}
+
+function sendLowStockNotif(cache, critical, todayKey) {
+  cache.put('/__sw_lastLowAlert__', new Response(todayKey));
+  timers.push(setTimeout(() => {
+    const names = critical.map(s => {
+      const rem = (s.totalAmount || 0) - (s.consumed || 0);
+      const d = rem <= 0 ? 0 : Math.ceil(rem / (s.servingSize * s.servingsPerDay));
+      return s.name + ' (' + d + 'd)';
+    }).join(', ');
+    const body = critical.length === 1
+      ? critical[0].name + ' — approx ' + (Math.ceil(((critical[0].totalAmount||0)-(critical[0].consumed||0))/(critical[0].servingSize*critical[0].servingsPerDay))) + ' days left. Time to reorder.'
+      : critical.length + ' supps running low: ' + names;
+    self.registration.showNotification('Suppstackd — Low stock', {
+      body,
+      tag: 'suppstackd-lowstock',
+      silent: false
+    });
+  }, 2000));
+}
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow('/'));
+});
+`;
+
+if ('serviceWorker' in navigator) {
+  const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl, { scope: '/' })
+    .then(reg => {
+      window._swReg = reg;
+      console.log('[SW] Registered');
+    })
+    .catch(err => console.warn('[SW] Registration failed (blob SW requires HTTPS or localhost):', err));
+}
+
+// Called by the app to push supplement data into the SW
+window._scheduleSWNotifs = function(supplements, todayStr) {
+  if (!window._swReg || !window._swReg.active) return;
+  const now = new Date();
+  const midday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  window._swReg.active.postMessage({
+    type: 'SCHEDULE_NOTIFS',
+    payload: {
+      supplements,
+      todayStr,
+      scheduledTime: midday > now ? midday.getTime() : null
+    }
+  });
+};
+</script>
 <div id="splash">
   <div class="splash-bg">
     <svg viewBox="0 0 390 844" width="390" height="844" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%">
@@ -570,13 +711,26 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
 
   const loggedSuppIds=new Set(dateLogs.map(l=>l.suppId));
   const [addingFor,setAddingFor]=useState(null);
-  const [quickAmt,setQuickAmt]=useState("");
+  const [quickTaken,setQuickTaken]=useState(true);
+  const [quickScoops,setQuickScoops]=useState(1);
+  const [quickCustomAmt,setQuickCustomAmt]=useState("");
+  const [quickUseCustom,setQuickUseCustom]=useState(false);
   const [quickNotes,setQuickNotes]=useState("");
+  const [quickFeel,setQuickFeel]=useState({energy:null,recovery:null,mood:null,sleep:null});
 
-  const handleQuickLog=(supp)=>{setAddingFor(supp);setQuickAmt(String(supp.servingSize));setQuickNotes("");};
+  const handleQuickLog=(supp)=>{
+    setAddingFor(supp);
+    setQuickTaken(true);
+    setQuickScoops(1);
+    setQuickCustomAmt(String(supp.servingSize));
+    setQuickUseCustom(false);
+    setQuickNotes("");
+    setQuickFeel({energy:null,recovery:null,mood:null,sleep:null});
+  };
   const confirmQuickLog=()=>{
     if(!addingFor)return;
-    onSaveLog({suppId:addingFor.id,date,taken:true,amount:parseFloat(quickAmt)||addingFor.servingSize,notes:quickNotes,feel:{},ts:new Date(date+"T12:00:00").getTime(),backdated:true});
+    const amount=quickTaken?(quickUseCustom?parseFloat(quickCustomAmt)||addingFor.servingSize:addingFor.servingSize*quickScoops):0;
+    onSaveLog({suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:quickFeel,ts:new Date(date+"T12:00:00").getTime(),backdated:true});
     setAddingFor(null);
   };
 
@@ -732,12 +886,61 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                 {addingFor?.id===supp.id?(
                   <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:9,padding:"12px 14px",marginBottom:8}}>
                     <p style={{margin:"0 0 10px",color:"#E8A830",fontWeight:700,fontSize:13,fontFamily:"'Space Mono',monospace"}}>{supp.name}</p>
-                    <div style={{display:"flex",gap:8,marginBottom:8}}>
-                      <div style={{flex:1}}>
-                        <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1px",display:"block",marginBottom:4}}>AMOUNT ({supp.unit})</span>
-                        <input type="number" className="inp" value={quickAmt} onChange={e=>setQuickAmt(e.target.value)} style={{fontSize:13}}/>
-                      </div>
+                    {/* Taken / Skipped */}
+                    <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>DID YOU TAKE IT?</span>
+                    <div style={{display:"flex",gap:8,marginBottom:12}}>
+                      {[true,false].map(v=>(
+                        <button key={String(v)} onClick={()=>setQuickTaken(v)} style={{flex:1,padding:"7px 0",borderRadius:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,border:quickTaken===v?`1px solid ${v?"#5BAD72":"#C0392B"}`:"1px solid #2A2B2E",background:quickTaken===v?(v?"rgba(91,173,114,0.1)":"rgba(192,57,43,0.1)"):"transparent",color:quickTaken===v?(v?"#5BAD72":"#C0392B"):"#7A7D85",transition:"all 0.15s"}}>{v?"YES":"SKIPPED"}</button>
+                      ))}
                     </div>
+                    {quickTaken&&<>
+                      {/* Amount mode */}
+                      <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>AMOUNT</span>
+                      <div style={{display:"flex",gap:8,marginBottom:10}}>
+                        {[false,true].map(c=>(
+                          <button key={String(c)} onClick={()=>setQuickUseCustom(c)} style={{flex:1,padding:"6px 0",borderRadius:7,cursor:"pointer",border:quickUseCustom===c?"1px solid #E8A830":"1px solid #2A2B2E",background:quickUseCustom===c?"rgba(232,168,48,0.07)":"transparent",color:quickUseCustom===c?"#E8A830":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{c?`CUSTOM (${supp.unit})`:"SCOOPS"}</button>
+                        ))}
+                      </div>
+                      {!quickUseCustom?(
+                        <div style={{display:"flex",alignItems:"center",gap:14,justifyContent:"center",marginBottom:10}}>
+                          <button onClick={()=>setQuickScoops(Math.max(0.5,quickScoops-0.5))} style={{width:36,height:36,borderRadius:"50%",border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
+                          <div style={{textAlign:"center"}}>
+                            <div style={{fontSize:22,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace"}}>{quickScoops}</div>
+                            <div style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>= {(supp.servingSize*quickScoops).toFixed(1)}{supp.unit}</div>
+                          </div>
+                          <button onClick={()=>setQuickScoops(quickScoops+0.5)} style={{width:36,height:36,borderRadius:"50%",border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
+                        </div>
+                      ):(
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                          <input type="number" value={quickCustomAmt} onChange={e=>setQuickCustomAmt(e.target.value)} className="inp" style={{flex:1,fontSize:18,textAlign:"center"}}/>
+                          <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.unit}</span>
+                        </div>
+                      )}
+                      <div style={{background:"#111213",borderRadius:7,padding:"6px 10px",display:"flex",justifyContent:"space-between",marginBottom:10}}>
+                        <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>DEDUCTING</span>
+                        <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{(quickUseCustom?parseFloat(quickCustomAmt)||0:supp.servingSize*quickScoops).toFixed(1)}{supp.unit}</span>
+                      </div>
+                    </>}
+                    {/* Feel scores */}
+                    <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>HOW WERE YOU FEELING? (OPTIONAL)</span>
+                    {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
+                      <div key={metric.key} style={{marginBottom:6}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                          <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>{metric.label}</span>
+                          <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{quickFeel[metric.key]||"—"}</span>
+                        </div>
+                        <div style={{display:"flex",gap:5}}>
+                          {[1,2,3,4,5].map(n=>(
+                            <button key={n} onClick={()=>setQuickFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"5px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:quickFeel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:quickFeel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:quickFeel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:10,marginTop:2}}>
+                      <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>LOW</span>
+                      <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>HIGH</span>
+                    </div>
+                    {/* Notes */}
                     <input className="inp" placeholder="Notes (optional)" value={quickNotes} onChange={e=>setQuickNotes(e.target.value)} style={{marginBottom:10}}/>
                     <div style={{display:"flex",gap:8}}>
                       <button onClick={()=>setAddingFor(null)} className="btn-cancel" style={{flex:1,padding:"8px 0",fontSize:11}}>Cancel</button>
@@ -1215,7 +1418,7 @@ function LogModal({supp,onClose,onSave,todayFeel}){
 // ── AddEditModal ──────────────────────────────────────────────────────────────
 function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const isEdit=!!supp;
-  const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed)}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null});
+  const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed),customDate:supp.createdAt||todayISO()}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null,customDate:todayISO()});
   const [suggestions,setSuggestions]=useState([]);
   const [showSuggestions,setShowSuggestions]=useState(false);
   const [touched,setTouched]=useState({});
@@ -1239,7 +1442,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const totalNum=parseFloat(form.totalAmount)||0;
   const remaining=totalNum-effectiveConsumed;
   const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0?Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
-  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed,price:parseFloat(form.price)||null});};
+  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed,price:parseFloat(form.price)||null,createdAt:form.customDate||todayISO()});};
   const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -1300,6 +1503,11 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
           <div className="field flex-1"><span className="section-label">SERVINGS / DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="e.g. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
         <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to calculate your daily stack cost.</p></div>
+        <div className="field">
+          <span className="section-label">DATE ADDED</span>
+          <input type="date" className="inp" value={form.customDate||todayISO()} onChange={e=>set("customDate",e.target.value)} style={{colorScheme:"dark"}}/>
+          <p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Set a past or future date — affects history and calendar.</p>
+        </div>
         {!isEdit&&(
           <div style={{marginBottom:16}}>
             <button onClick={()=>setAlreadyStarted(v=>!v)} style={{width:"100%",padding:"11px 14px",background:alreadyStarted?"rgba(232,168,48,0.08)":"#111213",border:alreadyStarted?"1px solid rgba(232,168,48,0.4)":"1px solid #2A2B2E",borderRadius:9,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
@@ -1323,7 +1531,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
             )}
           </div>
         )}
-        {isEdit&&<div className="field"><span className="section-label">ALREADY CONSUMED ({form.unit})</span><input type="number" className={ic("consumed")} min="0" value={form.consumed} onChange={e=>set("consumed",e.target.value)} onBlur={()=>touch("consumed")}/>{showErr("consumed")&&<div className="err-msg">⚠ {errors.consumed}</div>}</div>}
+        {isEdit&&<div className="field"><span className="section-label">ALREADY CONSUMED ({form.unit}) — ESTIMATE OK</span><input type="number" className={ic("consumed")} min="0" value={form.consumed} onChange={e=>set("consumed",e.target.value)} onBlur={()=>touch("consumed")}/><p style={{color:"#4A4B4F",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:5}}>Not sure? A rough estimate is fine — this sets your run-out date.</p>{showErr("consumed")&&<div className="err-msg">⚠ {errors.consumed}</div>}</div>}
         {preview!==null&&preview>0&&(
           <div style={{background:"#111213",border:"1px solid rgba(232,168,48,0.2)",borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div><span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",display:"block"}}>ESTIMATED SUPPLY</span>{alreadyStarted&&remaining>0&&<span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace"}}>{Math.round(remaining)} {form.unit} remaining</span>}</div>
@@ -1351,7 +1559,7 @@ function NotifPanel({onClose}){
   const [testSent,setTestSent]=useState(false);
   const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
   const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
-  const request=async()=>{const ok=await requestNotifPerm();setPerm(ok?"granted":"denied");};
+  const request=async()=>{const ok=await requestNotifPerm();setPerm(ok?"granted":"denied");if(ok&&window._scheduleSWNotifs){const supps=load(STORAGE_KEY,[]);setTimeout(()=>window._scheduleSWNotifs(supps,todayISO()),1000);}};
   const sendTest=()=>{fireNotif("Suppstackd — Log your supplements","Don't forget to log your stack today.",200);setTestSent(true);setTimeout(()=>setTestSent(false),3000);};
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -1365,7 +1573,7 @@ function NotifPanel({onClose}){
           <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,color:perm==="granted"?"#5BAD72":perm==="denied"?"#C0392B":"#E8A830"}}>{perm==="granted"?"GRANTED":perm==="denied"?"BLOCKED":"NOT SET"}</span>
         </div>
         {perm!=="granted"&&<button className="btn-primary" style={{width:"100%",marginBottom:10}} onClick={request}>ENABLE NOTIFICATIONS</button>}
-        {perm==="granted"&&<><p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:16}}>Notifications enabled. Suppstackd will remind you each time you open the app and haven't logged today.</p><button className="btn-primary" style={{width:"100%",marginBottom:10,background:testSent?"#5BAD72":undefined}} onClick={sendTest}>{testSent?"✓ TEST SENT":"SEND TEST NOTIFICATION"}</button></>}
+        {perm==="granted"&&<><p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.7,marginBottom:16}}>Notifications enabled. Suppstackd will alert your phone each day at noon if you haven't logged, and immediately if any supplement drops to 7 days or less — even when the app is closed.</p><button className="btn-primary" style={{width:"100%",marginBottom:10,background:testSent?"#5BAD72":undefined}} onClick={sendTest}>{testSent?"✓ TEST SENT":"SEND TEST NOTIFICATION"}</button></>}
         {perm==="denied"&&<p style={{color:"#C0392B",fontSize:12,fontFamily:"'Space Mono',monospace",lineHeight:1.6,marginBottom:16}}>Blocked. Go to Settings → Notifications → allow this site.</p>}
         <button className="btn-cancel" style={{width:"100%"}} onClick={onClose}>Done</button>
       </div>
@@ -1374,7 +1582,7 @@ function NotifPanel({onClose}){
 }
 
 // ── SupplementHistory ─────────────────────────────────────────────────────────
-function SupplementHistory({supplements}){
+function SupplementHistory({supplements,onAddNew}){
   const [selected,setSelected]=useState(null);
   const [historyFilter,setHistoryFilter]=useState("date");
   const logs=load(LOG_KEY,[]);
@@ -1412,10 +1620,15 @@ function SupplementHistory({supplements}){
     <div style={{paddingBottom:120}}>
       <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Supplement History</h2>
       <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:12}}>Tap a supplement to see full history</p>
-      <div style={{display:"flex",gap:6,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
-        {[{id:"date",label:"DATE ADDED"},{id:"urgency",label:"URGENCY"},{id:"used",label:"MOST USED"},{id:"name",label:"NAME"}].map(f=>(
-          <button key={f.id} onClick={()=>setHistoryFilter(f.id)} style={{padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px",whiteSpace:"nowrap",flexShrink:0,border:historyFilter===f.id?"1px solid #E8A830":"1px solid #2A2B2E",background:historyFilter===f.id?"rgba(232,168,48,0.1)":"transparent",color:historyFilter===f.id?"#E8A830":"#7A7D85",transition:"all 0.15s"}}>{f.label}</button>
-        ))}
+      {/* Filter LEFT, Add RIGHT — mirrored from stack page */}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:16}}>
+        <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
+          <option value="date">FILTER: DATE ADDED</option>
+          <option value="urgency">FILTER: URGENCY</option>
+          <option value="used">FILTER: MOST USED</option>
+          <option value="name">FILTER: NAME</option>
+        </select>
+        <button onClick={onAddNew} style={{marginLeft:"auto",padding:"6px 18px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.4)",background:"rgba(232,168,48,0.08)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
       </div>
       {supplements.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No supplements tracked yet.</p>}
       {[...supplements].sort((a,b)=>{
@@ -1433,11 +1646,16 @@ function SupplementHistory({supplements}){
         const totalUsed=suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
         const runOut=calcRunOut(s);
         const days=daysFromNow(runOut);
+        const addedDate=s.createdAt?new Date(s.createdAt+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"Unknown";
         return(
           <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
               <div><p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:15}}>{s.name}</p><p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p></div>
               <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
+            </div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:5,background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:6,padding:"3px 8px",marginBottom:8}}>
+              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>ADDED</span>
+              <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{addedDate}</span>
             </div>
             <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
               <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>📦 {s.totalAmount} {s.unit==="count"?"count":s.unit} container</span>
@@ -2199,6 +2417,20 @@ function App(){
             fireNotif("Suppstackd — Log your supplements",`${unlogged.length} supplement${unlogged.length>1?"s":""} not logged today.`);
         },msUntilMidday);
       }
+      // Push data to SW for background notifications (fires even when app is closed)
+      if(window._scheduleSWNotifs){
+        // Small delay to ensure SW is ready
+        setTimeout(()=>window._scheduleSWNotifs(supplements,todayISO()),1500);
+      }
+      // Low stock alerts — in-app fallback (fires when app is open)
+      const critical=supplements.filter(s=>{const d=daysFromNow(calcRunOut(s));return d>=0&&d<=7;});
+      if(critical.length>0){
+        const names=critical.map(s=>s.name).join(", ");
+        const msg=critical.length===1
+          ?`${critical[0].name} — approx ${Math.max(0,daysFromNow(calcRunOut(critical[0])))}d supply left. Time to reorder.`
+          :`${critical.length} supps running low: ${names}. Check your stack.`;
+        fireNotif("Suppstackd — Low stock",msg,800);
+      }
     }
     if(checkAndTrackActiveDay())setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
     return()=>{if(notifTimer)clearTimeout(notifTimer);};
@@ -2211,7 +2443,7 @@ function App(){
       const ex=prev.find(p=>p.id===s.id);
       if(ex)return prev.map(p=>p.id===s.id?s:p);
       // Always store createdAt as a plain YYYY-MM-DD string for reliable comparisons
-      return[...prev,{...s,createdAt:todayISO()}];
+      return[...prev,{...s,createdAt:s.createdAt||todayISO()}];
     });
     setShowAdd(false);setEditSupp(null);
   };
@@ -2307,7 +2539,7 @@ function App(){
 
           {tab==="stack"&&supplements.length>0&&(
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
-              <button onClick={()=>setShowAdd(true)} style={{padding:"5px 14px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.06)",color:"#E8A830",flexShrink:0}}>+ ADD</button>
+              <button onClick={()=>setShowAdd(true)} style={{padding:"7px 22px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.5)",background:"rgba(232,168,48,0.11)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
               {filter==="urgent"&&<button onClick={()=>setFilter("all")} style={{padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,border:"1px solid rgba(192,57,43,0.5)",background:"rgba(192,57,43,0.1)",color:"#C0392B",flexShrink:0}}>URGENT ✕</button>}
               <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginLeft:"auto",background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
                 <option value="runout">FILTER: URGENCY</option>
@@ -2318,7 +2550,7 @@ function App(){
         </div>
 
         <div className="shell-scroll">
-          {tab==="history"&&<SupplementHistory supplements={supplements}/>}
+          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 28px",textAlign:"center",minHeight:320}}>
