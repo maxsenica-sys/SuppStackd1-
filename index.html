@@ -700,7 +700,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,lockedDate,cale
 }
 
 // ── DateLogModal ──────────────────────────────────────────────────────────────
-function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
+function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDeleteLog}){
   const dateObj=new Date(date+"T00:00:00");
   const dateLabel=dateObj.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const todayStr=todayISO();
@@ -719,27 +719,50 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
 
   const loggedSuppIds=new Set(dateLogs.map(l=>l.suppId));
   const [addingFor,setAddingFor]=useState(null);
+  const [editingLog,setEditingLog]=useState(null);
   const [quickTaken,setQuickTaken]=useState(true);
   const [quickScoops,setQuickScoops]=useState(1);
   const [quickCustomAmt,setQuickCustomAmt]=useState("");
   const [quickUseCustom,setQuickUseCustom]=useState(false);
   const [quickNotes,setQuickNotes]=useState("");
   const [quickFeel,setQuickFeel]=useState({energy:null,recovery:null,mood:null,sleep:null});
+  const [quickFeelChanged,setQuickFeelChanged]=useState(false);
 
-  const handleQuickLog=(supp)=>{
+  // Check if a feel score already exists for this date (from storage or logs)
+  const dateFeelStored=(()=>{
+    const feels=load(FEEL_KEY,[]);
+    const stored=feels.find(f=>f.date===date);
+    if(stored&&(stored.energy||stored.recovery||stored.mood||stored.sleep))
+      return{energy:stored.energy,recovery:stored.recovery,mood:stored.mood,sleep:stored.sleep};
+    const logsWithFeel=dateLogs.filter(l=>l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
+    if(logsWithFeel.length)return logsWithFeel[logsWithFeel.length-1].feel;
+    return null;
+  })();
+
+  const handleQuickLog=(supp,existingLog=null)=>{
     setAddingFor(supp);
-    setQuickTaken(true);
-    setQuickScoops(1);
-    setQuickCustomAmt(String(supp.servingSize));
+    setQuickTaken(existingLog?existingLog.taken:true);
+    setQuickScoops(existingLog?Math.round(existingLog.amount/(supp.servingSize||1)):1);
+    setQuickCustomAmt(existingLog?String(existingLog.amount):String(supp.servingSize));
     setQuickUseCustom(false);
-    setQuickNotes("");
-    setQuickFeel({energy:null,recovery:null,mood:null,sleep:null});
+    setQuickNotes(existingLog?existingLog.notes||"":"");
+    // If a feel exists for this date, default to same — user can change
+    setQuickFeel(existingLog?.feel||dateFeelStored||{energy:null,recovery:null,mood:null,sleep:null});
+    setQuickFeelChanged(false);
+    setEditingLog(existingLog||null);
   };
   const confirmQuickLog=()=>{
     if(!addingFor)return;
     const amount=quickTaken?(quickUseCustom?parseFloat(quickCustomAmt)||addingFor.servingSize:addingFor.servingSize*quickScoops):0;
-    onSaveLog({suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:quickFeel,ts:new Date(date+"T12:00:00").getTime(),backdated:true});
+    const feelToSave=dateFeelStored&&!quickFeelChanged?dateFeelStored:quickFeel;
+    if(editingLog){
+      // Edit mode: replace existing log
+      onEditLog(editingLog,{suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:editingLog.ts,backdated:true});
+    } else {
+      onSaveLog({suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:new Date(date+"T12:00:00").getTime(),backdated:true});
+    }
     setAddingFor(null);
+    setEditingLog(null);
   };
 
   // ── Feel score helpers ────────────────────────────────────────────────────
@@ -863,11 +886,14 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
               const supp=supplements.find(s=>s.id===log.suppId);
               return(
                 <div key={i} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div>
+                  <div style={{flex:1,minWidth:0}}>
                     <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}</p>
                     <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount} ${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
                   </div>
-                  <button onClick={()=>onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
+                  <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    <button onClick={()=>{if(supp)handleQuickLog(supp,log);}} style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"4px 10px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>
+                    <button onClick={()=>onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
+                  </div>
                 </div>
               );
             })}
@@ -916,25 +942,48 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onDeleteLog}){
                         <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{(quickUseCustom?parseFloat(quickCustomAmt)||0:supp.servingSize*quickScoops).toFixed(1)}{supp.unit}</span>
                       </div>
                     </>}
-                    {/* Feel scores */}
-                    <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>HOW WERE YOU FEELING? (OPTIONAL)</span>
-                    {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
-                      <div key={metric.key} style={{marginBottom:6}}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                          <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>{metric.label}</span>
-                          <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{quickFeel[metric.key]||"—"}</span>
+                    {/* Feel scores — SAME/DIFFERENT if already logged today */}
+                    <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>HOW WERE YOU FEELING?</span>
+                    {dateFeelStored&&!quickFeelChanged?(
+                      <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 12px",marginBottom:10}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                          <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px"}}>TODAY'S FEEL</span>
+                          <div style={{display:"flex",gap:10}}>
+                            {[{k:"energy",l:"E"},{k:"recovery",l:"R"},{k:"mood",l:"M"},{k:"sleep",l:"S"}].map(m=>(
+                              <div key={m.k} style={{textAlign:"center"}}>
+                                <div style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,lineHeight:1}}>{quickFeel[m.k]||"—"}</div>
+                                <div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8}}>{m.l}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div style={{display:"flex",gap:5}}>
-                          {[1,2,3,4,5].map(n=>(
-                            <button key={n} onClick={()=>setQuickFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"5px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:quickFeel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:quickFeel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:quickFeel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
-                          ))}
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>setQuickFeelChanged(false)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #5BAD72",background:"rgba(91,173,114,0.1)",color:"#5BAD72",cursor:"pointer"}}>SAME</button>
+                          <button onClick={()=>setQuickFeelChanged(true)} style={{flex:1,padding:"6px 0",borderRadius:7,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",cursor:"pointer"}}>DIFFERENT</button>
                         </div>
                       </div>
-                    ))}
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:10,marginTop:2}}>
-                      <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>LOW</span>
-                      <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>HIGH</span>
-                    </div>
+                    ):(
+                      <div style={{marginBottom:10}}>
+                        {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(metric=>(
+                          <div key={metric.key} style={{marginBottom:6}}>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                              <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>{metric.label}</span>
+                              <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{quickFeel[metric.key]||"—"}</span>
+                            </div>
+                            <div style={{display:"flex",gap:5}}>
+                              {[1,2,3,4,5].map(n=>(
+                                <button key={n} onClick={()=>setQuickFeel(f=>({...f,[metric.key]:n}))} style={{flex:1,padding:"5px 0",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,border:quickFeel[metric.key]===n?"1px solid #E8A830":"1px solid #2A2B2E",background:quickFeel[metric.key]===n?"rgba(232,168,48,0.12)":"#111213",color:quickFeel[metric.key]===n?"#E8A830":"#7A7D85",transition:"all 0.12s"}}>{n}</button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {dateFeelStored&&<button onClick={()=>setQuickFeelChanged(false)} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",padding:"2px 0",marginBottom:4}}>← back to same</button>}
+                        <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+                          <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>LOW</span>
+                          <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>HIGH</span>
+                        </div>
+                      </div>
+                    )}
                     {/* Notes */}
                     <input className="inp" placeholder="Notes (optional)" value={quickNotes} onChange={e=>setQuickNotes(e.target.value)} style={{marginBottom:10}}/>
                     <div style={{display:"flex",gap:8}}>
@@ -1268,14 +1317,14 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
   const todayIso=todayISO();const logged=logs?logs.some(l=>l.suppId===supp.id&&(l.date===todayIso||toISODate(l.ts)===todayIso)):supp.lastLogged===today();
 
   return(
-    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5}}>
+    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5,minHeight:72}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
         <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
           <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
             <h3 style={{fontSize:15,fontWeight:700,color:"#F0F0F0",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{supp.name}</h3>
             <span style={{fontSize:10,color:color,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0}}>{urgencyLabel(days)} · {days>0?`${days}d`:"NOW"}</span>
           </div>
-          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit} left · out {formatDate(runOut)}</span>
+          <span style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"block"}}>{supp.brand?`${supp.brand} · `:""}{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit} left · out {formatDate(runOut)}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
           <div style={{position:"relative"}}>
@@ -1580,7 +1629,7 @@ function NotifPanel({onClose}){
 }
 
 // ── SupplementHistory ─────────────────────────────────────────────────────────
-function SupplementHistory({supplements,onAddNew}){
+function SupplementHistory({supplements,onAddNew,onEdit}){
   const [selected,setSelected]=useState(null);
   const [historyFilter,setHistoryFilter]=useState("date");
   const logs=load(LOG_KEY,[]);
@@ -1649,19 +1698,24 @@ function SupplementHistory({supplements,onAddNew}){
           <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
               <div><p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:15}}>{s.name}</p><p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p></div>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <button onClick={e=>{e.stopPropagation();onEdit&&onEdit(s);}} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.07)",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>EDIT</button>
+                <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
+              </div>
             </div>
             <div style={{display:"inline-flex",alignItems:"center",gap:5,background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:6,padding:"3px 8px",marginBottom:8}}>
               <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>ADDED</span>
               <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{addedDate}</span>
             </div>
-            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>📦 {s.totalAmount} {s.unit==="count"?"count":s.unit} container</span>
-              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>💊 {s.servingSize} {s.unit==="count"?"count":s.unit} × {s.servingsPerDay}/day</span>
-              {totalUsed>0&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{totalUsed.toFixed(0)} {s.unit==="count"?"count":s.unit} used</span>}
-              <span style={{color:urgencyColor(days),fontSize:11,fontFamily:"'Space Mono',monospace"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
-              {lastLog&&<span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>Last: {lastLog.date}</span>}
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap",overflow:"hidden"}}>
+              <span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
+              <span style={{color:"#4A4B4F",fontSize:10}}>·</span>
+              <span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>💊 {s.servingSize}{s.unit==="count"?"ct":s.unit}×{s.servingsPerDay}/d</span>
+              <span style={{color:"#4A4B4F",fontSize:10}}>·</span>
+              {totalUsed>0&&<><span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span><span style={{color:"#4A4B4F",fontSize:10}}>·</span></>}
+              <span style={{color:urgencyColor(days),fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
             </div>
+            {lastLog&&<div style={{marginTop:3}}><span style={{color:"#4A4B4F",fontSize:10,fontFamily:"'Space Mono',monospace"}}>Last logged: {lastLog.date}</span></div>}
           </div>
         );
       })}
@@ -2450,6 +2504,7 @@ function App(){
   const [slideDir,setSlideDir]=useState(null); // "left" | "right" | null
   const [tabDragX,setTabDragX]=useState(0);    // live drag offset for indicator (-1 to 1)
   const swipeTouchRef=useRef(null);            // {startX, startY, locked, axis}
+  const shellScrollRef=useRef(null);           // for resetting scroll on tab switch
   const [showAdd,setShowAdd]=useState(false);
   const [showCostBreakdown,setShowCostBreakdown]=useState(false);
   const [showShare,setShowShare]=useState(false);
@@ -2558,6 +2613,24 @@ function App(){
     const d=new Date(entry.ts);const dateStr=d.toDateString();
     setSupplements(prev=>prev.map(s=>s.id!==entry.suppId?s:{...s,consumed:s.consumed+(entry.taken?entry.amount:0),lastLogged:dateStr===today()?dateStr:s.lastLogged}));
     setLogs(prev=>[...prev,entry]);setSelectedDate(null);
+    // Persist feel for this date
+    if(entry.feel&&(entry.feel.energy||entry.feel.recovery||entry.feel.mood||entry.feel.sleep)){
+      const feels=load(FEEL_KEY,[]);const existing=feels.find(f=>f.date===entry.date);
+      if(existing){save(FEEL_KEY,feels.map(f=>f.date===entry.date?{...f,...entry.feel}:f));}
+      else{save(FEEL_KEY,[...feels,{date:entry.date,...entry.feel,ts:Date.now()}]);}
+    }
+  };
+  const editBackdatedLog=(oldLog,newEntry)=>{
+    // Replace the old log with updated data, adjusting consumed delta
+    const consumedDelta=(newEntry.taken?newEntry.amount:0)-(oldLog.taken?oldLog.amount:0);
+    setSupplements(prev=>prev.map(s=>s.id!==newEntry.suppId?s:{...s,consumed:Math.max(0,s.consumed+consumedDelta)}));
+    setLogs(prev=>prev.map(l=>(l.suppId===oldLog.suppId&&l.ts===oldLog.ts)?{...newEntry}:l));
+    // Persist feel for this date
+    if(newEntry.feel&&(newEntry.feel.energy||newEntry.feel.recovery||newEntry.feel.mood||newEntry.feel.sleep)){
+      const feels=load(FEEL_KEY,[]);const existing=feels.find(f=>f.date===newEntry.date);
+      if(existing){save(FEEL_KEY,feels.map(f=>f.date===newEntry.date?{...f,...newEntry.feel}:f));}
+      else{save(FEEL_KEY,[...feels,{date:newEntry.date,...newEntry.feel,ts:Date.now()}]);}
+    }
   };
   const deleteLog=(log)=>{
     const tISO=todayISO();
@@ -2639,7 +2712,7 @@ function App(){
                 pointerEvents:"none",
               }}/>
               {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map((t)=>(
-                <button key={t.id} onClick={()=>{setTab(t.id);setSlideDir(null);if(t.id!=="stack")setFilter("all");}}
+                <button key={t.id} onClick={()=>{setTab(t.id);setSlideDir(null);if(t.id!=="stack")setFilter("all");setTimeout(()=>{if(shellScrollRef.current)shellScrollRef.current.scrollTop=0;},10);}}
                   style={{flex:1,padding:"8px 0",borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:"none",background:"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"color 0.28s",position:"relative",zIndex:1}}>
                   {t.label}
                 </button>
@@ -2685,7 +2758,7 @@ function App(){
           )}
         </div>
 
-        <div className="shell-scroll"
+        <div className="shell-scroll" ref={shellScrollRef}
           onTouchStart={e=>{
             if(e.touches.length!==1)return;
             const anyModal=showAdd||showBatchLog||showCostBreakdown||showShare||showProfile||showInsights||showNotif||showFeedback||showInbox||!!logSupp||!!editSupp||!!viewSupp||!!selectedDate;
@@ -2726,16 +2799,18 @@ function App(){
                 setSlideDir("left");
                 setTab("history");
                 setFilter("all");
+                setTimeout(()=>{if(shellScrollRef.current)shellScrollRef.current.scrollTop=0;},10);
               } else if(dx>0&&tab==="history"){
                 setSlideDir("right");
                 setTab("stack");
+                setTimeout(()=>{if(shellScrollRef.current)shellScrollRef.current.scrollTop=0;},10);
               }
             }
           }}>
           <div style={{
             animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
           }} onAnimationEnd={()=>setSlideDir(null)}>
-          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)}/>}
+          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 28px",textAlign:"center",minHeight:320}}>
@@ -2787,7 +2862,7 @@ function App(){
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
       {viewSupp&&<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} onClose={()=>setViewSupp(null)} onEdit={()=>{setEditSupp(viewSupp);setViewSupp(null);}}/>}
-      {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onDeleteLog={deleteLog}/>}
+      {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
 }
