@@ -1748,20 +1748,24 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,logs:lo
     );
   }
 
+  const visibleSupps=[...supplements].filter(s=>!s.removed);
   const activeSupps=historyFilter==="depleted"
-    ?[...supplements].filter(isDep).sort((a,b)=>new Date(calcRunOut(a))-new Date(calcRunOut(b)))
-    :[...supplements].filter(s=>!isDep(s)).sort((a,b)=>{
-        if(historyFilter==="date")return new Date(b.createdAt||0)-new Date(a.createdAt||0);
-        if(historyFilter==="urgency")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));
-        if(historyFilter==="used"){
-          const aUsed=logs.filter(l=>l.suppId===a.id&&l.taken).reduce((s,l)=>s+l.amount,0);
-          const bUsed=logs.filter(l=>l.suppId===b.id&&l.taken).reduce((s,l)=>s+l.amount,0);
-          return bUsed-aUsed;
-        }
-        return a.name.localeCompare(b.name);
-      });
+    ?visibleSupps.filter(isDep).sort((a,b)=>new Date(calcRunOut(a))-new Date(calcRunOut(b)))
+    :[
+        ...visibleSupps.filter(s=>!isDep(s)).sort((a,b)=>{
+          if(historyFilter==="date")return new Date(b.createdAt||0)-new Date(a.createdAt||0);
+          if(historyFilter==="urgency")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));
+          if(historyFilter==="used"){
+            const aUsed=logs.filter(l=>l.suppId===a.id&&l.taken).reduce((s,l)=>s+l.amount,0);
+            const bUsed=logs.filter(l=>l.suppId===b.id&&l.taken).reduce((s,l)=>s+l.amount,0);
+            return bUsed-aUsed;
+          }
+          return a.name.localeCompare(b.name);
+        }),
+        ...visibleSupps.filter(isDep).sort((a,b)=>new Date(calcRunOut(a))-new Date(calcRunOut(b))),
+      ];
 
-  const depletedCount=supplements.filter(isDep).length;
+  const depletedCount=supplements.filter(s=>!s.removed&&isDep(s)).length;
 
   return(
     <div style={{paddingBottom:120}}>
