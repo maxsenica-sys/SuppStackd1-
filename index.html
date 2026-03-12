@@ -1211,7 +1211,7 @@ function ProgressRing({pct,color,size=58}){
 }
 
 // ── SupplementDetailSheet ─────────────────────────────────────────────────────
-function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
+function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnly}){
   const sheetRef=useRef(null);
   const dragStartY=useRef(null);
   const handleTouchStart=(e)=>{dragStartY.current=e.touches[0].clientY;};
@@ -1227,12 +1227,13 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
     if(delta>80)onClose();
     dragStartY.current=null;
   };
+  const isDepleted=(supp.totalAmount-(supp.consumed||0))<=0;
   const runOut=calcRunOut(supp);
   const days=daysFromNow(runOut);
   const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
   const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
   const pct=totalDays>0?Math.max(0,Math.min(100,(Math.max(0,days)/totalDays)*100)):0;
-  const color=urgencyColor(days);
+  const color=isDepleted?"#4A4B4F":urgencyColor(days);
   const suppLogs=logs.filter(l=>l.suppId===supp.id).sort((a,b)=>b.ts-a.ts);
   const totalConsumed=supp.consumed||0;
   const startedDate=supp.createdAt?new Date(supp.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"Unknown";
@@ -1240,48 +1241,50 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,profile}){
   const currency=CURRENCIES[profile?.country||"Other"]||"$";
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
-        <div style={{width:36,height:4,borderRadius:2,background:"#3A3B3E",margin:"0 auto 16px"}}/>
+      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
+        <div style={{width:36,height:4,borderRadius:2,background:"#2A2B2E",margin:"0 auto 16px"}}/>
+        {isDepleted&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12,background:"rgba(74,75,79,0.15)",border:"1px solid #2A2B2E",borderRadius:8,padding:"6px 10px"}}><span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px"}}>⬛ DEPLETED — READ ONLY</span></div>}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
-            <h2 style={{fontSize:20,fontWeight:800,color:"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px",margin:0}}>{supp.name}</h2>
-            {supp.brand&&<span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.brand} · {supp.type}</span>}
+            <h2 style={{fontSize:20,fontWeight:800,color:isDepleted?"#5A5B5F":"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px",margin:0}}>{supp.name}</h2>
+            {supp.brand&&<span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.brand} · {supp.type}</span>}
           </div>
           <div style={{display:"flex",gap:6}}>
-            <button onClick={onEdit} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>
+            {!readOnly&&!isDepleted&&<button onClick={onEdit} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>}
+            {isDepleted&&onReAdd&&<button onClick={onReAdd} style={{padding:"5px 12px",borderRadius:8,border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",fontWeight:700}}>RE-ADD</button>}
             <button onClick={onClose} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"transparent",color:"#7A7D85",fontSize:18,cursor:"pointer",lineHeight:1}}>✕</button>
           </div>
         </div>
         <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:16,background:"#111213",borderRadius:12,padding:"12px 14px"}}>
           <div style={{position:"relative",flexShrink:0}}>
-            <ProgressRing pct={pct} color={color} size={56}/>
+            <ProgressRing pct={isDepleted?0:pct} color={color} size={56}/>
             <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontSize:11,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{Math.round(pct)}%</span>
+              <span style={{fontSize:11,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{isDepleted?"0%":`${Math.round(pct)}%`}</span>
             </div>
           </div>
           <div style={{flex:1}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span><span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit}</span></div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>RUNS OUT</span><span style={{color,fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{formatDate(runOut)} · {days>0?`${days}d`:"NOW"}</span></div>
-            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span><span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span><span style={{color:"#5A5B5F",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>0 {supp.unit==="count"?"count":supp.unit}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>RAN OUT</span><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{formatDate(runOut)}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span><span style={{color:"#5A5B5F",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span></div>
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
           {[{label:"CONTAINER",value:`${supp.totalAmount} ${supp.unit==="count"?"count":supp.unit}`},{label:"TOTAL CONSUMED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp.unit==="count"?"count":supp.unit}`},{label:"ADDED ON",value:startedDate},{label:"FORM",value:supp.type||"—"},...(dailyCostVal?[{label:"DAILY COST",value:`${currency}${dailyCostVal.toFixed(2)}`}]:[]),...(supp.price?[{label:"UNIT PRICE",value:`${currency}${Number(supp.price).toFixed(2)}`}]:[])].map(row=>(
-            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"9px 12px"}}><div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div><div style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div></div>
+            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"9px 12px"}}><div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div><div style={{color:isDepleted?"#5A5B5F":"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div></div>
           ))}
         </div>
         {suppLogs.length>0&&(
           <div>
-            <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:8}}>RECENT LOGS</span>
-            {suppLogs.slice(0,4).map((l,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #2A2B2E"}}>
-                <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9}}>{new Date(l.ts).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
-                <span style={{color:l.taken?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{l.taken?`${l.amount} ${supp.unit==="count"?"count":supp.unit}`:"SKIPPED"}</span>
+            <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:8}}>LOG HISTORY</span>
+            {suppLogs.map((l,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1E1F21"}}>
+                <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>{new Date(l.ts).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
+                <span style={{color:isDepleted?"#4A4B4F":l.taken?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{l.taken?`${l.amount} ${supp.unit==="count"?"count":supp.unit}`:"SKIPPED"}</span>
               </div>
             ))}
           </div>
         )}
-        {(()=>{const benefits=lookupBenefits(supp.name);if(!benefits)return null;return(
+        {!isDepleted&&(()=>{const benefits=lookupBenefits(supp.name);if(!benefits)return null;return(
           <div style={{marginTop:16}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:900,fontSize:15,letterSpacing:"2px",color:"#E8A830",textTransform:"uppercase"}}>Benefits</span>
@@ -1648,56 +1651,32 @@ function NotifPanel({onClose}){
 }
 
 // ── SupplementHistory ─────────────────────────────────────────────────────────
-function SupplementHistory({supplements,onAddNew,onEdit}){
+function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,logs:logsFromParent,profile}){
   const [selected,setSelected]=useState(null);
   const [historyFilter,setHistoryFilter]=useState("date");
-  const logs=load(LOG_KEY,[]);
+  const logs=logsFromParent||load(LOG_KEY,[]);
+  const isDep=s=>(s.totalAmount-(s.consumed||0))<=0;
+
   if(selected){
     const supp=supplements.find(s=>s.id===selected);
-    const suppLogs=[...logs].filter(l=>l.suppId===selected).reverse();
-    const totalConsumed=suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
-    const daysTaken=new Set(suppLogs.filter(l=>l.taken).map(l=>l.date)).size;
+    if(!supp){setSelected(null);return null;}
+    const depleted=isDep(supp);
     return(
-      <div style={{paddingBottom:120}}>
-        <button onClick={()=>setSelected(null)} style={{background:"transparent",border:"none",color:"#E8A830",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:13,padding:"0 0 20px",letterSpacing:"0.5px"}}>← BACK</button>
-        <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>{supp?.name}</h2>
-        <p style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",marginBottom:20}}>{supp?.brand||"No brand"} · {supp?.type}</p>
-        <div className="flex gap-8" style={{marginBottom:20}}>
-          {[{label:"TOTAL USED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp?.unit==="count"?"count":supp?.unit||""}`},{label:"DAYS TAKEN",value:daysTaken},{label:"REMAINING",value:`${Math.max(0,(supp?.totalAmount||0)-(supp?.consumed||0)).toFixed(0)} ${supp?.unit==="count"?"count":supp?.unit||""}`}].map(s=>(
-            <div key={s.label} style={{flex:1,background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-              <div style={{fontSize:14,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace",marginBottom:3}}>{s.value}</div>
-              <div style={{fontSize:8,color:"#7A7D85",fontFamily:"'Space Mono',monospace",letterSpacing:"0.8px"}}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-        {suppLogs.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No logs yet for this supplement.</p>}
-        {suppLogs.map((log,i)=>(
-          <div key={i} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px 16px",marginBottom:8}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div><p style={{margin:0,color:"#F0F0F0",fontWeight:600,fontSize:14}}>{log.date}</p>{log.notes&&<p style={{margin:"3px 0 0",color:"#7A7D85",fontSize:11}}>"{log.notes}"</p>}</div>
-              <div style={{textAlign:"right"}}><span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,color:log.taken?"#5BAD72":"#C0392B"}}>{log.taken?`−${log.amount.toFixed(1)} ${supp?.unit==="count"?"count":supp?.unit||""}`:"SKIPPED"}</span></div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <SupplementDetailSheet
+        supp={supp}
+        logs={logs}
+        profile={profile}
+        readOnly={depleted}
+        onClose={()=>setSelected(null)}
+        onEdit={depleted?null:()=>{onEdit&&onEdit(supp);setSelected(null);}}
+        onReAdd={depleted&&onReAdd?()=>{onReAdd(supp);setSelected(null);}:null}
+      />
     );
   }
-  return(
-    <div style={{paddingBottom:120}}>
-      <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Supplement History</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:12}}>Tap a supplement to see full history</p>
-      {/* Filter LEFT, Add RIGHT — mirrored from stack page */}
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:16}}>
-        <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
-          <option value="date">FILTER: DATE ADDED</option>
-          <option value="urgency">FILTER: URGENCY</option>
-          <option value="used">FILTER: MOST USED</option>
-          <option value="name">FILTER: NAME</option>
-        </select>
-        <button onClick={onAddNew} style={{marginLeft:"auto",padding:"7px 22px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.5)",background:"rgba(232,168,48,0.11)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
-      </div>
-      {supplements.length===0&&<p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:12}}>No supplements tracked yet.</p>}
-      {[...supplements].sort((a,b)=>{
+
+  const activeSupps=historyFilter==="depleted"
+    ?[...supplements].filter(isDep).sort((a,b)=>new Date(calcRunOut(a))-new Date(calcRunOut(b)))
+    :[...supplements].filter(s=>!isDep(s)).sort((a,b)=>{
         if(historyFilter==="date")return new Date(b.createdAt||0)-new Date(a.createdAt||0);
         if(historyFilter==="urgency")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));
         if(historyFilter==="used"){
@@ -1706,13 +1685,59 @@ function SupplementHistory({supplements,onAddNew,onEdit}){
           return bUsed-aUsed;
         }
         return a.name.localeCompare(b.name);
-      }).map(s=>{
+      });
+
+  const depletedCount=supplements.filter(isDep).length;
+
+  return(
+    <div style={{paddingBottom:120}}>
+      <h2 style={{fontSize:22,fontWeight:700,color:"#F0F0F0",marginBottom:4}}>Supplement History</h2>
+      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:12}}>Tap a supplement to see full history</p>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:16}}>
+        <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
+          <option value="date">FILTER: DATE ADDED</option>
+          <option value="urgency">FILTER: URGENCY</option>
+          <option value="used">FILTER: MOST USED</option>
+          <option value="name">FILTER: NAME</option>
+          <option value="depleted">FILTER: DEPLETED{depletedCount>0?` (${depletedCount})`:""}</option>
+        </select>
+        <button onClick={onAddNew} style={{marginLeft:"auto",padding:"7px 22px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.5)",background:"rgba(232,168,48,0.11)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
+      </div>
+      {activeSupps.length===0&&(
+        <p style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:12}}>
+          {historyFilter==="depleted"?"No depleted supplements yet.":"No supplements tracked yet."}
+        </p>
+      )}
+      {activeSupps.map(s=>{
+        const depleted=isDep(s);
         const suppLogs=logs.filter(l=>l.suppId===s.id);
         const lastLog=suppLogs.length?suppLogs[suppLogs.length-1]:null;
         const totalUsed=suppLogs.filter(l=>l.taken).reduce((a,l)=>a+l.amount,0);
         const runOut=calcRunOut(s);
         const days=daysFromNow(runOut);
         const addedDate=s.createdAt?new Date(s.createdAt+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"Unknown";
+        const ranOutDate=depleted?new Date(runOut).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):null;
+        if(depleted){
+          return(
+            <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#141516",border:"1px solid #222325",borderLeft:"3px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",opacity:0.7}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                <div>
+                  <p style={{margin:0,color:"#5A5B5F",fontWeight:700,fontSize:15,textDecoration:"line-through"}}>{s.name}</p>
+                  <p style={{margin:"2px 0 0",color:"#3A3B3E",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{fontSize:9,color:"#3A3B3E",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px",border:"1px solid #2A2B2E",borderRadius:5,padding:"2px 7px"}}>DEPLETED</span>
+                  <span style={{color:"#3A3B3E",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                <span style={{color:"#3A3B3E",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
+                {totalUsed>0&&<span style={{color:"#3A3B3E",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>✓ {totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span>}
+                {ranOutDate&&<span style={{color:"#3A3B3E",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⬛ ran out {ranOutDate}</span>}
+              </div>
+            </div>
+          );
+        }
         return(
           <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
@@ -2831,7 +2856,7 @@ function App(){
           <div style={{
             animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
           }} onAnimationEnd={()=>setSlideDir(null)}>
-          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}}/>}
+          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} logs={logs} profile={profile}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 28px",textAlign:"center",minHeight:320}}>
@@ -2882,7 +2907,7 @@ function App(){
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
-      {viewSupp&&<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} onClose={()=>setViewSupp(null)} onEdit={()=>{setEditSupp(viewSupp);setViewSupp(null);}}/>}
+      {viewSupp&&<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} onClose={()=>setViewSupp(null)} onEdit={()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={()=>{const fresh={...viewSupp,consumed:0,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}}/>}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
