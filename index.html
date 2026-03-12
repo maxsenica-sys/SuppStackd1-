@@ -1246,9 +1246,22 @@ function ProgressRing({pct,color,size=58}){
 function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnly}){
   const sheetRef=useRef(null);
   const dragStartY=useRef(null);
-  const handleTouchStart=(e)=>{dragStartY.current=e.touches[0].clientY;};
+  const dragBlocked=useRef(false);
+  const handleTouchStart=(e)=>{
+    // Block drag-to-close if touch starts inside a scrollable sub-element
+    let el=e.target;
+    let insideScroll=false;
+    while(el&&el!==sheetRef.current){
+      if(el.scrollHeight>el.clientHeight+2&&getComputedStyle(el).overflowY!=='hidden'){
+        insideScroll=true;break;
+      }
+      el=el.parentElement;
+    }
+    dragBlocked.current=insideScroll;
+    dragStartY.current=e.touches[0].clientY;
+  };
   const handleTouchMove=(e)=>{
-    if(dragStartY.current===null)return;
+    if(dragStartY.current===null||dragBlocked.current)return;
     const delta=e.touches[0].clientY-dragStartY.current;
     if(delta>0&&sheetRef.current)sheetRef.current.style.transform=`translateY(${delta}px)`;
   };
@@ -1256,8 +1269,9 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
     if(dragStartY.current===null)return;
     const delta=e.changedTouches[0].clientY-dragStartY.current;
     if(sheetRef.current)sheetRef.current.style.transform="";
-    if(delta>80)onClose();
+    if(!dragBlocked.current&&delta>130)onClose();
     dragStartY.current=null;
+    dragBlocked.current=false;
   };
   const isDepleted=(supp.totalAmount-(supp.consumed||0))<=0;
   const runOut=calcRunOut(supp);
@@ -1380,7 +1394,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
 
   if(isDepleted){
     return(
-      <div className="card" style={{borderLeft:"3px solid #3A3B3E",padding:"10px 12px",marginBottom:5,opacity:0.72,background:"#1A1B1D"}}>
+      <div className="card" style={{borderLeft:"3px solid #3A3B3E",padding:"8px 10px",marginBottom:5,opacity:0.72,background:"#1A1B1D"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
             <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
@@ -1399,7 +1413,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
   }
 
   return(
-    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5,minHeight:72}}>
+    <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"8px 10px",marginBottom:5,minHeight:62}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
         <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
           <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
@@ -1632,7 +1646,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
         <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
         <div className="field">
           <span className="section-label">DATE ADDED</span>
-          <input type="date" className="inp" value={form.customDate||todayISO()} onChange={e=>set("customDate",e.target.value)} style={{colorScheme:"dark"}}/>
+          <input type="date" className="inp" value={form.customDate||todayISO()} onChange={e=>set("customDate",e.target.value)} style={{colorScheme:"dark",textAlign:"center",width:"100%",boxSizing:"border-box",paddingLeft:12,paddingRight:12}}/>
           
         </div>
         {!isEdit&&(
@@ -1709,7 +1723,7 @@ function NotifPanel({onClose}){
 }
 
 // ── SupplementHistory ─────────────────────────────────────────────────────────
-function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,logs:logsFromParent,profile}){
+function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,logs:logsFromParent,profile}){
   const [selected,setSelected]=useState(null);
   const [historyFilter,setHistoryFilter]=useState("date");
   const logs=logsFromParent||load(LOG_KEY,[]);
@@ -1777,27 +1791,32 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,logs:logsFromPar
         const ranOutDate=depleted?new Date(runOut).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):null;
         if(depleted){
           return(
-            <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#141516",border:"1px solid #222325",borderLeft:"3px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",opacity:0.7}}>
+            <div key={s.id} style={{background:"#1A1B1D",border:"1px solid #3A3B3E",borderLeft:"3px solid #3A3B3E",borderRadius:10,padding:"11px 13px",marginBottom:8,opacity:0.72}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                <div>
-                  <p style={{margin:0,color:"#5A5B5F",fontWeight:700,fontSize:17,textDecoration:"line-through"}}>{s.name}</p>
+                <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setSelected(s.id)}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
+                    <p style={{margin:0,color:"#5A5B5F",fontWeight:700,fontSize:17,textDecoration:"line-through",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</p>
+                    <span style={{fontSize:9,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.3px"}}>OUT OF STOCK</span>
+                  </div>
                   <p style={{margin:"2px 0 0",color:"#3A3B3E",fontSize:12,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p>
                 </div>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  <span style={{fontSize:9,color:"#3A3B3E",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px",border:"1px solid #2A2B2E",borderRadius:5,padding:"2px 7px"}}>DEPLETED</span>
-                  <span style={{color:"#3A3B3E",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
+                <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
+                  <button onClick={e=>{e.stopPropagation();onEdit&&onEdit({...s,consumed:0,createdAt:todayISO()});}} style={{padding:"4px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
+                  <button onClick={e=>{e.stopPropagation();if(window.confirm("Remove "+s.name+" from history?"))onDelete&&onDelete(s.id);}} style={{padding:"4px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>REMOVE</button>
                 </div>
               </div>
-              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                <span style={{color:"#3A3B3E",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
-                {totalUsed>0&&<span style={{color:"#3A3B3E",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>✓ {totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span>}
-                {ranOutDate&&<span style={{color:"#3A3B3E",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⬛ ran out {ranOutDate}</span>}
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap",overflow:"hidden"}}>
+                <span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
+                <span style={{color:"#3A3B3E",fontSize:10}}>·</span>
+                <span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>💊 {s.servingSize}{s.unit==="count"?"ct":s.unit}×{s.servingsPerDay}/d</span>
+                {totalUsed>0&&<><span style={{color:"#3A3B3E",fontSize:10}}>·</span><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span></>}
+                {ranOutDate&&<><span style={{color:"#3A3B3E",fontSize:10}}>·</span><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⬛ {ranOutDate}</span></>}
               </div>
             </div>
           );
         }
         return(
-          <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
+          <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"11px 13px",marginBottom:8,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
               <div><p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:17}}>{s.name}</p><p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p></div>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -1810,14 +1829,14 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,logs:logsFromPar
               <span style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{addedDate}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap",overflow:"hidden"}}>
-              <span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
+              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
               <span style={{color:"#4A4B4F",fontSize:10}}>·</span>
-              <span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>💊 {s.servingSize}{s.unit==="count"?"ct":s.unit}×{s.servingsPerDay}/d</span>
+              <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>💊 {s.servingSize}{s.unit==="count"?"ct":s.unit}×{s.servingsPerDay}/d</span>
               <span style={{color:"#4A4B4F",fontSize:10}}>·</span>
-              {totalUsed>0&&<><span style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span><span style={{color:"#4A4B4F",fontSize:10}}>·</span></>}
-              <span style={{color:urgencyColor(days),fontSize:10,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
+              {totalUsed>0&&<><span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span><span style={{color:"#4A4B4F",fontSize:10}}>·</span></>}
+              <span style={{color:urgencyColor(days),fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⏳ {days>0?`${days}d left`:"Depleted"}</span>
             </div>
-            {lastLog&&<div style={{marginTop:3}}><span style={{color:"#4A4B4F",fontSize:10,fontFamily:"'Space Mono',monospace"}}>Last logged: {lastLog.date}</span></div>}
+            {lastLog&&<div style={{marginTop:2}}><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace"}}>Last logged: {lastLog.date}</span></div>}
           </div>
         );
       })}
@@ -2693,7 +2712,7 @@ function App(){
   };
   const saveLog=({taken,amount,notes,feel})=>{
     const t=today();const tISO=todayISO();
-    setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+amount,lastLogged:t}));
+    setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+(taken?amount:0),lastLogged:t}));
     setLogs(prev=>[...prev,{suppId:logSupp.id,date:tISO,taken,amount,notes,feel,ts:Date.now()}]);
     if(feel&&(feel.energy||feel.recovery||feel.mood)){
       const feels=load(FEEL_KEY,[]);const todayFeel=feels.find(f=>f.date===tISO);
@@ -2918,7 +2937,7 @@ function App(){
           <div style={{
             animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
           }} onAnimationEnd={()=>setSlideDir(null)}>
-          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} logs={logs} profile={profile}/>}
+          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} onDelete={id=>setSupplements(prev=>prev.filter(s=>s.id!==id))} logs={logs} profile={profile}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 28px",textAlign:"center",minHeight:320}}>
