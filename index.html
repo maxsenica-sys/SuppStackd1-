@@ -1273,7 +1273,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
     dragStartY.current=null;
     dragBlocked.current=false;
   };
-  const isDepleted=(supp.totalAmount-(supp.consumed||0))<=0;
+  const isDepleted=(supp.totalAmount-(supp.consumed||0))<=0||supp.discontinued===true;
   const runOut=calcRunOut(supp);
   const days=daysFromNow(runOut);
   const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
@@ -1289,7 +1289,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"14px 16px calc(16px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#2A2B2E",margin:"0 auto 10px"}}/>
-        {isDepleted&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12,background:"rgba(74,75,79,0.15)",border:"1px solid #2A2B2E",borderRadius:8,padding:"6px 10px"}}><span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px"}}>⬛ DEPLETED — READ ONLY</span></div>}
+        {isDepleted&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12,background:"rgba(74,75,79,0.15)",border:"1px solid #2A2B2E",borderRadius:8,padding:"6px 10px"}}><span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px"}}>{supp.discontinued?"⬛ DISCONTINUED":"⬛ DEPLETED"}</span></div>}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
           <div>
             <h2 style={{fontSize:20,fontWeight:800,color:isDepleted?"#5A5B5F":"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px",margin:0}}>{supp.name}</h2>
@@ -1303,14 +1303,14 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
         </div>
         <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12,background:"#111213",borderRadius:12,padding:"10px 12px"}}>
           <div style={{position:"relative",flexShrink:0}}>
-            <ProgressRing pct={isDepleted?0:pct} color={color} size={56}/>
+            <ProgressRing pct={(isDepleted&&!supp.discontinued)?0:pct} color={color} size={56}/>
             <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontSize:11,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{isDepleted?"0%":`${Math.round(pct)}%`}</span>
+              <span style={{fontSize:11,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{(isDepleted&&!supp.discontinued)?"0%":`${Math.round(pct)}%`}</span>
             </div>
           </div>
           <div style={{flex:1}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span><span style={{color:"#5A5B5F",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>0 {supp.unit==="count"?"count":supp.unit}</span></div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>RAN OUT</span><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{formatDate(runOut)}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>REMAINING</span><span style={{color:"#5A5B5F",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{remaining%1===0?remaining.toFixed(0):remaining.toFixed(1)} {supp.unit==="count"?"count":supp.unit}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>{supp.discontinued?"STOPPED TAKING":isDepleted?"RAN OUT":"RUNS OUT"}</span><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{supp.discontinued?formatDate(new Date(supp.discontinuedAt)):formatDate(runOut)}</span></div>
             <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span><span style={{color:"#5A5B5F",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span></div>
           </div>
         </div>
@@ -1394,18 +1394,18 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
 
   if(isDepleted){
     return(
-      <div className="card" style={{borderLeft:"3px solid #3A3B3E",padding:"8px 10px",marginBottom:5,opacity:0.72,background:"#1A1B1D"}}>
+      <div className="card" style={{borderLeft:"3px solid #3A3B3E",padding:"8px 10px",marginBottom:5,opacity:0.72,background:"#1A1B1D",cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
+          <div style={{flex:1,minWidth:0}}>
             <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
               <h3 style={{fontSize:15,fontWeight:700,color:"#5A5B5F",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:"line-through"}}>{supp.name}</h3>
-              <span style={{fontSize:9,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.3px"}}>OUT OF STOCK</span>
+              <span style={{fontSize:9,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.3px"}}>{supp.discontinued?"DISCONTINUED":"OUT OF STOCK"}</span>
             </div>
             <span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace"}}>{supp.brand||supp.type}</span>
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0}}>
-            <button onClick={()=>{const fresh={...supp,consumed:0,createdAt:todayISO()};onEdit(fresh);}} style={{padding:"5px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
-            <button onClick={()=>{if(window.confirm("Remove "+supp.name+" from your stack?"))onDelete(supp.id);}} style={{padding:"5px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>REMOVE</button>
+            <button onClick={e=>{e.stopPropagation();const fresh={...supp,consumed:0,createdAt:todayISO()};onEdit(fresh);}} style={{padding:"5px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
+            <button onClick={e=>{e.stopPropagation();if(window.confirm("Remove "+supp.name+" from your stack?"))onDelete(supp.id);}} style={{padding:"5px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>REMOVE</button>
           </div>
         </div>
       </div>
@@ -1557,7 +1557,7 @@ function LogModal({supp,onClose,onSave,todayFeel}){
 }
 
 // ── AddEditModal ──────────────────────────────────────────────────────────────
-function AddEditModal({supp,onClose,onSave,onDelete,profile}){
+function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
   const isEdit=!!supp;
   const [form,setForm]=useState(supp?{...supp,totalAmount:String(supp.totalAmount),servingSize:String(supp.servingSize),servingsPerDay:String(supp.servingsPerDay),consumed:String(supp.consumed),customDate:supp.createdAt||todayISO()}:{name:"",brand:"",type:"Powder",totalAmount:"",unit:"g",servingSize:"",servingsPerDay:"",consumed:"0",lastLogged:null,customDate:todayISO()});
   const [suggestions,setSuggestions]=useState([]);
@@ -1689,7 +1689,10 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
         </div>
         {!isValid&&<p style={{textAlign:"center",color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:10,letterSpacing:"0.5px"}}>Fill in all required (*) fields to continue</p>}
         {isEdit&&onDelete&&(
-          <button onClick={()=>{if(window.confirm("Remove this supplement? This cannot be undone."))onDelete(supp.id);}} style={{width:"100%",marginTop:12,padding:"10px",background:"transparent",border:"1px solid rgba(192,57,43,0.3)",borderRadius:9,color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>DELETE SUPPLEMENT</button>
+          <div style={{display:"flex",gap:8,marginTop:12}}>
+            <button onClick={()=>{if(window.confirm("Stop taking "+supp.name+"? It will move to history but your logs are kept."))onStopTaking&&onStopTaking(supp.id);}} style={{flex:1,padding:"10px",background:"transparent",border:"1px solid #3A4A5C",borderRadius:9,color:"#7A9BB5",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>STOP TAKING</button>
+            <button onClick={()=>{if(window.confirm("Delete "+supp.name+"? This cannot be undone."))onDelete(supp.id);}} style={{flex:1,padding:"10px",background:"transparent",border:"1px solid rgba(192,57,43,0.3)",borderRadius:9,color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:11,cursor:"pointer",letterSpacing:"0.5px"}}>DELETE</button>
+          </div>
         )}
       </div>
     </div>
@@ -1728,7 +1731,7 @@ function NotifPanel({onClose}){
 function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,onView,logs:logsFromParent,profile}){
   const [historyFilter,setHistoryFilter]=useState("date");
   const logs=logsFromParent||load(LOG_KEY,[]);
-  const isDep=s=>(s.totalAmount-(s.consumed||0))<=0;
+  const isDep=s=>(s.totalAmount-(s.consumed||0))<=0||s.discontinued===true;
 
   const visibleSupps=[...supplements].filter(s=>!s.removed);
   const activeSupps=historyFilter==="depleted"
@@ -1784,7 +1787,7 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,onView,
                 <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(s)}>
                   <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
                     <p style={{margin:0,color:"#5A5B5F",fontWeight:700,fontSize:17,textDecoration:"line-through",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</p>
-                    <span style={{fontSize:9,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.3px"}}>OUT OF STOCK</span>
+                    <span style={{fontSize:9,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.3px"}}>{s.discontinued?"DISCONTINUED":"OUT OF STOCK"}</span>
                   </div>
                   <p style={{margin:"2px 0 0",color:"#3A3B3E",fontSize:12,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p>
                 </div>
@@ -1796,9 +1799,14 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,onView,
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap",overflow:"hidden"}}>
                 <span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>📦 {s.totalAmount}{s.unit==="count"?"ct":s.unit}</span>
                 <span style={{color:"#3A3B3E",fontSize:10}}>·</span>
-                <span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>💊 {s.servingSize}{s.unit==="count"?"ct":s.unit}×{s.servingsPerDay}/d</span>
+                {s.discontinued?(
+                  <span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>🔵 {Math.max(0,s.totalAmount-(s.consumed||0)).toFixed(0)}{s.unit==="count"?"ct":s.unit} left</span>
+                ):(
+                  <span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>💊 {s.servingSize}{s.unit==="count"?"ct":s.unit}×{s.servingsPerDay}/d</span>
+                )}
                 {totalUsed>0&&<><span style={{color:"#3A3B3E",fontSize:10}}>·</span><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{totalUsed.toFixed(0)}{s.unit==="count"?"ct":s.unit} used</span></>}
-                {ranOutDate&&<><span style={{color:"#3A3B3E",fontSize:10}}>·</span><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⬛ {ranOutDate}</span></>}
+                {ranOutDate&&!s.discontinued&&<><span style={{color:"#3A3B3E",fontSize:10}}>·</span><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>⬛ {ranOutDate}</span></>}
+                {s.discontinued&&s.discontinuedAt&&<><span style={{color:"#3A3B3E",fontSize:10}}>·</span><span style={{color:"#4A4B4F",fontSize:11,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>stopped {new Date(s.discontinuedAt+"T00:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span></>}
               </div>
             </div>
           );
@@ -2781,7 +2789,7 @@ function App(){
     return todayLogs[todayLogs.length-1].feel;
   })();
   const dailyCost=supplements.reduce((total,s)=>{if(!s.price||!s.totalAmount)return total;const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);return total+(costPerServing*s.servingsPerDay);},0);
-  const isDepletedSupp=s=>s.totalAmount-(s.consumed||0)<=0;
+  const isDepletedSupp=s=>(s.totalAmount-(s.consumed||0)<=0)||s.discontinued===true;
   const displaySupps=supplements.filter(s=>!s.removed).filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14&&!isDepletedSupp(s);if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>{const ad=isDepletedSupp(a),bd=isDepletedSupp(b);if(ad&&!bd)return 1;if(!ad&&bd)return-1;if(sortBy==="runout")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));if(sortBy==="type")return(a.type||"z").localeCompare(b.type||"z")||a.name.localeCompare(b.name);return a.name.localeCompare(b.name);});
   const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
 
@@ -2925,7 +2933,7 @@ function App(){
           <div style={{
             animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
           }} onAnimationEnd={()=>setSlideDir(null)}>
-          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} onDelete={id=>setSupplements(prev=>prev.filter(s=>s.id!==id))} onView={s=>setViewSupp(s)} logs={logs} profile={profile}/>}
+          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} onDelete={id=>{if(window.confirm("Permanently delete this supplement and all its logs?"))setSupplements(prev=>prev.filter(s=>s.id!==id));}} onView={s=>setViewSupp(s)} logs={logs} profile={profile}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 28px",textAlign:"center",minHeight:320}}>
@@ -2968,7 +2976,7 @@ function App(){
 
       {showCostBreakdown&&<DailyCostModal supplements={supplements} profile={profile} onClose={()=>setShowCostBreakdown(false)}/>}
       {showBatchLog&&<BatchLogModal supplements={supplements} logs={logs} todayFeel={todayFeelLog} onClose={()=>setShowBatchLog(false)} onSaveAll={saveBatchLogs}/>}
-      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate} onDelete={(id)=>{deleteSupp(id);setEditSupp(null);setShowAdd(false);}}/>}
+      {(showAdd||editSupp)&&<AddEditModal supp={editSupp} profile={profile} onClose={()=>{setShowAdd(false);setEditSupp(null);}} onSave={addOrUpdate} onDelete={(id)=>{deleteSupp(id);setEditSupp(null);setShowAdd(false);}} onStopTaking={(id)=>{setSupplements(prev=>prev.map(s=>s.id===id?{...s,discontinued:true,discontinuedAt:todayISO()}:s));setEditSupp(null);setShowAdd(false);}}/>}
       {logSupp&&<LogModal supp={logSupp} onClose={()=>setLogSupp(null)} onSave={saveLog} todayFeel={todayFeelLog}/>}
       {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
