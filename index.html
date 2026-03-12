@@ -276,7 +276,8 @@ const ACTIVE_KEY="suppstackd_v1_active_days";
 const FB_SHOWN_KEY="suppstackd_v1_feedback_shown";
 const PROFILE_KEY="suppstackd_v1_profile";
 const FEEL_KEY="suppstackd_v1_feel";
-const SUPPLEMENT_TYPES=["Powder","Capsule","Tablet","Liquid","Gummy","Other"];
+const SUPPLEMENT_TYPES=["Powder","Pill","Liquid","Chew","Other"];
+const normalizeType=t=>{if(!t)return"Other";const m={Capsule:"Pill",Tablet:"Pill",Gummy:"Chew"};return m[t]||t;};
 const UNITS=["g","kg","mg","ml","lb","oz","fl oz","count"];
 const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey Isolate","Casein Protein","Plant Protein","Pea Protein","Collagen Peptides","BCAA","EAA","Beta-Alanine","L-Citrulline","Citrulline Malate","L-Arginine","L-Glutamine","HMB","Pre-Workout","Caffeine","L-Theanine","Alpha GPC","Lion's Mane","Ashwagandha","Rhodiola Rosea","Panax Ginseng","Maca Root","Magnesium Glycinate","Magnesium Citrate","Magnesium Malate","Zinc","Zinc Bisglycinate","Iron","Calcium","Vitamin D3","Vitamin D3 + K2","Vitamin K2","Vitamin C","Vitamin B12","Vitamin B6","Vitamin A","Vitamin E","B Complex","Multivitamin","Omega-3","Fish Oil","Krill Oil","Algae Oil","Probiotics","Prebiotics","Psyllium Husk","Fiber","Electrolytes","Sodium","Potassium","Magnesium","Selenium","Iodine","Chromium","CoQ10","NAC","NMN","NR","Resveratrol","Quercetin","Berberine","Inositol","Melatonin","5-HTP","GABA","Valerian Root","Turmeric","Curcumin","Ginger","Milk Thistle","Saw Palmetto","Fenugreek","Tongkat Ali","Fadogia Agrestis","Shilajit","Boron","Glucosamine","Chondroitin","MSM","Collagen Type II","Hyaluronic Acid","Biotin","Spirulina","Chlorella","Matcha","Green Tea Extract","Caffeine Anhydrous"];
 
@@ -720,6 +721,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
   const loggedSuppIds=new Set(dateLogs.map(l=>l.suppId));
   const [addingFor,setAddingFor]=useState(null);
   const [editingLog,setEditingLog]=useState(null);
+  const [editingFor,setEditingFor]=useState(null);
   const [quickTaken,setQuickTaken]=useState(true);
   const [quickScoops,setQuickScoops]=useState(1);
   const [quickCustomAmt,setQuickCustomAmt]=useState("");
@@ -740,13 +742,12 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
   })();
 
   const handleQuickLog=(supp,existingLog=null)=>{
-    setAddingFor(supp);
+    if(existingLog){setEditingFor(supp);}else{setAddingFor(supp);}
     setQuickTaken(existingLog?existingLog.taken:true);
     setQuickScoops(existingLog?Math.round(existingLog.amount/(supp.servingSize||1)):1);
     setQuickCustomAmt(existingLog?String(existingLog.amount):String(supp.servingSize));
     setQuickUseCustom(false);
     setQuickNotes(existingLog?existingLog.notes||"":"");
-    // If a feel exists for this date, default to same — user can change
     setQuickFeel(existingLog?.feel||dateFeelStored||{energy:null,recovery:null,mood:null,sleep:null});
     setQuickFeelChanged(false);
     setEditingLog(existingLog||null);
@@ -762,6 +763,7 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
       onSaveLog({suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:new Date(date+"T12:00:00").getTime(),backdated:true});
     }
     setAddingFor(null);
+    setEditingFor(null);
     setEditingLog(null);
   };
 
@@ -884,14 +886,44 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
             <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"1.5px",display:"block",marginBottom:8}}>LOGGED</span>
             {dateLogs.map((log,i)=>{
               const supp=supplements.find(s=>s.id===log.suppId);
+              const isEditingThis=editingFor?.id===log.suppId&&editingLog?.ts===log.ts;
+              if(isEditingThis&&supp){return(
+                <div key={i} style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:9,padding:"12px 14px",marginBottom:8}}>
+                  <p style={{margin:"0 0 10px",color:"#E8A830",fontWeight:700,fontSize:13,fontFamily:"'Space Mono',monospace"}}>{supp.name}</p>
+                  <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>DID YOU TAKE IT?</span>
+                  <div style={{display:"flex",gap:8,marginBottom:12}}>
+                    {[true,false].map(v=>(<button key={String(v)} onClick={()=>setQuickTaken(v)} style={{flex:1,padding:"7px 0",borderRadius:8,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,border:quickTaken===v?`1px solid ${v?"#5BAD72":"#C0392B"}`:"1px solid #2A2B2E",background:quickTaken===v?(v?"rgba(91,173,114,0.1)":"rgba(192,57,43,0.1)"):"transparent",color:quickTaken===v?(v?"#5BAD72":"#C0392B"):"#7A7D85",transition:"all 0.15s"}}>{v?"YES":"SKIPPED"}</button>))}
+                  </div>
+                  {quickTaken&&<>
+                    <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:6}}>AMOUNT</span>
+                    <div style={{display:"flex",gap:8,marginBottom:10}}>
+                      {[false,true].map(c=>(<button key={String(c)} onClick={()=>setQuickUseCustom(c)} style={{flex:1,padding:"6px 0",borderRadius:7,cursor:"pointer",border:quickUseCustom===c?"1px solid #E8A830":"1px solid #2A2B2E",background:quickUseCustom===c?"rgba(232,168,48,0.07)":"transparent",color:quickUseCustom===c?"#E8A830":"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{c?`CUSTOM (${supp.unit})`:"SCOOPS"}</button>))}
+                    </div>
+                    {!quickUseCustom?(<div style={{display:"flex",alignItems:"center",gap:14,justifyContent:"center",marginBottom:10}}>
+                      <button onClick={()=>setQuickScoops(Math.max(0.5,quickScoops-0.5))} style={{width:36,height:36,borderRadius:"50%",border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
+                      <div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:"#E8A830",fontFamily:"'Space Mono',monospace"}}>{quickScoops}</div><div style={{fontSize:10,color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>= {(supp.servingSize*quickScoops).toFixed(1)}{supp.unit}</div></div>
+                      <button onClick={()=>setQuickScoops(quickScoops+0.5)} style={{width:36,height:36,borderRadius:"50%",border:"1px solid #2A2B2E",background:"#111213",color:"#F0F0F0",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
+                    </div>):(<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><input type="number" value={quickCustomAmt} onChange={e=>setQuickCustomAmt(e.target.value)} className="inp" style={{flex:1,fontSize:18,textAlign:"center"}}/><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace"}}>{supp.unit}</span></div>)}
+                    <div style={{background:"#111213",borderRadius:7,padding:"6px 10px",display:"flex",justifyContent:"space-between",marginBottom:10}}>
+                      <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>DEDUCTING</span>
+                      <span style={{color:"#E8A830",fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{(quickUseCustom?parseFloat(quickCustomAmt)||0:supp.servingSize*quickScoops).toFixed(1)}{supp.unit}</span>
+                    </div>
+                  </>}
+                  <input className="inp" placeholder="Notes (optional)" value={quickNotes} onChange={e=>setQuickNotes(e.target.value)} style={{marginBottom:10}}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>{setEditingFor(null);setEditingLog(null);}} className="btn-cancel" style={{flex:1,padding:"8px 0",fontSize:11}}>Cancel</button>
+                    <button onClick={confirmQuickLog} className="btn-primary" style={{flex:2,padding:"8px 0",fontSize:11}}>SAVE LOG</button>
+                  </div>
+                </div>
+              );}
               return(
                 <div key={i} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}</p>
+                    <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}{supp?.removed&&<span style={{color:"#4A4B4F",fontSize:9,fontFamily:"'Space Mono',monospace",marginLeft:6}}>[removed]</span>}</p>
                     <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount} ${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
                   </div>
                   <div style={{display:"flex",gap:6,flexShrink:0}}>
-                    <button onClick={()=>{if(supp)handleQuickLog(supp,log);}} style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"4px 10px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>
+                    {supp&&!supp.removed&&<button onClick={()=>handleQuickLog(supp,log)} style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"4px 10px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>}
                     <button onClick={()=>onDeleteLog(log)} style={{background:"transparent",border:"1px solid #2A2B2E",borderRadius:7,padding:"4px 10px",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>REMOVE</button>
                   </div>
                 </div>
@@ -1275,13 +1307,18 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
         </div>
         {suppLogs.length>0&&(
           <div>
-            <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px",display:"block",marginBottom:8}}>LOG HISTORY</span>
-            {suppLogs.map((l,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #1E1F21"}}>
-                <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>{new Date(l.ts).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
-                <span style={{color:isDepleted?"#4A4B4F":l.taken?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{l.taken?`${l.amount} ${supp.unit==="count"?"count":supp.unit}`:"SKIPPED"}</span>
-              </div>
-            ))}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px"}}>LOG HISTORY</span>
+              <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>{suppLogs.length} entries</span>
+            </div>
+            <div style={{maxHeight:156,overflowY:"auto",WebkitOverflowScrolling:"touch",borderRadius:8,border:"1px solid #1E1F21",background:"#111213"}}>
+              {suppLogs.map((l,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",borderBottom:i<suppLogs.length-1?"1px solid #1E1F21":"none"}}>
+                  <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>{new Date(l.ts).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
+                  <span style={{color:isDepleted?"#4A4B4F":l.taken?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{l.taken?`${l.amount} ${supp.unit==="count"?"count":supp.unit}`:"SKIPPED"}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {!isDepleted&&(()=>{const benefits=lookupBenefits(supp.name);if(!benefits)return null;return(
@@ -1305,7 +1342,28 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
   );
 }
 
-function StackCardList({displaySupps,onLog,onEdit,onDelete,onView,logs}){
+function StackCardList({displaySupps,onLog,onEdit,onDelete,onView,logs,sortBy}){
+  if(sortBy==="type"){
+    const groups={};
+    displaySupps.forEach(s=>{
+      const isDep=s.totalAmount-(s.consumed||0)<=0;
+      const grp=isDep?"DEPLETED":normalizeType(s.type)||"Other";
+      if(!groups[grp])groups[grp]=[];
+      groups[grp].push(s);
+    });
+    const order=["Powder","Pill","Liquid","Chew","Other","DEPLETED"];
+    const sorted=Object.keys(groups).sort((a,b)=>{const ai=order.indexOf(a),bi=order.indexOf(b);return(ai===-1?99:ai)-(bi===-1?99:bi);});
+    return(<div style={{paddingBottom:160}}>{sorted.map(grp=>(
+      <div key={grp}>
+        <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 0 8px"}}>
+          <div style={{flex:1,height:1,background:"#2A2B2E"}}/>
+          <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1.5px"}}>{grp}</span>
+          <div style={{flex:1,height:1,background:"#2A2B2E"}}/>
+        </div>
+        {groups[grp].map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView} logs={logs}/>)}
+      </div>
+    ))}</div>);
+  }
   return(<div style={{paddingBottom:160}}>{displaySupps.map(s=><SupplementCard key={s.id} supp={s} onLog={onLog} onEdit={onEdit} onDelete={onDelete} onView={onView} logs={logs}/>)}</div>);
 }
 
@@ -1322,7 +1380,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
 
   if(isDepleted){
     return(
-      <div className="card" style={{borderLeft:"3px solid #2A2B2E",padding:"10px 12px",marginBottom:5,opacity:0.55,background:"#161718"}}>
+      <div className="card" style={{borderLeft:"3px solid #3A3B3E",padding:"10px 12px",marginBottom:5,opacity:0.72,background:"#1A1B1D"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
             <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
@@ -1722,8 +1780,8 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,logs:logsFromPar
             <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#141516",border:"1px solid #222325",borderLeft:"3px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",opacity:0.7}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                 <div>
-                  <p style={{margin:0,color:"#5A5B5F",fontWeight:700,fontSize:15,textDecoration:"line-through"}}>{s.name}</p>
-                  <p style={{margin:"2px 0 0",color:"#3A3B3E",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p>
+                  <p style={{margin:0,color:"#5A5B5F",fontWeight:700,fontSize:17,textDecoration:"line-through"}}>{s.name}</p>
+                  <p style={{margin:"2px 0 0",color:"#3A3B3E",fontSize:12,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p>
                 </div>
                 <div style={{display:"flex",gap:6,alignItems:"center"}}>
                   <span style={{fontSize:9,color:"#3A3B3E",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px",border:"1px solid #2A2B2E",borderRadius:5,padding:"2px 7px"}}>DEPLETED</span>
@@ -1741,7 +1799,7 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,logs:logsFromPar
         return(
           <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",borderLeft:`3px solid ${urgencyColor(days)}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-              <div><p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:15}}>{s.name}</p><p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p></div>
+              <div><p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:17}}>{s.name}</p><p style={{margin:"2px 0 0",color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace"}}>{s.brand||"No brand"} · {s.type}</p></div>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <button onClick={e=>{e.stopPropagation();onEdit&&onEdit(s);}} style={{padding:"4px 10px",borderRadius:7,border:"1px solid rgba(232,168,48,0.3)",background:"rgba(232,168,48,0.07)",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>EDIT</button>
                 <span style={{color:"#7A7D85",fontSize:11,fontFamily:"'Space Mono',monospace"}}>›</span>
@@ -2541,7 +2599,7 @@ function DailyCostModal({supplements,profile,onClose}){
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App(){
-  const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]));
+  const [supplements,setSupplements]=useState(()=>load(STORAGE_KEY,[]).map(s=>({...s,type:normalizeType(s.type)})));
   const [logs,setLogs]=useState(()=>load(LOG_KEY,[]));
   const [profile,setProfile]=useState(()=>load(PROFILE_KEY,null));
   const [tab,setTab]=useState("stack");
@@ -2620,15 +2678,19 @@ function App(){
   if(!profile)return<ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});}}/>;
 
   const addOrUpdate=s=>{
+    const ns={...s,type:normalizeType(s.type)};
     setSupplements(prev=>{
-      const ex=prev.find(p=>p.id===s.id);
-      if(ex)return prev.map(p=>p.id===s.id?s:p);
+      const ex=prev.find(p=>p.id===ns.id);
+      if(ex)return prev.map(p=>p.id===ns.id?ns:p);
       // Always store createdAt as a plain YYYY-MM-DD string for reliable comparisons
-      return[...prev,{...s,createdAt:s.createdAt||todayISO()}];
+      return[...prev,{...ns,createdAt:ns.createdAt||todayISO()}];
     });
     setShowAdd(false);setEditSupp(null);
   };
-  const deleteSupp=id=>{if(confirm("Remove this supplement?"))setSupplements(prev=>prev.filter(s=>s.id!==id));};
+  const deleteSupp=id=>{
+    if(confirm("Remove this supplement? Your log history will be preserved."))
+      setSupplements(prev=>prev.map(s=>s.id===id?{...s,removed:true,removedAt:todayISO()}:s));
+  };
   const saveLog=({taken,amount,notes,feel})=>{
     const t=today();const tISO=todayISO();
     setSupplements(prev=>prev.map(s=>s.id!==logSupp.id?s:{...s,consumed:s.consumed+amount,lastLogged:t}));
@@ -2713,7 +2775,7 @@ function App(){
   })();
   const dailyCost=supplements.reduce((total,s)=>{if(!s.price||!s.totalAmount)return total;const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);return total+(costPerServing*s.servingsPerDay);},0);
   const isDepletedSupp=s=>s.totalAmount-(s.consumed||0)<=0;
-  const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14&&!isDepletedSupp(s);if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>{const ad=isDepletedSupp(a),bd=isDepletedSupp(b);if(ad&&!bd)return 1;if(!ad&&bd)return-1;if(sortBy==="runout")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));if(sortBy==="type")return(a.type||"z").localeCompare(b.type||"z")||a.name.localeCompare(b.name);return a.name.localeCompare(b.name);});
+  const displaySupps=supplements.filter(s=>!s.removed).filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14&&!isDepletedSupp(s);if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>{const ad=isDepletedSupp(a),bd=isDepletedSupp(b);if(ad&&!bd)return 1;if(!ad&&bd)return-1;if(sortBy==="runout")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));if(sortBy==="type")return(a.type||"z").localeCompare(b.type||"z")||a.name.localeCompare(b.name);return a.name.localeCompare(b.name);});
   const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
 
   return(
@@ -2868,7 +2930,7 @@ function App(){
                 <button className="btn-primary" style={{padding:"14px 32px",fontSize:13,letterSpacing:"0.5px"}} onClick={()=>setShowAdd(true)}>+ ADD SUPPLEMENT</button>
               </div>
             )}
-            {supplements.length>0&&<StackCardList displaySupps={displaySupps} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp} onView={setViewSupp} logs={logs}/>}
+            {supplements.length>0&&<StackCardList displaySupps={displaySupps} onLog={setLogSupp} onEdit={setEditSupp} onDelete={deleteSupp} onView={setViewSupp} logs={logs} sortBy={sortBy}/>}
           </>}
           </div>
         </div>
