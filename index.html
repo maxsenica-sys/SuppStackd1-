@@ -1310,11 +1310,32 @@ function StackCardList({displaySupps,onLog,onEdit,onDelete,onView,logs}){
 function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
   const runOut=calcRunOut(supp),days=daysFromNow(runOut);
   const remaining=Math.max(0,supp.totalAmount-(supp.consumed||0));
+  const isDepleted=remaining<=0;
   const totalDays=supp.totalAmount>0?Math.floor(supp.totalAmount/(supp.servingSize*supp.servingsPerDay)):0;
   const daysRemaining=Math.max(0,daysFromNow(calcRunOut(supp)));
   const pct=totalDays>0?Math.max(0,Math.min(100,(daysRemaining/totalDays)*100)):0;
-  const color=urgencyColor(days);
+  const color=isDepleted?"#4A4B4F":urgencyColor(days);
   const todayIso=todayISO();const logged=logs?logs.some(l=>l.suppId===supp.id&&(l.date===todayIso||toISODate(l.ts)===todayIso)):supp.lastLogged===today();
+
+  if(isDepleted){
+    return(
+      <div className="card" style={{borderLeft:"3px solid #2A2B2E",padding:"10px 12px",marginBottom:5,opacity:0.55,background:"#161718"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>onView&&onView(supp)}>
+            <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:2}}>
+              <h3 style={{fontSize:15,fontWeight:700,color:"#5A5B5F",lineHeight:1.2,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:"line-through"}}>{supp.name}</h3>
+              <span style={{fontSize:9,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.3px"}}>OUT OF STOCK</span>
+            </div>
+            <span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace"}}>{supp.brand||supp.type}</span>
+          </div>
+          <div style={{display:"flex",gap:6,flexShrink:0}}>
+            <button onClick={()=>{const fresh={...supp,consumed:0,createdAt:todayISO()};onEdit(fresh);}} style={{padding:"5px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
+            <button onClick={()=>{if(window.confirm("Remove "+supp.name+" from your stack?"))onDelete(supp.id);}} style={{padding:"5px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>REMOVE</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return(
     <div className="card" style={{borderLeft:`3px solid ${color}`,padding:"10px 12px",marginBottom:5,minHeight:72}}>
@@ -1342,8 +1363,6 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
     </div>
   );
 }
-
-// ── LogModal ──────────────────────────────────────────────────────────────────
 function LogModal({supp,onClose,onSave,todayFeel}){
   const [taken,setTaken]=useState(true);
   const [scoops,setScoops]=useState(1);
@@ -1480,7 +1499,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
   const touch=(k)=>setTouched(t=>({...t,[k]:true}));
   const calcConsumed=()=>{const total=parseFloat(form.totalAmount)||0,serving=parseFloat(form.servingSize)||0,perDay=parseFloat(form.servingsPerDay)||1;if(startedMode==="amount"){const left=parseFloat(amountLeft)||0;return Math.max(0,total-left);}else{const days=parseInt(daysAlready)||0;return Math.min(total,days*serving*perDay);}};
   const effectiveConsumed=!isEdit&&alreadyStarted?calcConsumed():parseFloat(form.consumed)||0;
-  const errors={name:!form.name.trim()?"Supplement name is required":null,totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999)?"Can't exceed total amount":null,servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null};
+  const errors={name:!form.name.trim()?"Supplement name is required":null,totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":(!isEdit&&parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999))?"Can't exceed total amount":null,servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null};
   const reqFields=["name","totalAmount","servingSize","servingsPerDay"];
   const isValid=reqFields.every(k=>!errors[k]);
   const completed=reqFields.filter(k=>!errors[k]).length;
@@ -2668,7 +2687,8 @@ function App(){
     return todayLogs[todayLogs.length-1].feel;
   })();
   const dailyCost=supplements.reduce((total,s)=>{if(!s.price||!s.totalAmount)return total;const costPerServing=s.price/Math.floor(s.totalAmount/s.servingSize);return total+(costPerServing*s.servingsPerDay);},0);
-  const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14;if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>sortBy==="runout"?daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b)):a.name.localeCompare(b.name));
+  const isDepletedSupp=s=>s.totalAmount-(s.consumed||0)<=0;
+  const displaySupps=supplements.filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14&&!isDepletedSupp(s);if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>{const ad=isDepletedSupp(a),bd=isDepletedSupp(b);if(ad&&!bd)return 1;if(!ad&&bd)return-1;if(sortBy==="runout")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));if(sortBy==="type")return(a.type||"z").localeCompare(b.type||"z")||a.name.localeCompare(b.name);return a.name.localeCompare(b.name);});
   const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
 
   return(
@@ -2751,8 +2771,9 @@ function App(){
               <button onClick={()=>setShowAdd(true)} style={{padding:"7px 22px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:12,letterSpacing:"0.8px",border:"1px solid rgba(232,168,48,0.5)",background:"rgba(232,168,48,0.11)",color:"#E8A830",flexShrink:0,fontWeight:700}}>+ ADD</button>
               {filter==="urgent"&&<button onClick={()=>setFilter("all")} style={{padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,border:"1px solid rgba(192,57,43,0.5)",background:"rgba(192,57,43,0.1)",color:"#C0392B",flexShrink:0}}>URGENT ✕</button>}
               <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{marginLeft:"auto",background:"#1C1D1F",border:"1px solid #2A2B2E",color:"#7A7D85",borderRadius:20,padding:"5px 10px",fontFamily:"'Space Mono',monospace",fontSize:10,flexShrink:0,appearance:"none",WebkitAppearance:"none",paddingRight:22,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7D85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center"}}>
-                <option value="runout">FILTER: URGENCY</option>
-                <option value="name">FILTER: NAME</option>
+                <option value="runout">SORT: URGENCY</option>
+                <option value="name">SORT: NAME</option>
+                <option value="type">SORT: TYPE</option>
               </select>
             </div>
           )}
