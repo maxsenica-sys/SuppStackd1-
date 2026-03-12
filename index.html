@@ -1287,7 +1287,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
   const currency=CURRENCIES[profile?.country||"Other"]||"$";
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"14px 16px calc(16px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
+      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"14px 16px calc(16px + env(safe-area-inset-bottom,0px))",minHeight:"60vh",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#2A2B2E",margin:"0 auto 10px"}}/>
         {isDepleted&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12,background:"rgba(74,75,79,0.15)",border:"1px solid #2A2B2E",borderRadius:8,padding:"6px 10px"}}><span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px"}}>{supp.discontinued?"⬛ DISCONTINUED":"⬛ DEPLETED"}</span></div>}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
@@ -2984,7 +2984,7 @@ function App(){
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
-      {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>{const fresh={...viewSupp,consumed:0,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}:null}/>);})()}
+      {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}:null}/>);})()}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
   );
