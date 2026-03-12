@@ -1287,10 +1287,10 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
   const currency=CURRENCIES[profile?.country||"Other"]||"$";
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
-        <div style={{width:36,height:4,borderRadius:2,background:"#2A2B2E",margin:"0 auto 16px"}}/>
+      <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"14px 16px calc(16px + env(safe-area-inset-bottom,0px))",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
+        <div style={{width:36,height:4,borderRadius:2,background:"#2A2B2E",margin:"0 auto 10px"}}/>
         {isDepleted&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12,background:"rgba(74,75,79,0.15)",border:"1px solid #2A2B2E",borderRadius:8,padding:"6px 10px"}}><span style={{fontSize:10,color:"#4A4B4F",fontFamily:"'Space Mono',monospace",letterSpacing:"0.5px"}}>⬛ DEPLETED — READ ONLY</span></div>}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
           <div>
             <h2 style={{fontSize:20,fontWeight:800,color:isDepleted?"#5A5B5F":"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:"-0.3px",margin:0}}>{supp.name}</h2>
             {supp.brand&&<span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.brand} · {supp.type}</span>}
@@ -1301,7 +1301,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
             <button onClick={onClose} style={{padding:"5px 10px",borderRadius:8,border:"none",background:"transparent",color:"#7A7D85",fontSize:18,cursor:"pointer",lineHeight:1}}>✕</button>
           </div>
         </div>
-        <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:16,background:"#111213",borderRadius:12,padding:"12px 14px"}}>
+        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12,background:"#111213",borderRadius:12,padding:"10px 12px"}}>
           <div style={{position:"relative",flexShrink:0}}>
             <ProgressRing pct={isDepleted?0:pct} color={color} size={56}/>
             <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1314,20 +1314,20 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
             <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>SERVING</span><span style={{color:"#5A5B5F",fontFamily:"'Space Mono',monospace",fontSize:11}}>{supp.servingSize} {supp.unit==="count"?"count":supp.unit} × {supp.servingsPerDay}/day</span></div>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
           {[{label:"CONTAINER",value:`${supp.totalAmount} ${supp.unit==="count"?"count":supp.unit}`},{label:"TOTAL CONSUMED",value:`${totalConsumed%1===0?totalConsumed.toFixed(0):totalConsumed.toFixed(1)} ${supp.unit==="count"?"count":supp.unit}`},{label:"ADDED ON",value:startedDate},{label:"FORM",value:supp.type||"—"},...(dailyCostVal?[{label:"DAILY COST",value:`${currency}${dailyCostVal.toFixed(2)}`}]:[]),...(supp.price?[{label:"UNIT PRICE",value:`${currency}${Number(supp.price).toFixed(2)}`}]:[])].map(row=>(
-            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"9px 12px"}}><div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div><div style={{color:isDepleted?"#5A5B5F":"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div></div>
+            <div key={row.label} style={{background:"#111213",borderRadius:9,padding:"7px 10px"}}><div style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:"0.8px",marginBottom:3}}>{row.label}</div><div style={{color:isDepleted?"#5A5B5F":"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{row.value}</div></div>
           ))}
         </div>
         {suppLogs.length>0&&(
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px"}}>LOG HISTORY</span>
-              <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>{suppLogs.length} entries</span>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"1px"}}>RECENT LOGS</span>
+              <span style={{color:"#3A3B3E",fontFamily:"'Space Mono',monospace",fontSize:9}}>{suppLogs.length} total</span>
             </div>
-            <div style={{maxHeight:156,overflowY:"auto",WebkitOverflowScrolling:"touch",borderRadius:8,border:"1px solid #1E1F21",background:"#111213"}}>
+            <div style={{borderRadius:8,border:"1px solid #1E1F21",background:"#111213",maxHeight:100,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
               {suppLogs.map((l,i)=>(
-                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",borderBottom:i<suppLogs.length-1?"1px solid #1E1F21":"none"}}>
+                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 10px",borderBottom:i<suppLogs.length-1?"1px solid #1E1F21":"none"}}>
                   <span style={{color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:9}}>{new Date(l.ts).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}</span>
                   <span style={{color:isDepleted?"#4A4B4F":l.taken?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>{l.taken?`${l.amount} ${supp.unit==="count"?"count":supp.unit}`:"SKIPPED"}</span>
                 </div>
@@ -1646,7 +1646,9 @@ function AddEditModal({supp,onClose,onSave,onDelete,profile}){
         <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
         <div className="field">
           <span className="section-label">DATE ADDED</span>
-          <input type="date" className="inp" value={form.customDate||todayISO()} onChange={e=>set("customDate",e.target.value)} style={{colorScheme:"dark",textAlign:"center",width:"100%",boxSizing:"border-box",paddingLeft:12,paddingRight:12}}/>
+          <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box",width:"100%"}}>
+            <input type="date" value={form.customDate||todayISO()} onChange={e=>set("customDate",e.target.value)} style={{colorScheme:"dark",background:"transparent",border:"none",outline:"none",color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:13,textAlign:"center",width:"auto",cursor:"pointer"}}/>
+          </div>
           
         </div>
         {!isEdit&&(
