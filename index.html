@@ -2573,7 +2573,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
             <>
               {/* Info rows */}
               <div style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"clamp(10px,2.5vw,16px) clamp(12px,3vw,18px)"}}>
-                {[{label:"NAME",value:profile?.name||"Not set"},{label:"EMAIL",value:profile?.email||"Not set"},{label:"AGE",value:profile?.age||"Not set"},{label:"CURRENCY",value:(()=>{const c=CURRENCY_OPTIONS.find(x=>x.code===(profile?.currency||profile?.country));return c?`${c.code} ${c.symbol}`:(profile?.country||"Not set");})()}].map((row,i,arr)=>(
+                {[{label:"NAME",value:profile?.name||"Not set"},{label:"EMAIL",value:profile?.email||"Not set"},{label:"AGE",value:profile?.age||"Not set"},{label:"CURRENCY",value:(()=>{const c=CURRENCY_OPTIONS.find(x=>x.code===(profile?.currency||profile?.country));return c?`${c.symbol} ${c.code}`:(profile?.country||"Not set");})()}].map((row,i,arr)=>(
                   <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:"clamp(6px,1.5vh,10px)",marginBottom:"clamp(6px,1.5vh,10px)",borderBottom:i!==arr.length-1?"1px solid #2A2B2E":"none"}}>
                     <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(9px,2.2vw,11px)",letterSpacing:"0.8px"}}>{row.label}</span>
                     <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:"clamp(11px,2.8vw,13px)",fontWeight:600}}>{row.value}</span>
@@ -2596,8 +2596,8 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 
               {/* Action buttons */}
               <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>setEditing(true)} style={{flex:1,padding:"clamp(8px,2vh,11px)",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer"}}>EDIT PROFILE</button>
-                <button onClick={()=>setShowFeedbackInProfile(true)} style={{flex:1,padding:"clamp(8px,2vh,11px)",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:MM,fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer"}}>FEEDBACK</button>
+                <button onClick={()=>setEditing(true)} style={{flex:2,padding:"clamp(8px,2vh,11px)",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontSize:"clamp(10px,2.5vw,12px)",fontWeight:700,cursor:"pointer",letterSpacing:"0.5px"}}>EDIT PROFILE</button>
+                <button onClick={()=>setShowFeedbackInProfile(true)} style={{flex:1,padding:"clamp(8px,2vh,11px)",background:"transparent",border:"1px solid rgba(91,173,114,0.4)",borderRadius:9,color:"#5BAD72",fontFamily:MM,fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer"}}>FEEDBACK</button>
               </div>
 
               {/* Data & Backup */}
@@ -2652,7 +2652,9 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 function InsightsModal({onClose,logs,supplements,isPro}){
   const [tab,setTab]=React.useState("feel");
   const [debriefText,setDebriefText]=React.useState(null);
+  const [debriefPoints,setDebriefPoints]=React.useState([]);
   const [debriefLoading,setDebriefLoading]=React.useState(false);
+  const [debriefExpanded,setDebriefExpanded]=React.useState(false);
   const [vaultSearch,setVaultSearch]=React.useState("");
   const [vaultSelected,setVaultSelected]=React.useState(null);
 
@@ -2722,62 +2724,88 @@ function InsightsModal({onClose,logs,supplements,isPro}){
   },{});
 
   // ── Weekly Debrief — smart client-side template engine ───────────────────
+  // Supplement → metric support map
+  const SUPP_METRIC_MAP={
+    energy:["creatine","caffeine","b complex","vitamin b12","iron","cordyceps","rhodiola rosea","coq10","nmn","nr","maca","panax ginseng","ashwagandha","alpha gpc","l-carnitine","shilajit","vitamin d3","vitamin d"],
+    recovery:["omega-3","fish oil","turmeric","curcumin","vitamin c","glutamine","l-glutamine","taurine","magnesium","zinc","collagen","collagen peptides","hmb","bcaa","eaa","krill oil"],
+    mood:["ashwagandha","rhodiola rosea","5-htp","inositol","l-theanine","lions mane","vitamin d3","vitamin d","magnesium","probiotics","panax ginseng","reishi"],
+    sleep:["magnesium","magnesium glycinate","melatonin","l-theanine","reishi","5-htp","inositol","ashwagandha","valerian root","gaba"],
+  };
+
   const generateDebrief=()=>{
     setDebriefLoading(true);
+    setDebriefExpanded(false);
     setTimeout(()=>{
       try{
-        const suppNames=supplements.filter(s=>!s.removed).map(s=>s.name);
+        const activeSupps=supplements.filter(s=>!s.removed);
+        const suppNames=activeSupps.map(s=>s.name);
         const suppCount=suppNames.length;
-        const topSupp=suppNames[0]||"your supplements";
         const energy=parseFloat(avgScore("energy")||0);
         const recovery=parseFloat(avgScore("recovery")||0);
         const mood=parseFloat(avgScore("mood")||0);
         const sleep=parseFloat(avgScore("sleep")||0);
         const hasFeel=energy>0||recovery>0||mood>0||sleep>0;
-        const overallFeel=hasFeel?((energy+recovery+mood+sleep)/[energy,recovery,mood,sleep].filter(v=>v>0).length):0;
-        const strongestMetric=[{k:"energy",v:energy},{k:"recovery",v:recovery},{k:"mood",v:mood},{k:"sleep",v:sleep}].filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0];
-        const weakestMetric=[{k:"energy",v:energy},{k:"recovery",v:recovery},{k:"mood",v:mood},{k:"sleep",v:sleep}].filter(x=>x.v>0).sort((a,b)=>a.v-b.v)[0];
+        const overallFeel=hasFeel?([energy,recovery,mood,sleep].filter(v=>v>0).reduce((a,b)=>a+b,0)/[energy,recovery,mood,sleep].filter(v=>v>0).length):0;
+        const metrics=[{k:"energy",v:energy},{k:"recovery",v:recovery},{k:"mood",v:mood},{k:"sleep",v:sleep}].filter(x=>x.v>0);
+        const strongestMetric=[...metrics].sort((a,b)=>b.v-a.v)[0];
+        const weakestMetric=[...metrics].sort((a,b)=>a.v-b.v)[0];
+        const points=[];
 
-        // Consistency sentence
-        let s1="";
-        if(daysLogged===7)s1=`Perfect week — you logged all 7 days and kept your ${streak}-day streak alive.`;
-        else if(daysLogged>=5)s1=`Solid week — ${daysLogged} out of 7 days logged${streak>3?` and your streak is now at ${streak} days`:""}. ${daysMissed===1?"One missed day is nothing to worry about.":"A couple of gaps, but the consistency is there."}`;
-        else if(daysLogged>=3)s1=`You logged ${daysLogged} days this week — a decent effort, but there are ${daysMissed} gaps worth closing next week.`;
-        else s1=`Only ${daysLogged} day${daysLogged!==1?"s":""} logged this week — it happens, but getting back into a daily habit will make a real difference.`;
+        // Point 1: This week consistency
+        if(daysLogged===7)points.push(`📅 Perfect week — all 7 days logged${streak>3?`, streak now at ${streak} days`:""}.`);
+        else if(daysLogged>=5)points.push(`📅 ${daysLogged}/7 days logged${streak>3?`, ${streak}-day streak`:""}. ${daysMissed===1?"One missed day — no big deal.":"A couple of gaps to close next week."}`);
+        else if(daysLogged>=3)points.push(`📅 ${daysLogged}/7 days logged — decent effort, but ${daysMissed} gaps to close next week.`);
+        else points.push(`📅 ${daysLogged||"No"} day${daysLogged!==1?"s":""} logged this week. Getting the daily habit back will make a real difference.`);
 
-        // Feel sentence
-        let s2="";
-        if(hasFeel&&overallFeel>=4){
-          s2=strongestMetric?`Your ${strongestMetric.k} scores are looking strong at ${strongestMetric.v}/5 — keep doing what you're doing.`:"Feel scores are looking strong across the board this week.";
-        }else if(hasFeel&&overallFeel>=3){
-          s2=weakestMetric?`Overall feel is solid — ${weakestMetric.k} is the one to watch at ${weakestMetric.v}/5, which might be worth paying attention to.`:"Feel scores are moderate — nothing alarming, but room to improve.";
-        }else if(hasFeel){
-          s2=weakestMetric?`Feel scores are lower than ideal this week, especially ${weakestMetric.k} at ${weakestMetric.v}/5. Make sure you're hitting your full stack consistently.`:"Feel scores dipped this week — consistency with your stack should help bring those back up.";
+        // Point 2: Feel scores
+        if(hasFeel){
+          if(overallFeel>=4)points.push(`💪 Feel scores strong${strongestMetric?` — ${strongestMetric.k} leading at ${strongestMetric.v}/5`:""}. Keep doing what you're doing.`);
+          else if(overallFeel>=3)points.push(`📊 Feel scores moderate${weakestMetric?` — ${weakestMetric.k} is your lowest at ${weakestMetric.v}/5`:""}. Room to improve.`);
+          else points.push(`📊 Feel scores dipped${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is the main area to watch`:""}. Consistent logging will help surface the reason.`);
         }else{
-          s2="No feel scores logged yet — start rating your daily feel to unlock trend insights here.";
+          points.push(`📊 No feel scores logged yet — rate your energy, recovery, mood and sleep daily to unlock trend insights.`);
         }
 
-        // Stack + timing sentence
-        let s3="";
+        // Point 3: Full stack vs partial
         if(fullAvg&&partialAvg&&parseFloat(fullAvg)>parseFloat(partialAvg)){
-          s3=`When you take your full stack, your feel scores average ${fullAvg} — compared to ${partialAvg} on partial days. That gap is your case for staying consistent.`;
-        }else if(timeLabel){
-          s3=`You're logging most days ${timeLabel.toLowerCase()}${suppCount>1?` across ${suppCount} supplements`:""}${timeLabel.toLowerCase().includes("morning")?" — a great habit to lock in before the day gets away from you":""}.`;
-        }else if(suppCount>0){
-          s3=`You're tracking ${suppCount} supplement${suppCount!==1?"s":""} — the more consistently you log, the more meaningful the patterns become here.`;
+          points.push(`🔬 Full stack days average ${fullAvg}/5 vs ${partialAvg}/5 on partial days. That difference is your case for consistency.`);
+        }else if(timeLabel&&suppCount>0){
+          points.push(`⏱ Most logs happening ${timeLabel.toLowerCase()}${suppCount>1?` across ${suppCount} supplements`:""}${timeLabel.toLowerCase().includes("morning")?" — good habit to maintain":""}.`);
         }
 
-        // Forward-looking sentence
-        let s4="";
-        if(daysLogged<5)s4=`Next week, aim for at least 5 logged days — even a small step up will start showing in the trends.`;
-        else if(!hasFeel)s4=`Adding feel scores to your logs will unlock the most powerful insights — try it tomorrow.`;
-        else if(adherencePct<70)s4=`Your 30-day consistency is at ${adherencePct}% — push that above 80% and your Streak Score will reflect it.`;
-        else s4=`Keep the momentum going — the data paints a clearer picture every week you log.`;
+        // Point 4: 30-day score — only after 25+ days
+        const firstLogTs=logs.length?Math.min(...logs.map(l=>{try{return new Date(l.date||l.ts).getTime();}catch{return Date.now();}})):Date.now();
+        const daysSinceFirst=Math.floor((Date.now()-firstLogTs)/(1000*60*60*24));
+        if(daysSinceFirst>=25){
+          if(adherencePct>=80)points.push(`🔥 30-day streak score: ${adherencePct}% — elite. That consistency is what makes these insights meaningful.`);
+          else if(adherencePct>=60)points.push(`📈 30-day streak score: ${adherencePct}% — solid base. Push above 80% and patterns will get sharper.`);
+          else points.push(`📈 30-day streak score: ${adherencePct}% — room to build. Adding 2–3 more logging days per week will move this fast.`);
+        }
 
-        const sentences=[s1,s2,s3,s4].filter(Boolean);
-        setDebriefText(sentences.join(" "));
+        // Point 5: Supplement suggestion for weakest metric
+        if(hasFeel&&weakestMetric&&weakestMetric.v<3.5){
+          const wk=weakestMetric.k;
+          const relevantSupps=SUPP_METRIC_MAP[wk]||[];
+          const userHas=suppNames.filter(n=>relevantSupps.some(r=>n.toLowerCase().includes(r)||r.includes(n.toLowerCase())));
+          const userMissing=relevantSupps.filter(r=>!suppNames.some(n=>n.toLowerCase().includes(r)||r.includes(n.toLowerCase()))).slice(0,2);
+          if(userHas.length>0){
+            points.push(`💡 ${wk.charAt(0).toUpperCase()+wk.slice(1)} is your lowest metric — you're already taking ${userHas[0]} which research links to ${wk}. Make sure you're not skipping it.`);
+          }else if(userMissing.length>0){
+            const sug=userMissing.map(s=>s.split(" ").map(w=>w[0].toUpperCase()+w.slice(1)).join(" ")).join(" or ");
+            points.push(`💡 ${wk.charAt(0).toUpperCase()+wk.slice(1)} is your lowest at ${weakestMetric.v}/5. Research links ${sug} to ${wk} support — explore in The Vault.`);
+          }
+        }
+
+        // Point 6: Forward look
+        if(daysLogged<5)points.push(`🎯 Next week: aim for 5+ logged days — small step, real impact.`);
+        else if(!hasFeel)points.push(`🎯 Start logging feel scores tomorrow — the biggest unlock for meaningful insights.`);
+        else points.push(`🎯 Keep it going — the picture gets sharper every week you log.`);
+
+        setDebriefPoints(points);
+        setDebriefText(points.join("||"));
       }catch(e){
-        setDebriefText("Something went wrong generating your summary. Try again.");
+        setDebriefPoints(["Something went wrong. Tap regenerate to try again."]);
+        setDebriefText("error");
       }
       setDebriefLoading(false);
     },600);
@@ -3063,15 +3091,39 @@ function InsightsModal({onClose,logs,supplements,isPro}){
               </div>
             )}
 
-            {/* AI output box */}
-            <div style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:10,padding:"14px",marginBottom:10,minHeight:80,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {debriefLoading?(
-                <div style={{textAlign:"center",width:"100%"}}>
-                  <div style={{color:"#E8A830",fontFamily:MM,fontSize:10,letterSpacing:"1px",marginBottom:6}}>GENERATING...</div>
-                  <div style={{width:40,height:2,background:"rgba(232,168,48,0.3)",borderRadius:2,margin:"0 auto",animation:"none"}}/>
+            {/* Debrief output — dot points, tap to expand */}
+            {debriefExpanded&&debriefPoints.length>0&&(
+              <div onClick={()=>setDebriefExpanded(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0 0 24px"}}>
+                <div style={{background:"#161718",border:"1px solid #2A2B2E",borderRadius:"16px 16px 12px 12px",padding:"20px",width:"100%",maxWidth:480,maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                    <p style={{color:"#E8A830",fontFamily:MM,fontSize:11,fontWeight:700,margin:0,letterSpacing:"0.5px"}}>WEEKLY DEBRIEF</p>
+                    <button onClick={()=>setDebriefExpanded(false)} style={{background:"transparent",border:"none",color:"#7A7D85",cursor:"pointer",fontSize:18,fontWeight:700,padding:0,lineHeight:1}}>✕</button>
+                  </div>
+                  {debriefPoints.map((pt,i)=>(
+                    <div key={i} style={{marginBottom:12,paddingBottom:12,borderBottom:i<debriefPoints.length-1?"1px solid #1C1D1F":"none"}}>
+                      <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.75}}>{pt}</p>
+                    </div>
+                  ))}
+                  <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,margin:"8px 0 0",textAlign:"center"}}>TAP ANYWHERE TO CLOSE</p>
                 </div>
-              ):debriefText?(
-                <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.85,width:"100%"}}>{debriefText}</p>
+              </div>
+            )}
+            <div onClick={()=>{if(debriefPoints.length>0)setDebriefExpanded(true);}} style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:10,padding:"12px 14px",marginBottom:10,minHeight:80,cursor:debriefPoints.length>0?"pointer":"default"}}>
+              {debriefLoading?(
+                <div style={{textAlign:"center",padding:"8px 0"}}>
+                  <div style={{color:"#E8A830",fontFamily:MM,fontSize:10,letterSpacing:"1px"}}>GENERATING...</div>
+                </div>
+              ):debriefPoints.length>0?(
+                <div>
+                  {debriefPoints.slice(0,3).map((pt,i)=>(
+                    <div key={i} style={{marginBottom:i<2?7:0}}>
+                      <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.6}}>{pt}</p>
+                    </div>
+                  ))}
+                  {debriefPoints.length>3&&(
+                    <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,margin:"7px 0 0",letterSpacing:"0.5px"}}>+ {debriefPoints.length-3} more — tap to expand ↗</p>
+                  )}
+                </div>
               ):(
                 <p style={{color:"#3A3B3E",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7,textAlign:"center",fontStyle:"italic"}}>Your personalised weekly summary<br/>will appear here.</p>
               )}
@@ -3145,7 +3197,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                         </div>
                         {e.timing&&(
                           <span style={{color:"#E8A830",fontFamily:MM,fontSize:11,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"3px 7px",whiteSpace:"nowrap",flexShrink:0}}>
-                            {e.timing.window.split(" ")[0]}
+                            {e.timing.window.split(',')[0].split(' or ')[0].split(' and ')[0].replace('30–60','Pre-workout').replace('20–30','Pre-workout').replace('60–90','Pre-exercise').replace('2–3','Pre-exercise')}
                           </span>
                         )}
                       </button>
