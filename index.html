@@ -279,9 +279,9 @@ const FEEL_KEY="suppstackd_v1_feel";
 const SUPPLEMENT_TYPES=["Powder","Pill","Liquid","Chew","Other"];
 const normalizeType=t=>{if(!t)return"Other";const m={Capsule:"Pill",Tablet:"Pill",Gummy:"Chew"};return m[t]||t;};
 const UNITS=["g","kg","mg","ml","lb","oz","fl oz","count"];
-const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey Isolate","Casein Protein","Plant Protein","Pea Protein","Collagen Peptides","BCAA","EAA","Beta-Alanine","L-Citrulline","Citrulline Malate","L-Arginine","L-Glutamine","HMB","Pre-Workout","Caffeine","L-Theanine","Alpha GPC","Lion's Mane","Ashwagandha","Rhodiola Rosea","Panax Ginseng","Maca Root","Magnesium Glycinate","Magnesium Citrate","Magnesium Malate","Zinc","Zinc Bisglycinate","Iron","Calcium","Vitamin D3","Vitamin D3 + K2","Vitamin K2","Vitamin C","Vitamin B12","Vitamin B6","Vitamin A","Vitamin E","B Complex","Multivitamin","Omega-3","Fish Oil","Krill Oil","Algae Oil","Probiotics","Prebiotics","Psyllium Husk","Fiber","Electrolytes","Sodium","Potassium","Magnesium","Selenium","Iodine","Chromium","CoQ10","NAC","NMN","NR","Resveratrol","Quercetin","Berberine","Inositol","Melatonin","5-HTP","GABA","Valerian Root","Turmeric","Curcumin","Ginger","Milk Thistle","Saw Palmetto","Fenugreek","Tongkat Ali","Fadogia Agrestis","Shilajit","Boron","Glucosamine","Chondroitin","MSM","Collagen Type II","Hyaluronic Acid","Biotin","Spirulina","Chlorella","Matcha","Green Tea Extract","Caffeine Anhydrous"];
+const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey Isolate","Casein Protein","Plant Protein","Pea Protein","Collagen Peptides","BCAA","EAA","Beta-Alanine","L-Citrulline","Citrulline Malate","L-Arginine","L-Glutamine","HMB","Pre-Workout","Caffeine","L-Theanine","Alpha GPC","Lion's Mane","Ashwagandha","Rhodiola Rosea","Panax Ginseng","Maca Root","Magnesium Glycinate","Magnesium Citrate","Magnesium Malate","Zinc","Zinc Bisglycinate","Iron","Calcium","Vitamin D3","Vitamin D3 + K2","Vitamin K2","Vitamin C","Vitamin B12","Vitamin B6","Vitamin A","Vitamin E","B Complex","Multivitamin","Omega-3","Fish Oil","Krill Oil","Algae Oil","Probiotics","Prebiotics","Psyllium Husk","Fiber","Electrolytes","Sodium","Potassium","Magnesium","Selenium","Iodine","Chromium","CoQ10","NAC","NMN","NR","Resveratrol","Quercetin","Berberine","Inositol","Melatonin","5-HTP","GABA","Valerian Root","Turmeric","Curcumin","Ginger","Milk Thistle","Saw Palmetto","Fenugreek","Tongkat Ali","Fadogia Agrestis","Shilajit","Boron","Glucosamine","Chondroitin","MSM","Collagen Type II","Hyaluronic Acid","Biotin","Spirulina","Chlorella","Matcha","Green Tea Extract","Caffeine Anhydrous","Cocoa Powder","Cacao","Dark Chocolate Extract","L-Carnitine","Taurine","Beetroot Powder","Sodium Bicarbonate","Digestive Enzymes","CLA","Vitamin B1","Vitamin B2","Vitamin B3","Vitamin B5","Folate","Copper","Manganese","Molybdenum","Lithium Orotate","Phosphatidylserine","Huperzine A","Bacopa Monnieri","Ginkgo Biloba","Cordyceps","Reishi","Turkey Tail","Chaga","NAD+","Spermidine","Urolithin A","PQQ","Acetyl L-Carnitine","R-Alpha Lipoic Acid","MSM","Pycnogenol","Astaxanthin","Kefir","Colostrum","Deer Antler Velvet","Turkesterone","Ecdysterone"];
 
-const DEV_PRO_MODE=false;
+const DEV_PRO_MODE=true;
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
 const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
 const SPORTS=["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","Football","Rugby","Basketball","MMA / Boxing","Tennis","Triathlon","Yoga / Pilates","Other"];
@@ -363,6 +363,103 @@ const SUPP_BENEFITS={
   "iodine":["Essential for thyroid health, which regulates your metabolism","Many people are mildly deficient without knowing it","Important for energy levels and cognitive function"],
   "selenium":["Antioxidant mineral that protects cells from damage","Supports thyroid health and immune function","Easily overdone — stick to recommended doses"],
   "protein bar":["Convenient way to hit your protein goals on the go","Check labels — some have more sugar than a chocolate bar","Look for 20g+ protein and minimal junk ingredients"],
+  "cocoa powder":["Rich in flavanols that support heart health and blood flow","Natural source of magnesium, iron, and antioxidants","May improve mood and cognitive function with regular use"],
+  "cacao":["Raw form of cocoa — higher in antioxidants than processed cocoa","Supports cardiovascular health and nitric oxide production","Contains theobromine, a mild stimulant with a smoother effect than caffeine"],
+  "dark chocolate extract":["Concentrated source of cocoa flavanols for heart and brain health","Supports healthy blood pressure and circulation","Antioxidant properties help reduce oxidative stress from training"],
+  "acetyl l-carnitine":["Crosses the blood-brain barrier to support focus and mental energy","Helps convert fat to fuel and supports mitochondrial function","May reduce mental fatigue during prolonged effort"],
+  "r-alpha lipoic acid":["Powerful antioxidant that recycles other antioxidants in the body","Supports blood sugar regulation and mitochondrial health","Helps protect against oxidative stress from heavy training"],
+  "phosphatidylserine":["Supports brain health, memory, and cognitive performance","Shown to reduce cortisol response to exercise stress","Popular with athletes for recovery and mental performance"],
+  "huperzine a":["Supports memory and focus by protecting acetylcholine in the brain","Short-acting nootropic — works well before cognitively demanding tasks","Often cycled to maintain effectiveness"],
+  "bacopa monnieri":["Supports long-term memory and learning over weeks of use","Reduces anxiety and supports calm focus","Works slowly — give it 4–8 weeks before judging results"],
+  "ginkgo biloba":["Improves circulation to the brain, supporting focus and memory","May reduce mental fatigue and support cognitive longevity","Often combined with other nootropics for a broader effect"],
+  "turkey tail":["Immune-supporting mushroom rich in polysaccharides","Supports gut health and the microbiome","One of the most well-researched medicinal mushrooms"],
+  "chaga":["Antioxidant-rich mushroom that supports immune defence","May help reduce inflammation from heavy training","Popular in cold climates as a general health tonic"],
+  "nad+":["Fuel for your cells — helps them produce energy efficiently","Levels drop with age, which is why people supplement","Supports recovery, metabolism, and overall cellular health"],
+  "spermidine":["Supports cellular renewal and longevity processes","Found naturally in wheat germ and aged cheese","Emerging research suggests benefits for brain and heart health"],
+  "urolithin a":["Activates mitophagy — your body's process of recycling old cells","Supports muscle endurance and mitochondrial health","Produced from pomegranate compounds — supplement if your gut can't make it"],
+  "pqq":["Supports mitochondrial biogenesis — growing new energy-producing cells","Works well stacked with CoQ10 for cellular energy","May support cognitive function and heart health"],
+  "pycnogenol":["Potent antioxidant from French maritime pine bark","Supports circulation, joint health, and recovery","Shown to reduce muscle cramps and soreness after exercise"],
+  "astaxanthin":["One of the most powerful antioxidants found in nature","Reduces oxidative stress and inflammation from training","Supports eye health, skin, and endurance performance"],
+  "colostrum":["First milk from mammals — rich in growth factors and immune compounds","Supports gut integrity and immune function","Popular with athletes for recovery and lean mass support"],
+  "ecdysterone":["Plant-based compound studied for anabolic-like effects without hormones","May support muscle protein synthesis and strength gains","Emerging research — promising but still early"],
+  "alpha gpc":["Rapidly absorbed choline source that supports focus and memory","Shown to increase power output in some studies","Popular pre-workout nootropic for mental and physical performance"],
+  "nac":["Replenishes glutathione — your body's master antioxidant","Supports liver health and helps clear toxins","Reduces oxidative stress from intense training"],
+  "hmb":["Slows muscle breakdown during calorie deficits or intense training","Useful during cuts or periods of high volume","More beneficial for beginners or those returning after a break"],
+  "shilajit":["Mineral-rich resin from the Himalayas packed with fulvic acid","Supports energy, testosterone, and mitochondrial function","Traditional adaptogen used for endurance and vitality"],
+  "boron":["Supports bone density, hormone health, and testosterone levels","Helps the body use vitamin D and magnesium more effectively","Often overlooked but useful for active people"],
+  "hyaluronic acid":["Supports joint lubrication and skin hydration","Helps cushion high-impact joints like knees and hips","Works best taken consistently over several weeks"],
+  "msm":["Natural sulphur compound that supports joint and connective tissue health","Reduces inflammation and may ease post-exercise soreness","Often combined with glucosamine and chondroitin for joint support"],
+  "biotin":["Supports healthy hair, skin, and nails","Involved in energy metabolism and converting food into fuel","Deficiency is rare but worth supplementing if hair or skin health is a concern"],
+  "ginger":["Natural anti-inflammatory that reduces muscle soreness","Supports digestion and gut comfort","Shown to reduce nausea and aid recovery after hard training"],
+  "milk thistle":["Supports liver health and detoxification","Protects liver cells from damage — useful during high supplement use","Antioxidant properties support overall health"],
+  "panax ginseng":["Supports energy, endurance, and immune function","May improve cognitive performance under stress","One of the most used adaptogens in sports and traditional medicine"],
+};
+
+// ── Stack Timing Database ─────────────────────────────────────────────────────
+const SUPP_TIMING={
+  "creatine monohydrate":{window:"Post-workout or anytime",tip:"Research suggests post-workout timing may offer a slight edge, but consistency matters more than timing. Take daily."},
+  "creatine hcl":{window:"Post-workout or anytime",tip:"Same as creatine monohydrate — take consistently every day. Smaller dose needed due to better solubility."},
+  "creatine":{window:"Post-workout or anytime",tip:"Daily consistency is the key factor. Post-workout with food and protein is a common approach."},
+  "whey protein":{window:"Post-workout",tip:"Research supports taking protein within a few hours of training. Whey is fast-absorbing, making it well-suited to post-workout windows."},
+  "whey isolate":{window:"Post-workout",tip:"Faster than concentrate — commonly taken immediately after training to support muscle repair."},
+  "casein protein":{window:"Before bed",tip:"Slow-digesting protein that feeds muscles for hours. Research supports pre-sleep use for overnight recovery."},
+  "plant protein":{window:"Post-workout or with meals",tip:"Works similarly to whey — take around training or spread throughout the day to hit protein targets."},
+  "bcaa":{window:"During or before training",tip:"Most useful during fasted training or long sessions. Research on BCAAs is mixed if overall protein intake is adequate."},
+  "eaa":{window:"Before or during training",tip:"More complete than BCAAs. Particularly useful during fasted workouts or when protein intake is low."},
+  "caffeine":{window:"30–60 min pre-workout",tip:"Research consistently shows a 3–6mg/kg dose taken 30–60 minutes before exercise improves performance. Avoid within 6 hours of sleep."},
+  "caffeine anhydrous":{window:"30–60 min pre-workout",tip:"Concentrated caffeine — same timing as regular caffeine but effects may onset faster. Dose carefully."},
+  "l-theanine":{window:"With caffeine or before bed",tip:"Pairs well with caffeine to reduce jitteriness. On its own, supports relaxation before sleep."},
+  "beta-alanine":{window:"Pre-workout",tip:"Tingling is normal. Some research suggests taking with meals to reduce this. Daily use matters more than exact timing."},
+  "l-citrulline":{window:"30–60 min pre-workout",tip:"Research supports a 6–8g dose taken before training to improve blood flow and reduce fatigue."},
+  "citrulline malate":{window:"30–60 min pre-workout",tip:"Commonly used before training for pump and endurance. 8g is a frequently studied dose."},
+  "pre-workout":{window:"20–30 min pre-workout",tip:"Follow product directions. Most contain caffeine and should be avoided in the afternoon if sleep is a priority."},
+  "omega-3":{window:"With meals",tip:"Fat-soluble — take with a meal containing dietary fat to significantly improve absorption."},
+  "fish oil":{window:"With meals",tip:"Take with the largest meal of the day for best absorption and to minimise fish-burp side effects."},
+  "krill oil":{window:"With meals",tip:"Better absorbed than fish oil and can be taken with smaller meals. Still improved by taking with food."},
+  "vitamin d3":{window:"Morning with food",tip:"Fat-soluble vitamin — take with a meal. Morning timing is common and avoids any potential sleep interference."},
+  "vitamin d3 + k2":{window:"Morning with food",tip:"Both are fat-soluble. Take with a fatty meal for best absorption. Morning is the most practical time."},
+  "vitamin k2":{window:"With meals",tip:"Fat-soluble — absorption improves significantly when taken with food containing dietary fat."},
+  "vitamin c":{window:"Anytime with food",tip:"Water-soluble and absorbed regardless of meal timing. Spreading doses may be slightly better than one large dose."},
+  "magnesium glycinate":{window:"Before bed",tip:"Magnesium is commonly associated with improved sleep quality. Glycinate form is gentle on the stomach."},
+  "magnesium citrate":{window:"Before bed or with meals",tip:"Good bioavailability. Before bed supports relaxation. Can cause loose stools in high doses — start low."},
+  "magnesium malate":{window:"Morning or pre-workout",tip:"Malate form may support energy production — sometimes taken earlier in the day for this reason."},
+  "magnesium":{window:"Before bed",tip:"Supports muscle relaxation and sleep quality. Evening timing is most common and practical."},
+  "zinc":{window:"With food, away from iron",tip:"Take with food to reduce stomach irritation. Avoid taking at the same time as iron — they compete for absorption."},
+  "iron":{window:"Away from food and calcium",tip:"Best absorbed on an empty stomach with vitamin C. Avoid calcium-rich foods or supplements at the same time."},
+  "ashwagandha":{window:"Morning or before bed",tip:"Some people prefer morning for energy support; others take it at night for stress and sleep. Both are supported by research."},
+  "rhodiola rosea":{window:"Morning or pre-workout",tip:"Stimulating adaptogen — best taken early in the day. Research suggests effects on fatigue and performance under stress."},
+  "melatonin":{window:"30–60 min before sleep",tip:"A low dose (0.5–1mg) is often effective. Higher doses aren't necessarily better. Take consistently at the same time."},
+  "5-htp":{window:"Before bed or with meals",tip:"Supports serotonin production. Often taken at night for sleep support. Avoid combining with antidepressants."},
+  "probiotics":{window:"Morning before food",tip:"Many strains survive better when taken before eating. Some products recommend with food — follow label guidance."},
+  "coq10":{window:"With meals",tip:"Fat-soluble — absorption improves significantly with a meal. Ubiquinol form has better bioavailability than ubiquinone."},
+  "turmeric":{window:"With meals containing fat",tip:"Curcumin is fat-soluble and poorly absorbed alone. Black pepper (piperine) increases absorption by up to 2000%."},
+  "curcumin":{window:"With meals containing fat",tip:"Same as turmeric — fat and piperine are critical for absorption. A specialised formula (like Meriva) can also help."},
+  "alpha gpc":{window:"Pre-workout or morning",tip:"Fast-acting choline source that supports focus. Often taken 30–60 min before training or demanding cognitive work."},
+  "l-glutamine":{window:"Post-workout or before bed",tip:"Post-workout or before sleep are common windows to support gut and muscle recovery."},
+  "berberine":{window:"With meals",tip:"Take with or just before meals to help regulate blood sugar after eating. Spread across 2–3 doses per day."},
+  "inositol":{window:"Anytime, often before bed",tip:"Commonly taken before sleep for its calming effects. Can be taken in split doses throughout the day."},
+  "tongkat ali":{window:"Morning",tip:"Stimulating — most people prefer morning dosing. Research typically uses daily consistent dosing, often cycled."},
+  "fadogia agrestis":{window:"Morning",tip:"Often cycled (8 weeks on, 4 weeks off as a common approach). Take with food. Still limited human research available."},
+  "cordyceps":{window:"Pre-workout or morning",tip:"Supports oxygen utilisation and energy. Pre-workout or morning timing aligns with its energising properties."},
+  "reishi":{window:"Evening or before bed",tip:"Known for calming and immune effects. Evening use supports winding down and sleep quality."},
+  "lions mane":{window:"Morning with food",tip:"Nootropic effects develop over weeks. Consistent daily use matters more than specific timing."},
+  "electrolytes":{window:"During and after training",tip:"Most important during long or intense sessions and in hot conditions. Replenish post-training too."},
+  "sodium bicarbonate":{window:"60–90 min pre-exercise",tip:"Research suggests 0.3g/kg body weight taken 60–90 min before high-intensity efforts. Can cause GI upset — test first."},
+  "beetroot powder":{window:"2–3 hours pre-exercise",tip:"Nitrate loading takes time — research suggests 2–3 hours before exercise for peak effect. 3–5 days of use builds up."},
+  "collagen peptides":{window:"Pre-workout or with vitamin C",tip:"Research suggests 15g taken with vitamin C before exercise that loads tendons and joints may support connective tissue synthesis."},
+  "hmb":{window:"Pre-workout or with meals",tip:"Consistent daily use matters most. Some research supports pre-workout timing but split dosing throughout the day is also valid."},
+  "cocoa powder":{window:"Pre-workout or anytime",tip:"Flavanols in cocoa support blood flow and nitric oxide production. Natural theobromine provides a mild, sustained energy effect."},
+  "cacao":{window:"Pre-workout or morning",tip:"Raw cacao's flavanols support circulation and nitric oxide levels. Natural stimulant effect is gentler than caffeine."},
+  "nac":{window:"Away from exercise",tip:"Some research suggests NAC taken close to exercise may blunt some training adaptations. Best taken away from workout windows."},
+  "nmn":{window:"Morning",tip:"May work with circadian rhythms — morning timing is most commonly studied. Take on an empty stomach or with a light meal."},
+  "nr":{window:"Morning",tip:"Similar to NMN — morning timing is most common in research. Consistent daily use is the key factor."},
+  "resveratrol":{window:"With meals",tip:"Fat-soluble — take with food. Some research suggests avoiding high doses close to training as it may blunt adaptations."},
+  "taurine":{window:"Pre-workout",tip:"Supports hydration and muscle function. Often included in pre-workouts for this reason. Safe and well-tolerated."},
+  "l-carnitine":{window:"Before meals or pre-workout",tip:"Some research supports taking with carbohydrates to improve uptake into muscle. Pre-workout use is common."},
+  "shilajit":{window:"Morning with water or milk",tip:"Traditional use involves morning dosing. Consistent daily use for several weeks to assess benefits."},
+  "panax ginseng":{window:"Morning",tip:"Stimulating adaptogen — morning is most practical. Some research suggests cycling (e.g. 3 months on, 1 month off)."},
+  "ashwagandha":{window:"Morning or before bed",tip:"Flexible timing — some prefer morning for energy; others take at night for sleep and stress. Both approaches are studied."},
+  "phosphatidylserine":{window:"Before exercise or cognitively demanding tasks",tip:"Shown to blunt cortisol response to exercise. Taking before training is a common approach in research."},
 };
 
 function lookupBenefits(name){
@@ -385,6 +482,22 @@ function lookupBenefits(name){
     if(shared>bestScore){bestScore=shared;bestMatch=key;}
   }
   return bestScore>0?SUPP_BENEFITS[bestMatch]:null;
+}
+function lookupTiming(name){
+  if(!name)return null;
+  const n=name.toLowerCase().trim();
+  if(SUPP_TIMING[n])return SUPP_TIMING[n];
+  const keys=Object.keys(SUPP_TIMING);
+  for(const key of keys){if(n.includes(key)||key.includes(n))return SUPP_TIMING[key];}
+  const stopWords=new Set(["the","and","with","for","of","a","an","in","is","to"]);
+  const nameWords=n.split(/\s+/).filter(w=>w.length>2&&!stopWords.has(w));
+  let bestMatch=null,bestScore=0;
+  for(const key of keys){
+    const keyWords=key.split(/\s+/).filter(w=>w.length>2&&!stopWords.has(w));
+    const shared=nameWords.filter(w=>keyWords.some(kw=>kw.includes(w)||w.includes(kw))).length;
+    if(shared>bestScore){bestScore=shared;bestMatch=key;}
+  }
+  return bestScore>0?SUPP_TIMING[bestMatch]:null;
 }
 const GOALS=["Build muscle & strength","Lose weight / body fat","Boost energy & performance","Improve focus & recovery","General health & wellness","Competitive sport performance"];
 const EXPERIENCE=["Just starting out","6–12 months","1–3 years","3+ years","Elite / Professional"];
@@ -753,14 +866,16 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
     setEditingLog(existingLog||null);
   };
   const confirmQuickLog=()=>{
-    if(!addingFor)return;
-    const amount=quickTaken?(quickUseCustom?parseFloat(quickCustomAmt)||addingFor.servingSize:addingFor.servingSize*quickScoops):0;
+    // activeSupp covers both new-log (addingFor) and edit (editingFor) modes
+    const activeSupp=addingFor||editingFor;
+    if(!activeSupp)return;
+    const amount=quickTaken?(quickUseCustom?parseFloat(quickCustomAmt)||activeSupp.servingSize:activeSupp.servingSize*quickScoops):0;
     const feelToSave=dateFeelStored&&!quickFeelChanged?dateFeelStored:quickFeel;
     if(editingLog){
       // Edit mode: replace existing log
-      onEditLog(editingLog,{suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:editingLog.ts,backdated:true});
+      onEditLog(editingLog,{suppId:activeSupp.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:editingLog.ts,backdated:true});
     } else {
-      onSaveLog({suppId:addingFor.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:new Date(date+"T12:00:00").getTime(),backdated:true});
+      onSaveLog({suppId:activeSupp.id,date,taken:quickTaken,amount,notes:quickNotes,feel:feelToSave,ts:new Date(date+"T12:00:00").getTime(),backdated:true});
     }
     setAddingFor(null);
     setEditingFor(null);
@@ -2457,46 +2572,470 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 
 // ── InsightsModal ─────────────────────────────────────────────────────────────
 function InsightsModal({onClose,logs,supplements,isPro}){
+  const [tab,setTab]=React.useState("feel");
+  const [debriefText,setDebriefText]=React.useState(null);
+  const [debriefLoading,setDebriefLoading]=React.useState(false);
+  const [vaultSearch,setVaultSearch]=React.useState("");
+  const [vaultSelected,setVaultSelected]=React.useState(null);
+
+  const MM="'Space Mono',monospace";
+
+  // ── Data calculations ──────────────────────────────────────────────────────
   const feelLogs=logs.filter(l=>l.feel&&(l.feel.energy||l.feel.recovery||l.feel.mood||l.feel.sleep));
-  const hasData=feelLogs.length>=3&&isPro;
-  const avgScore=(key)=>{const vals=feelLogs.map(l=>l.feel[key]).filter(v=>v!=null);if(!vals.length)return null;return(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);};
+  const avgScore=(key)=>{
+    const vals=feelLogs.map(l=>l.feel[key]).filter(v=>v!=null);
+    if(!vals.length)return null;
+    return(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+  };
+
+  const todayDate=new Date();
+  const adherenceDays=Array.from({length:30},(_,i)=>{
+    const d=new Date(todayDate);d.setDate(d.getDate()-i);
+    return d.toISOString().split("T")[0];
+  });
+  const loggedDays=new Set(logs.map(l=>{
+    try{return l.date||new Date(l.ts).toISOString().split("T")[0];}catch{return null;}
+  }).filter(Boolean));
+  const adherencePct=Math.round((adherenceDays.filter(d=>loggedDays.has(d)).length/30)*100);
+  let streak=0;
+  for(let i=0;i<adherenceDays.length;i++){if(loggedDays.has(adherenceDays[i]))streak++;else break;}
+
+  const last7=adherenceDays.slice(0,7);
+  const last7Logs=logs.filter(l=>{
+    try{const d=l.date||new Date(l.ts).toISOString().split("T")[0];return last7.includes(d);}catch{return false;}
+  });
+  const daysLogged=new Set(last7Logs.map(l=>l.date||new Date(l.ts).toISOString().split("T")[0])).size;
+  const daysMissed=7-daysLogged;
+
+  const timingEntries=supplements.filter(s=>!s.removed).map(s=>({name:s.name,timing:lookupTiming(s.name)})).filter(e=>e.timing);
+
+  const totalActiveSupps=supplements.filter(s=>!s.removed).length;
+  const fullStackDays=[];const partialDays=[];
+  last7.forEach(d=>{
+    const dayLogs=logs.filter(l=>(l.date||new Date(l.ts).toISOString().split("T")[0])===d&&l.taken);
+    const feel=feelLogs.find(l=>(l.date||new Date(l.ts).toISOString().split("T")[0])===d);
+    if(!feel)return;
+    const scores=[feel.feel.energy,feel.feel.recovery,feel.feel.mood,feel.feel.sleep].filter(v=>v!=null);
+    const score=scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:0;
+    if(dayLogs.length>=totalActiveSupps*0.8)fullStackDays.push(score);else partialDays.push(score);
+  });
+  const fullAvg=fullStackDays.length?(fullStackDays.reduce((a,b)=>a+b,0)/fullStackDays.length).toFixed(1):null;
+  const partialAvg=partialDays.length?(partialDays.reduce((a,b)=>a+b,0)/partialDays.length).toFixed(1):null;
+
+  const logHours=last7Logs.filter(l=>l.ts).map(l=>new Date(l.ts).getHours());
+  const avgHour=logHours.length?Math.round(logHours.reduce((a,b)=>a+b,0)/logHours.length):null;
+  const timeLabel=avgHour!=null?(avgHour<6?"Early morning":avgHour<10?"Morning":avgHour<12?"Late morning":avgHour<14?"Midday":avgHour<18?"Afternoon":"Evening"):null;
+
+  // ── Vault data ─────────────────────────────────────────────────────────────
+  const vaultEntries=React.useMemo(()=>
+    SUPP_DATABASE
+      .map(name=>({name,benefits:lookupBenefits(name),timing:lookupTiming(name)}))
+      .filter(e=>e.benefits)
+      .sort((a,b)=>a.name.localeCompare(b.name))
+  ,[]);
+  const vaultFiltered=vaultSearch.trim().length>0
+    ?vaultEntries.filter(e=>e.name.toLowerCase().includes(vaultSearch.toLowerCase()))
+    :vaultEntries;
+  const vaultGrouped=vaultFiltered.reduce((acc,e)=>{
+    const letter=e.name[0].toUpperCase();
+    if(!acc[letter])acc[letter]=[];
+    acc[letter].push(e);
+    return acc;
+  },{});
+
+  // ── AI Weekly Debrief ──────────────────────────────────────────────────────
+  const generateDebrief=async()=>{
+    setDebriefLoading(true);
+    const suppNames=supplements.filter(s=>!s.removed).map(s=>s.name).join(", ");
+    const feelAvgs=[
+      {k:"energy",v:avgScore("energy")},
+      {k:"recovery",v:avgScore("recovery")},
+      {k:"mood",v:avgScore("mood")},
+      {k:"sleep",v:avgScore("sleep")}
+    ].filter(x=>x.v).map(x=>`${x.k}: ${x.v}/5`).join(", ");
+    const prompt=`You are a supplement tracking assistant writing a weekly summary for an athlete. Be warm, direct, and honest. 3-4 sentences max. No bullet points. No headers.\n\nThis week:\n- Days logged: ${daysLogged}/7 (missed: ${daysMissed})\n- Current streak: ${streak} days\n- 30-day consistency: ${adherencePct}%\n- Supplements tracked: ${suppNames||"various"}\n- Feel score averages: ${feelAvgs||"not enough data yet"}\n- Typical log time: ${timeLabel||"varies"}\n- Full-stack days avg feel: ${fullAvg||"n/a"} vs partial days: ${partialAvg||"n/a"}\n\nWrite the summary now. Lead with consistency this week, reference feel scores if available, note log timing briefly, close with one forward-looking sentence. Never use the word "data". Stay under 80 words. Make it feel personal, not generic.`;
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:200,
+          messages:[{role:"user",content:prompt}]
+        })
+      });
+      const json=await res.json();
+      setDebriefText(json.content?.[0]?.text||"Couldn't generate summary — try again shortly.");
+    }catch{
+      setDebriefText("Connection error. Check your internet and try again.");
+    }
+    setDebriefLoading(false);
+  };
+
+  // ── Shared styles ──────────────────────────────────────────────────────────
+  const card=(extra={})=>({background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,...extra});
+  const label=(extra={})=>({color:"#7A7D85",fontFamily:MM,fontSize:9,margin:0,letterSpacing:"1px",...extra});
+  const tabBtn=(t)=>({
+    flex:1,
+    padding:"8px 0",
+    borderRadius:7,
+    border:"none",
+    cursor:"pointer",
+    fontFamily:MM,
+    fontWeight:700,
+    fontSize:"8.5px",
+    letterSpacing:"0.4px",
+    textAlign:"center",
+    background:tab===t?"rgba(232,168,48,0.18)":"transparent",
+    color:tab===t?"#E8A830":"#4A4B4F",
+    transition:"all 0.15s",
+    whiteSpace:"nowrap",
+  });
+
+  // ── FREE PLAN ──────────────────────────────────────────────────────────────
+  if(!isPro){
+    const features=[
+      {icon:"📈",title:"FEEL SCORE TRENDS",   desc:"Energy, recovery, mood & sleep averages tracked over time."},
+      {icon:"🔥",title:"STREAK SCORE",         desc:"Your 30-day consistency %, current streak, and daily heatmap."},
+      {icon:"⏱",title:"STACK TIMING",         desc:"Research-based timing windows for every supplement in your stack."},
+      {icon:"✦",title:"WEEKLY DEBRIEF",       desc:"AI-generated personal summary of your week, logs, and feel scores."},
+      {icon:"🔒",title:"THE VAULT",            desc:"Browse 100+ supplements with research notes and timing windows."},
+    ];
+    return(
+      <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+        <div className="modal-box" style={{padding:"20px"}}>
+          {/* Header */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <h2 style={{fontSize:16,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,letterSpacing:"0.5px"}}>INSIGHTS</h2>
+            <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:0}}>✕</button>
+          </div>
+          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,margin:"0 0 16px",letterSpacing:"0.8px"}}>PRO FEATURE — UPGRADE TO UNLOCK</p>
+
+          {/* Feature cards */}
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+            {features.map((f,i)=>(
+              <div key={i} style={{...card(),padding:"11px 14px",display:"flex",alignItems:"center",gap:12}}>
+                <span style={{fontSize:20,lineHeight:1,flexShrink:0,width:24,textAlign:"center"}}>{f.icon}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,fontWeight:700,margin:"0 0 3px",letterSpacing:"0.3px"}}>{f.title}</p>
+                  <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:0,lineHeight:1.55}}>{f.desc}</p>
+                </div>
+                <svg style={{flexShrink:0}} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3A3B3E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <button style={{width:"100%",padding:"12px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>
+            UPGRADE TO PRO →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PRO — Vault detail view ────────────────────────────────────────────────
+  if(vaultSelected){
+    return(
+      <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)setVaultSelected(null);}}>
+        <div className="modal-box" style={{padding:"20px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+            <button onClick={()=>setVaultSelected(null)} style={{background:"transparent",border:"none",cursor:"pointer",color:"#E8A830",fontFamily:MM,fontSize:10,fontWeight:700,padding:0,flexShrink:0,letterSpacing:"0.5px"}}>← VAULT</button>
+            <h2 style={{fontSize:13,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,flex:1,letterSpacing:"0.3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vaultSelected.name.toUpperCase()}</h2>
+            <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,fontWeight:700,color:"#4A4B4F",lineHeight:1,padding:0,flexShrink:0}}>✕</button>
+          </div>
+
+          <div style={{...card(),padding:"14px",marginBottom:10}}>
+            <p style={{...label(),marginBottom:10}}>WHAT IT DOES</p>
+            {vaultSelected.benefits.map((b,i)=>(
+              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<vaultSelected.benefits.length-1?10:0}}>
+                <div style={{width:5,height:5,borderRadius:"50%",background:"#E8A830",marginTop:6,flexShrink:0}}/>
+                <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.7}}>{b}</p>
+              </div>
+            ))}
+          </div>
+
+          {vaultSelected.timing&&(
+            <div style={{...card(),padding:"14px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <p style={label()}>TIMING WINDOW</p>
+                <span style={{color:"#E8A830",fontFamily:MM,fontSize:9,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"2px 8px",flexShrink:0,marginLeft:10}}>{vaultSelected.timing.window}</span>
+              </div>
+              <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7}}>{vaultSelected.timing.tip}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PRO — Main insights view ───────────────────────────────────────────────
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div className="modal-box" style={{padding:"18px 20px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <h2 style={{fontSize:19,fontWeight:700,color:"#F0F0F0",margin:0}}>Insights</h2>
-          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1}}>✕</button>
+      <div className="modal-box" style={{padding:"20px"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <h2 style={{fontSize:16,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,letterSpacing:"0.5px"}}>INSIGHTS</h2>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:0}}>✕</button>
         </div>
-        {!hasData?(
+
+        {/* Tab bar — 5 equal tabs */}
+        <div style={{display:"flex",gap:3,background:"#111213",borderRadius:9,padding:"3px",marginBottom:16,border:"1px solid #2A2B2E"}}>
+          {[["feel","FEEL"],["streak","STREAK"],["timing","TIMING"],["debrief","DEBRIEF"],["vault","VAULT"]].map(([id,label])=>(
+            <button key={id} style={tabBtn(id)} onClick={()=>setTab(id)}>{label}</button>
+          ))}
+        </div>
+
+        {/* ── FEEL TAB ─────────────────────────────────────────────────────── */}
+        {tab==="feel"&&(
           <div>
-            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"16px",marginBottom:16,textAlign:"center"}}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:10}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,margin:"0 0 8px",letterSpacing:"0.5px"}}>INSIGHTS — PRO FEATURE</p>
-              <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:11,margin:"0 0 14px",lineHeight:1.7}}>After logging how you feel for a few days, Insights will surface patterns from your own data.</p>
-            </div>
-            <div style={{marginBottom:16}}>
-              {[{title:"Feel trends",desc:"Track energy, recovery, mood & sleep over time"},{title:"Supplement correlation",desc:"See which supplements improve your scores"},{title:"Weekly summary",desc:"Your best and worst days, with reasons why"},{title:"Streak analysis",desc:"How consistent logging affects your performance"}].map((item,i)=>(
-                <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 0",borderBottom:"1px solid #1C1D1F"}}>
-                  <div style={{width:6,height:6,borderRadius:"50%",background:"#E8A830",marginTop:5,flexShrink:0}}/>
-                  <div><p style={{margin:0,color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{item.title}</p><p style={{margin:"3px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:1.5}}>{item.desc}</p></div>
+            {feelLogs.length<3?(
+              <div style={{textAlign:"center",padding:"32px 0 24px"}}>
+                <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:11,lineHeight:1.8,margin:0}}>Log how you feel for at least 3 days<br/>to see your score trends here.</p>
+              </div>
+            ):(
+              <div>
+                <p style={{...label(),marginBottom:12}}>BASED ON {feelLogs.length} FEEL LOGS</p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                  {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(m=>{
+                    const avg=avgScore(m.key);if(!avg)return null;
+                    const col=avg>=4?"#5BAD72":avg>=3?"#E8A830":"#C0392B";
+                    return(
+                      <div key={m.key} style={{...card(),padding:"14px 12px",textAlign:"center"}}>
+                        <div style={{fontSize:28,fontWeight:800,color:col,fontFamily:MM,lineHeight:1}}>{avg}</div>
+                        <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>{m.label} AVG</div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-            <button style={{width:"100%",padding:"10px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
-          </div>
-        ):(
-          <div>
-            <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,marginBottom:14,letterSpacing:"1px"}}>BASED ON {feelLogs.length} LOGS</p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-              {[{key:"energy",label:"ENERGY"},{key:"recovery",label:"RECOVERY"},{key:"mood",label:"MOOD"},{key:"sleep",label:"SLEEP"}].map(m=>{
-                const avg=avgScore(m.key);
-                const color=avg>=4?"#5BAD72":avg>=3?"#E8A830":"#C0392B";
-                return avg?(<div key={m.key} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:10,padding:"12px",textAlign:"center"}}><div style={{fontSize:24,fontWeight:800,color,fontFamily:"'Space Mono',monospace"}}>{avg}</div><div style={{fontSize:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",marginTop:3,letterSpacing:"0.8px"}}>{m.label} AVG</div></div>):null;
-              })}
-            </div>
-            <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:9,padding:"12px 14px"}}><p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,margin:"0 0 6px"}}>PRO INSIGHTS COMING SOON</p><p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,margin:0,lineHeight:1.6}}>Supplement correlations, weekly trends and detailed analysis unlock with Pro.</p></div>
+                {(fullAvg||partialAvg)&&(
+                  <div style={{...card(),padding:"12px 14px"}}>
+                    <p style={{...label(),marginBottom:10}}>FULL STACK VS PARTIAL — 7 DAY</p>
+                    <div style={{display:"flex",gap:8}}>
+                      {fullAvg&&(
+                        <div style={{flex:1,background:"rgba(91,173,114,0.08)",border:"1px solid rgba(91,173,114,0.2)",borderRadius:8,padding:"10px 0",textAlign:"center"}}>
+                          <div style={{color:"#5BAD72",fontFamily:MM,fontSize:22,fontWeight:800,lineHeight:1}}>{fullAvg}</div>
+                          <div style={{color:"#5BAD72",fontFamily:MM,fontSize:8,marginTop:4,letterSpacing:"0.5px"}}>FULL STACK</div>
+                        </div>
+                      )}
+                      {partialAvg&&(
+                        <div style={{flex:1,background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.2)",borderRadius:8,padding:"10px 0",textAlign:"center"}}>
+                          <div style={{color:"#C0392B",fontFamily:MM,fontSize:22,fontWeight:800,lineHeight:1}}>{partialAvg}</div>
+                          <div style={{color:"#C0392B",fontFamily:MM,fontSize:8,marginTop:4,letterSpacing:"0.5px"}}>PARTIAL</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
+
+        {/* ── STREAK TAB ───────────────────────────────────────────────────── */}
+        {tab==="streak"&&(
+          <div>
+            {/* Headline numbers */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+              <div style={{...card(),padding:"16px 12px",textAlign:"center"}}>
+                <div style={{fontSize:28,fontWeight:800,color:adherencePct>=80?"#5BAD72":adherencePct>=50?"#E8A830":"#C0392B",fontFamily:MM,lineHeight:1}}>{adherencePct}%</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>30-DAY SCORE</div>
+              </div>
+              <div style={{...card(),padding:"16px 12px",textAlign:"center"}}>
+                <div style={{fontSize:28,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1}}>{streak}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>DAY STREAK</div>
+              </div>
+            </div>
+
+            {/* Heatmap */}
+            <p style={{...label(),marginBottom:8}}>LAST 30 DAYS</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:12}}>
+              {adherenceDays.slice().reverse().map((d,i)=>{
+                const logged=loggedDays.has(d);
+                return(
+                  <div key={i} style={{
+                    width:16,height:16,borderRadius:4,
+                    background:logged?"#5BAD72":"#1C1D1F",
+                    border:`1px solid ${logged?"rgba(91,173,114,0.35)":"#2A2B2E"}`
+                  }}/>
+                );
+              })}
+            </div>
+
+            {/* Context note */}
+            <div style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.15)",borderRadius:9,padding:"11px 13px"}}>
+              <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7}}>
+                {adherencePct>=80
+                  ?"Elite consistency. Keep that streak alive — this level of logging is what makes the insights actually meaningful."
+                  :adherencePct>=50
+                  ?"Good base. Log even on rest days to fill the gaps and sharpen your trend picture."
+                  :"Building the habit. Aim for at least 5 days a week — it adds up fast."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── TIMING TAB ───────────────────────────────────────────────────── */}
+        {tab==="timing"&&(
+          <div>
+            <p style={{...label(),marginBottom:14}}>RESEARCH-BASED WINDOWS — YOUR STACK</p>
+            {timingEntries.length===0?(
+              <div style={{textAlign:"center",padding:"32px 0 24px"}}>
+                <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:11,lineHeight:1.8,margin:0}}>Add supplements to your stack<br/>to see timing windows here.</p>
+              </div>
+            ):(
+              <div>
+                {timingEntries.map((e,i)=>(
+                  <div key={i} style={{paddingBottom:12,marginBottom:12,borderBottom:i<timingEntries.length-1?"1px solid #1C1D1F":"none"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:8}}>
+                      <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,fontWeight:700,flex:1}}>{e.name}</span>
+                      <span style={{color:"#E8A830",fontFamily:MM,fontSize:8,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"3px 7px",flexShrink:0,whiteSpace:"nowrap"}}>{e.timing.window}</span>
+                    </div>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.65}}>{e.timing.tip}</p>
+                  </div>
+                ))}
+                <div style={{background:"rgba(91,173,114,0.05)",border:"1px solid rgba(91,173,114,0.15)",borderRadius:9,padding:"11px 13px",marginTop:4}}>
+                  <p style={{color:"#5BAD72",fontFamily:MM,fontSize:9,fontWeight:700,margin:"0 0 4px",letterSpacing:"0.5px"}}>NOTE</p>
+                  <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:0,lineHeight:1.65}}>These windows reflect what published research commonly examines. Consistency matters more than perfect timing for most supplements.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── DEBRIEF TAB ──────────────────────────────────────────────────── */}
+        {tab==="debrief"&&(
+          <div>
+            {/* Stat row */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+              <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
+                <div style={{fontSize:24,fontWeight:800,color:"#5BAD72",fontFamily:MM,lineHeight:1}}>{daysLogged}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>LOGGED</div>
+              </div>
+              <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
+                <div style={{fontSize:24,fontWeight:800,color:daysMissed>3?"#C0392B":"#E8A830",fontFamily:MM,lineHeight:1}}>{daysMissed}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>MISSED</div>
+              </div>
+              <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1,marginTop:4}}>{timeLabel?timeLabel.split(" ")[0].slice(0,5).toUpperCase():"—"}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>LOG TIME</div>
+              </div>
+            </div>
+
+            {/* Feel row */}
+            {avgScore("energy")&&(
+              <div style={{...card(),padding:"12px 14px",marginBottom:12}}>
+                <p style={{...label(),marginBottom:9}}>WEEK AVG FEEL SCORES</p>
+                <div style={{display:"flex",justifyContent:"space-around"}}>
+                  {[{k:"energy",l:"ENERGY"},{k:"recovery",l:"RECOV"},{k:"mood",l:"MOOD"},{k:"sleep",l:"SLEEP"}].map(m=>{
+                    const v=avgScore(m.k);if(!v)return null;
+                    const col=v>=4?"#5BAD72":v>=3?"#E8A830":"#C0392B";
+                    return(
+                      <div key={m.k} style={{textAlign:"center"}}>
+                        <div style={{color:col,fontFamily:MM,fontSize:20,fontWeight:800,lineHeight:1}}>{v}</div>
+                        <div style={{color:"#4A4B4F",fontFamily:MM,fontSize:8,marginTop:4,letterSpacing:"0.5px"}}>{m.l}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* AI output box */}
+            <div style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:10,padding:"14px",marginBottom:10,minHeight:80,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {debriefLoading?(
+                <div style={{textAlign:"center",width:"100%"}}>
+                  <div style={{color:"#E8A830",fontFamily:MM,fontSize:10,letterSpacing:"1px",marginBottom:6}}>GENERATING...</div>
+                  <div style={{width:40,height:2,background:"rgba(232,168,48,0.3)",borderRadius:2,margin:"0 auto",animation:"none"}}/>
+                </div>
+              ):debriefText?(
+                <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.85,width:"100%"}}>{debriefText}</p>
+              ):(
+                <p style={{color:"#3A3B3E",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7,textAlign:"center",fontStyle:"italic"}}>Your personalised weekly summary<br/>will appear here.</p>
+              )}
+            </div>
+
+            {/* Generate button */}
+            <button
+              onClick={generateDebrief}
+              disabled={debriefLoading}
+              style={{
+                width:"100%",padding:"12px 0",
+                background:debriefLoading?"#1C1D1F":"linear-gradient(135deg,#E8A830,#C88820)",
+                border:"none",borderRadius:9,
+                color:debriefLoading?"#4A4B4F":"#111213",
+                fontFamily:MM,fontWeight:700,fontSize:12,
+                cursor:debriefLoading?"not-allowed":"pointer",
+                letterSpacing:"0.5px",transition:"all 0.2s"
+              }}
+            >
+              {debriefLoading?"GENERATING...":debriefText?"REGENERATE DEBRIEF ↻":"GENERATE WEEKLY DEBRIEF ✦"}
+            </button>
+          </div>
+        )}
+
+        {/* ── VAULT TAB ────────────────────────────────────────────────────── */}
+        {tab==="vault"&&(
+          <div>
+            {/* Search */}
+            <div style={{position:"relative",marginBottom:10}}>
+              <input
+                value={vaultSearch}
+                onChange={e=>setVaultSearch(e.target.value)}
+                placeholder="Search supplements..."
+                style={{
+                  width:"100%",background:"#111213",border:"1px solid #2A2B2E",
+                  borderRadius:9,padding:"9px 12px 9px 32px",
+                  color:"#F0F0F0",fontFamily:MM,fontSize:11,outline:"none",
+                  boxSizing:"border-box"
+                }}
+              />
+              <svg style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A4B4F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <p style={{...label(),marginBottom:10,letterSpacing:"0.5px"}}>{vaultEntries.length} SUPPLEMENTS ON FILE</p>
+
+            {/* List */}
+            <div style={{overflowY:"auto",maxHeight:"50vh"}}>
+              {vaultFiltered.length===0?(
+                <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:11,textAlign:"center",padding:"24px 0",margin:0}}>No results for "{vaultSearch}"</p>
+              ):(
+                Object.keys(vaultGrouped).sort().map(letter=>(
+                  <div key={letter}>
+                    <div style={{position:"sticky",top:0,background:"#161718",padding:"4px 0 3px",zIndex:2}}>
+                      <span style={{color:"#E8A830",fontFamily:MM,fontSize:10,fontWeight:700,letterSpacing:"1.5px"}}>{letter}</span>
+                    </div>
+                    {vaultGrouped[letter].map((e,i)=>(
+                      <button
+                        key={i}
+                        onClick={()=>setVaultSelected(e)}
+                        style={{
+                          width:"100%",background:"transparent",border:"none",
+                          borderBottom:"1px solid #1C1D1F",padding:"9px 0",
+                          cursor:"pointer",display:"flex",justifyContent:"space-between",
+                          alignItems:"center",textAlign:"left",gap:8
+                        }}
+                      >
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,fontWeight:700,margin:"0 0 2px"}}>{e.name}</p>
+                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.benefits[0].slice(0,46)}{e.benefits[0].length>46?"…":""}</p>
+                        </div>
+                        {e.timing&&(
+                          <span style={{color:"#E8A830",fontFamily:MM,fontSize:8,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"2px 6px",whiteSpace:"nowrap",flexShrink:0}}>
+                            {e.timing.window.split(" ")[0]}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -2972,6 +3511,7 @@ function App(){
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           <span>INSIGHTS</span>
         </button>
+
       </div>
 
       {showCostBreakdown&&<DailyCostModal supplements={supplements} profile={profile} onClose={()=>setShowCostBreakdown(false)}/>}
