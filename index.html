@@ -2657,7 +2657,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"application/json","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:200,
@@ -2683,8 +2683,8 @@ function InsightsModal({onClose,logs,supplements,isPro}){
     cursor:"pointer",
     fontFamily:MM,
     fontWeight:700,
-    fontSize:"8.5px",
-    letterSpacing:"0.4px",
+    fontSize:"11px",
+    letterSpacing:"0.5px",
     textAlign:"center",
     background:tab===t?"rgba(232,168,48,0.18)":"transparent",
     color:tab===t?"#E8A830":"#4A4B4F",
@@ -2739,10 +2739,17 @@ function InsightsModal({onClose,logs,supplements,isPro}){
     return(
       <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)setVaultSelected(null);}}>
         <div className="modal-box" style={{padding:"20px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-            <button onClick={()=>setVaultSelected(null)} style={{background:"transparent",border:"none",cursor:"pointer",color:"#E8A830",fontFamily:MM,fontSize:10,fontWeight:700,padding:0,flexShrink:0,letterSpacing:"0.5px"}}>← VAULT</button>
-            <h2 style={{fontSize:13,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,flex:1,letterSpacing:"0.3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vaultSelected.name.toUpperCase()}</h2>
-            <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,fontWeight:700,color:"#4A4B4F",lineHeight:1,padding:0,flexShrink:0}}>✕</button>
+          {/* Back row */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <button onClick={()=>setVaultSelected(null)} style={{background:"transparent",border:"none",cursor:"pointer",color:"#E8A830",fontFamily:MM,fontSize:13,fontWeight:700,padding:"6px 0",display:"flex",alignItems:"center",gap:6,letterSpacing:"0.5px"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              VAULT
+            </button>
+            <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,fontWeight:700,color:"#4A4B4F",lineHeight:1,padding:0}}>✕</button>
+          </div>
+          {/* Supplement name — centred */}
+          <div style={{textAlign:"center",marginBottom:18,padding:"0 8px"}}>
+            <h2 style={{fontSize:16,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,letterSpacing:"0.5px",lineHeight:1.3}}>{vaultSelected.name.toUpperCase()}</h2>
           </div>
 
           <div style={{...card(),padding:"14px",marginBottom:10}}>
@@ -2759,7 +2766,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
             <div style={{...card(),padding:"14px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <p style={label()}>TIMING WINDOW</p>
-                <span style={{color:"#E8A830",fontFamily:MM,fontSize:9,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"2px 8px",flexShrink:0,marginLeft:10}}>{vaultSelected.timing.window}</span>
+                <span style={{color:"#E8A830",fontFamily:MM,fontSize:12,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:6,padding:"4px 10px",flexShrink:0,marginLeft:10}}>{vaultSelected.timing.window}</span>
               </div>
               <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7}}>{vaultSelected.timing.tip}</p>
             </div>
@@ -2843,7 +2850,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                 <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>30-DAY SCORE</div>
               </div>
               <div style={{...card(),padding:"16px 12px",textAlign:"center"}}>
-                <div style={{fontSize:28,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1}}>{streak}</div>
+                <div style={{fontSize:28,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1}}>{Math.min(streak,30)}{streak>30?"+":" "}</div>
                 <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>DAY STREAK</div>
               </div>
             </div>
@@ -2889,10 +2896,10 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                 {timingEntries.map((e,i)=>(
                   <div key={i} style={{paddingBottom:12,marginBottom:12,borderBottom:i<timingEntries.length-1?"1px solid #1C1D1F":"none"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:8}}>
-                      <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,fontWeight:700,flex:1}}>{e.name}</span>
-                      <span style={{color:"#E8A830",fontFamily:MM,fontSize:8,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"3px 7px",flexShrink:0,whiteSpace:"nowrap"}}>{e.timing.window}</span>
+                      <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:13,fontWeight:700,flex:1}}>{e.name}</span>
+                      <span style={{color:"#E8A830",fontFamily:MM,fontSize:11,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"4px 9px",flexShrink:0,whiteSpace:"nowrap"}}>{e.timing.window}</span>
                     </div>
-                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.65}}>{e.timing.tip}</p>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.7}}>{e.timing.tip}</p>
                   </div>
                 ))}
                 <div style={{background:"rgba(91,173,114,0.05)",border:"1px solid rgba(91,173,114,0.15)",borderRadius:9,padding:"11px 13px",marginTop:4}}>
@@ -2908,18 +2915,19 @@ function InsightsModal({onClose,logs,supplements,isPro}){
         {tab==="debrief"&&(
           <div>
             {/* Stat row */}
+            <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 8px",letterSpacing:"1px"}}>THIS WEEK — 7 DAYS</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
               <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
-                <div style={{fontSize:24,fontWeight:800,color:"#5BAD72",fontFamily:MM,lineHeight:1}}>{daysLogged}</div>
-                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>LOGGED</div>
+                <div style={{fontSize:24,fontWeight:800,color:"#5BAD72",fontFamily:MM,lineHeight:1}}>{daysLogged}/7</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>DAYS LOGGED</div>
               </div>
               <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
                 <div style={{fontSize:24,fontWeight:800,color:daysMissed>3?"#C0392B":"#E8A830",fontFamily:MM,lineHeight:1}}>{daysMissed}</div>
-                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>MISSED</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>DAYS MISSED</div>
               </div>
               <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1,marginTop:4}}>{timeLabel?timeLabel.split(" ")[0].slice(0,5).toUpperCase():"—"}</div>
-                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>LOG TIME</div>
+                <div style={{fontSize:13,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1,marginTop:2}}>{timeLabel||"—"}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>USUAL LOG TIME</div>
               </div>
             </div>
 
@@ -3019,11 +3027,11 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                         }}
                       >
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,fontWeight:700,margin:"0 0 2px"}}>{e.name}</p>
-                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.benefits[0].slice(0,46)}{e.benefits[0].length>46?"…":""}</p>
+                          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:12,fontWeight:700,margin:"0 0 3px"}}>{e.name}</p>
+                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:10,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.benefits[0].slice(0,46)}{e.benefits[0].length>46?"…":""}</p>
                         </div>
                         {e.timing&&(
-                          <span style={{color:"#E8A830",fontFamily:MM,fontSize:8,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"2px 6px",whiteSpace:"nowrap",flexShrink:0}}>
+                          <span style={{color:"#E8A830",fontFamily:MM,fontSize:11,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"3px 7px",whiteSpace:"nowrap",flexShrink:0}}>
                             {e.timing.window.split(" ")[0]}
                           </span>
                         )}
