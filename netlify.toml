@@ -1,3 +1,21 @@
 [build]
   publish = "."
-  command = ""
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/create-checkout"
+  to = "/.netlify/functions/create-checkout"
+  status = 200
+
+[[redirects]]
+  from = "/api/verify-session"
+  to = "/.netlify/functions/verify-session"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe-webhook"
+  to = "/.netlify/functions/stripe-webhook"
+  status = 200
