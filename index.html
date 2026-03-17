@@ -3519,7 +3519,7 @@ function App(){
     if(cancelled){setStripeVerified(true);return;}
     const verify=async(sId,cId)=>{
       try{
-        const res=await fetch("/api/verify-session",{
+        const res=await fetch("/.netlify/functions/verify-session",{
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({sessionId:sId||null,customerId:cId||null})
@@ -3557,7 +3557,7 @@ function App(){
   // ── Stripe checkout launcher ───────────────────────────────────────────────
   const launchCheckout=async(plan="monthly")=>{
     try{
-      const res=await fetch("/api/create-checkout",{
+      const res=await fetch("/.netlify/functions/create-checkout",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({plan})
