@@ -288,6 +288,8 @@ const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey 
 
 const DEV_PRO_MODE=false;
 const FREE_SUPPLEMENT_LIMIT=2;
+const STRIPE_PK="pk_test_51SsruuLqLTr81KltF0rvU20vqmhd2WcCJA3UcPXrajcCmT1MVf6miAq4vbpsEZYIetCU9WAr9TnnRQwZKolpIXzd00kwpcEuhp";
+const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
 const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
 const CURRENCY_OPTIONS=[
@@ -2481,8 +2483,15 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
 }
 
 // ── UpgradeModal ──────────────────────────────────────────────────────────────
-function UpgradeModal({onClose,limit}){
+function UpgradeModal({onClose,limit,onUpgrade}){
   const MM="'Space Mono',monospace";
+  const [selectedPlan,setSelectedPlan]=React.useState("monthly");
+  const [loading,setLoading]=React.useState(false);
+  const handleUpgrade=async()=>{
+    setLoading(true);
+    await onUpgrade(selectedPlan);
+    setLoading(false);
+  };
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={{zIndex:9999}}>
       <div className="modal-box" style={{padding:"24px 20px",textAlign:"center"}}>
@@ -2491,8 +2500,8 @@ function UpgradeModal({onClose,limit}){
         </div>
         <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 6px"}}>FREE PLAN LIMIT REACHED</p>
         <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:15,fontWeight:700,margin:"0 0 8px",lineHeight:1.3}}>YOU'VE MAXED OUT YOUR FREE STACK</h2>
-        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 20px",lineHeight:1.65}}>Free plan includes {limit} supplements.<br/>Upgrade to Pro and track your full stack — no limits.</p>
-        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>Free plan includes {limit} supplements.<br/>Upgrade to Pro and track your full stack — no limits.</p>
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
           {[
             "Unlimited supplement tracking",
             "Feel score trends & insights",
@@ -2505,8 +2514,20 @@ function UpgradeModal({onClose,limit}){
             </div>
           ))}
         </div>
-        <button style={{width:"100%",padding:"13px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px",marginBottom:10}}>
-          UPGRADE TO PRO — $7.99/mo →
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          {[
+            {id:"monthly",label:"MONTHLY",price:"A$7.99/mo",sub:""},
+            {id:"annual",label:"ANNUAL",price:"A$49.99/yr",sub:"SAVE 48%"},
+          ].map(p=>(
+            <button key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{flex:1,padding:"10px 8px",borderRadius:9,border:selectedPlan===p.id?"1px solid #E8A830":"1px solid #2A2B2E",background:selectedPlan===p.id?"rgba(232,168,48,0.1)":"#1C1D1F",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
+              <div style={{color:selectedPlan===p.id?"#E8A830":"#7A7D85",fontFamily:MM,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:2}}>{p.label}</div>
+              <div style={{color:selectedPlan===p.id?"#F0F0F0":"#4A4B4F",fontFamily:MM,fontSize:11,fontWeight:700}}>{p.price}</div>
+              {p.sub&&<div style={{color:"#5BAD72",fontFamily:MM,fontSize:8,marginTop:2,letterSpacing:"0.5px"}}>{p.sub}</div>}
+            </button>
+          ))}
+        </div>
+        <button onClick={handleUpgrade} disabled={loading} style={{width:"100%",padding:"13px 0",background:loading?"#3A3B3E":"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:loading?"#7A7D85":"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:loading?"not-allowed":"pointer",letterSpacing:"0.5px",marginBottom:10,transition:"all 0.2s"}}>
+          {loading?"LOADING...":"UPGRADE TO PRO →"}
         </button>
         <button onClick={onClose} style={{width:"100%",padding:"10px 0",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#4A4B4F",fontFamily:MM,fontSize:11,cursor:"pointer",letterSpacing:"0.3px"}}>
           MAYBE LATER
@@ -2686,7 +2707,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 }
 
 // ── InsightsModal ─────────────────────────────────────────────────────────────
-function InsightsModal({onClose,logs,supplements,isPro}){
+function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
   const [tab,setTab]=React.useState("feel");
   const [debriefText,setDebriefText]=React.useState(null);
   const [debriefPoints,setDebriefPoints]=React.useState([]);
@@ -2935,7 +2956,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
           </div>
 
           {/* CTA */}
-          <button style={{width:"100%",padding:"12px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>
+          <button onClick={()=>{onClose();if(onUpgrade)onUpgrade("monthly");}} style={{width:"100%",padding:"12px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px"}}>
             UPGRADE TO PRO →
           </button>
         </div>
@@ -3315,7 +3336,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:"block",margin:"0 auto 6px"}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,fontWeight:700,margin:"0 0 2px",letterSpacing:"0.3px"}}>Viewing 2 of {allEntries.length} supplements</p>
                         <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",letterSpacing:"0.3px"}}>Upgrade to Pro to unlock the full Vault</p>
-                        <div style={{display:"inline-block",padding:"7px 20px",background:"linear-gradient(135deg,#E8A830,#C88820)",borderRadius:20,color:"#111213",fontFamily:MM,fontSize:10,fontWeight:700,letterSpacing:"0.5px",cursor:"pointer"}}>UPGRADE TO PRO →</div>
+                        <div onClick={()=>{onClose();if(onUpgrade)onUpgrade("monthly");}} style={{display:"inline-block",padding:"7px 20px",background:"linear-gradient(135deg,#E8A830,#C88820)",borderRadius:20,color:"#111213",fontFamily:MM,fontSize:10,fontWeight:700,letterSpacing:"0.5px",cursor:"pointer"}}>UPGRADE TO PRO →</div>
                       </div>
                     </div>
                   )}
@@ -3457,6 +3478,8 @@ function App(){
   const [showProfile,setShowProfile]=useState(false);
   const [showInsights,setShowInsights]=useState(false);
   const [showUpgrade,setShowUpgrade]=useState(false);
+  const [stripeData,setStripeData]=useState(()=>load(STRIPE_CUSTOMER_KEY,null));
+  const [stripeVerified,setStripeVerified]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -3483,6 +3506,70 @@ function App(){
       if(prof)setProfile(prof);
     }).catch(()=>{});
   },[]);
+
+  // ── Stripe verification on load ───────────────────────────────────────────
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const sessionId=params.get("session_id");
+    const upgraded=params.get("upgraded");
+    const cancelled=params.get("cancelled");
+    if(sessionId||upgraded||cancelled){
+      window.history.replaceState({},"",window.location.pathname);
+    }
+    if(cancelled){setStripeVerified(true);return;}
+    const verify=async(sId,cId)=>{
+      try{
+        const res=await fetch("/api/verify-session",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({sessionId:sId||null,customerId:cId||null})
+        });
+        const data=await res.json();
+        if(data.isPro){
+          const stripeRecord={customerId:data.customerId,subscriptionId:data.subscriptionId,plan:data.plan,verifiedAt:new Date().toISOString()};
+          setStripeData(stripeRecord);
+          save(STRIPE_CUSTOMER_KEY,stripeRecord);
+          setProfile(p=>{
+            if(!p)return p;
+            const updated={...p,plan:"pro"};
+            save(PROFILE_KEY,updated);
+            return updated;
+          });
+        }else{
+          setProfile(p=>{
+            if(!p||p.plan!=="pro")return p;
+            const updated={...p,plan:"free"};
+            save(PROFILE_KEY,updated);
+            return updated;
+          });
+        }
+        setStripeVerified(true);
+      }catch(e){
+        console.warn("Stripe verify failed — defaulting to stored plan",e);
+        setStripeVerified(true);
+      }
+    };
+    if(sessionId){verify(sessionId,null);}
+    else if(stripeData?.customerId){verify(null,stripeData.customerId);}
+    else{setStripeVerified(true);}
+  },[]);
+
+  // ── Stripe checkout launcher ───────────────────────────────────────────────
+  const launchCheckout=async(plan="monthly")=>{
+    try{
+      const res=await fetch("/api/create-checkout",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({plan})
+      });
+      const data=await res.json();
+      if(data.url)window.location.href=data.url;
+      else alert("Could not start checkout. Please try again.");
+    }catch(e){
+      console.error("Checkout error:",e);
+      alert("Something went wrong. Please try again.");
+    }
+  };
 
   const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
   useEffect(()=>{window._openFeedback=openManualFeedback;},[]);
@@ -3847,8 +3934,8 @@ function App(){
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
-      {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT}/>}
-      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro}/>}
+      {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
+      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog}/>}
     </div>
