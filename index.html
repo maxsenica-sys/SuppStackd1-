@@ -3471,20 +3471,35 @@ function App(){
   },[]);
 
   // ── Stripe checkout launcher ───────────────────────────────────────────────
-  const launchCheckout=async(plan="monthly")=>{
+  const launchCheckout=async(plan="monthly",attempt=1)=>{
     if(typeof posthog!=="undefined")posthog.capture("upgrade_clicked",{plan});
     try{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000); // 12s timeout
       const res=await fetch("/.netlify/functions/create-checkout",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({plan})
+        body:JSON.stringify({plan}),
+        signal:controller.signal
       });
+      clearTimeout(timeout);
       const data=await res.json();
       if(data.url)window.location.href=data.url;
-      else alert("Could not start checkout. Please try again.");
+      else if(attempt<3){
+        // Auto retry on failure
+        setTimeout(()=>launchCheckout(plan,attempt+1),1500);
+      } else {
+        alert("Could not start checkout. Please try again.");
+      }
     }catch(e){
-      console.error("Checkout error:",e);
-      alert("Something went wrong. Please try again.");
+      if(attempt<3){
+        // Auto retry on timeout or network error
+        console.warn("Checkout attempt "+attempt+" failed, retrying...");
+        setTimeout(()=>launchCheckout(plan,attempt+1),1500);
+      } else {
+        console.error("Checkout error:",e);
+        alert("Something went wrong. Please check your connection and try again.");
+      }
     }
   };
 
