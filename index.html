@@ -91,127 +91,14 @@
 <script>
 // ── Service Worker for background notifications ───────────────────────────────
 // Injected as a blob so it works from a single HTML file
-const SW_SCRIPT = `
-const CACHE = 'suppstackd-sw-v2';
-const NOTIF_STORE = 'suppstackd_sw_notifs';
-
-// Listen for messages from the main app
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SCHEDULE_NOTIFS') {
-    // Store supplement data in cache storage for later use
-    caches.open(NOTIF_STORE).then(cache => {
-      cache.put('/__sw_data__', new Response(JSON.stringify(e.data.payload)));
-    });
-    scheduleNotifs(e.data.payload);
-  }
-});
-
-// On SW activation, reload stored data and reschedule
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.open(NOTIF_STORE).then(cache =>
-      cache.match('/__sw_data__').then(res => {
-        if (res) res.json().then(data => scheduleNotifs(data));
-      })
-    )
-  );
-});
-
-// Clear old timers map on each schedule call
-const timers = [];
-function scheduleNotifs(data) {
-  // Clear any existing timers
-  timers.forEach(t => clearTimeout(t));
-  timers.length = 0;
-
-  const { supplements, scheduledTime } = data;
-  if (!supplements || !supplements.length) return;
-
-  const now = Date.now();
-
-  // ── Daily log reminder at scheduled time ──
-  if (scheduledTime && scheduledTime > now) {
-    timers.push(setTimeout(() => {
-      caches.open(NOTIF_STORE).then(cache =>
-        cache.match('/__sw_data__').then(res => {
-          if (!res) return;
-          res.json().then(d => {
-            const unlogged = (d.supplements || []).filter(s => s.lastLogged !== d.todayStr);
-            if (unlogged.length > 0) {
-              self.registration.showNotification('Suppstackd', {
-                body: unlogged.length === 1
-                  ? unlogged[0].name + ' not logged today.'
-                  : unlogged.length + ' supplements not logged today.',
-                tag: 'suppstackd-daily',
-                silent: false
-              });
-            }
-          });
-        })
-      );
-    }, scheduledTime - now));
-  }
-
-  // ── Low stock alerts — fire after short delay on load ──
-  const critical = supplements.filter(s => {
-    if (!s.totalAmount || !s.servingSize || !s.servingsPerDay) return false;
-    const rem = (s.totalAmount || 0) - (s.consumed || 0);
-    const daysLeft = rem <= 0 ? 0 : Math.ceil(rem / (s.servingSize * s.servingsPerDay));
-    return daysLeft >= 0 && daysLeft <= 7;
-  });
-
-  if (critical.length > 0) {
-    // Only fire if not already shown today
-    const todayKey = new Date().toISOString().slice(0, 10);
-    caches.open(NOTIF_STORE).then(cache =>
-      cache.match('/__sw_lastLowAlert__').then(res => {
-        if (res) {
-          res.text().then(t => {
-            if (t === todayKey) return; // already shown today
-            sendLowStockNotif(cache, critical, todayKey);
-          });
-        } else {
-          sendLowStockNotif(cache, critical, todayKey);
-        }
-      })
-    );
-  }
-}
-
-function sendLowStockNotif(cache, critical, todayKey) {
-  cache.put('/__sw_lastLowAlert__', new Response(todayKey));
-  timers.push(setTimeout(() => {
-    const names = critical.map(s => {
-      const rem = (s.totalAmount || 0) - (s.consumed || 0);
-      const d = rem <= 0 ? 0 : Math.ceil(rem / (s.servingSize * s.servingsPerDay));
-      return s.name + ' (' + d + 'd)';
-    }).join(', ');
-    const body = critical.length === 1
-      ? critical[0].name + ' — approx ' + (Math.ceil(((critical[0].totalAmount||0)-(critical[0].consumed||0))/(critical[0].servingSize*critical[0].servingsPerDay))) + ' days left. Time to reorder.'
-      : critical.length + ' supps running low: ' + names;
-    self.registration.showNotification('Suppstackd — Low stock', {
-      body,
-      tag: 'suppstackd-lowstock',
-      silent: false
-    });
-  }, 2000));
-}
-
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(clients.openWindow('/'));
-});
-`;
-
+// Service Worker — registered from /sw.js
 if ('serviceWorker' in navigator) {
-  const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl, { scope: '/' })
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
     .then(reg => {
       window._swReg = reg;
       console.log('[SW] Registered');
     })
-    .catch(err => console.warn('[SW] Registration failed (blob SW requires HTTPS or localhost):', err));
+    .catch(err => console.warn('[SW] Registration failed:', err));
 }
 
 // Called by the app to push supplement data into the SW
@@ -282,8 +169,69 @@ const UNITS=["g","kg","mg","ml","lb","oz","fl oz","count"];
 const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey Isolate","Casein Protein","Plant Protein","Pea Protein","Collagen Peptides","BCAA","EAA","Beta-Alanine","L-Citrulline","Citrulline Malate","L-Arginine","L-Glutamine","HMB","Pre-Workout","Caffeine","L-Theanine","Alpha GPC","Lion's Mane","Ashwagandha","Rhodiola Rosea","Panax Ginseng","Maca Root","Magnesium Glycinate","Magnesium Citrate","Magnesium Malate","Zinc","Zinc Bisglycinate","Iron","Calcium","Vitamin D3","Vitamin D3 + K2","Vitamin K2","Vitamin C","Vitamin B12","Vitamin B6","Vitamin A","Vitamin E","B Complex","Multivitamin","Omega-3","Fish Oil","Krill Oil","Algae Oil","Probiotics","Prebiotics","Psyllium Husk","Fiber","Electrolytes","Sodium","Potassium","Magnesium","Selenium","Iodine","Chromium","CoQ10","NAC","NMN","NR","Resveratrol","Quercetin","Berberine","Inositol","Melatonin","5-HTP","GABA","Valerian Root","Turmeric","Curcumin","Ginger","Milk Thistle","Saw Palmetto","Fenugreek","Tongkat Ali","Fadogia Agrestis","Shilajit","Boron","Glucosamine","Chondroitin","MSM","Collagen Type II","Hyaluronic Acid","Biotin","Spirulina","Chlorella","Matcha","Green Tea Extract","Caffeine Anhydrous","Cocoa Powder","Cacao","Dark Chocolate Extract","L-Carnitine","Taurine","Beetroot Powder","Sodium Bicarbonate","Digestive Enzymes","CLA","Vitamin B1","Vitamin B2","Vitamin B3","Vitamin B5","Folate","Copper","Manganese","Molybdenum","Lithium Orotate","Phosphatidylserine","Huperzine A","Bacopa Monnieri","Ginkgo Biloba","Cordyceps","Reishi","Turkey Tail","Chaga","NAD+","Spermidine","Urolithin A","PQQ","Acetyl L-Carnitine","R-Alpha Lipoic Acid","MSM","Pycnogenol","Astaxanthin","Kefir","Colostrum","Deer Antler Velvet","Turkesterone","Ecdysterone"];
 
 const DEV_PRO_MODE=true;
+const FREE_SUPPLEMENT_LIMIT=2;
+const STRIPE_PK="pk_test_51SsruuLqLTr81KltF0rvU20vqmhd2WcCJA3UcPXrajcCmT1MVf6miAq4vbpsEZYIetCU9WAr9TnnRQwZKolpIXzd00kwpcEuhp";
+const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
 const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
+const CURRENCY_OPTIONS=[
+  {code:"USD",symbol:"$",label:"USD — US Dollar"},
+  {code:"GBP",symbol:"£",label:"GBP — British Pound"},
+  {code:"EUR",symbol:"€",label:"EUR — Euro"},
+  {code:"AUD",symbol:"A$",label:"AUD — Australian Dollar"},
+  {code:"CAD",symbol:"C$",label:"CAD — Canadian Dollar"},
+  {code:"NZD",symbol:"NZ$",label:"NZD — New Zealand Dollar"},
+  {code:"CHF",symbol:"CHF",label:"CHF — Swiss Franc"},
+  {code:"JPY",symbol:"¥",label:"JPY — Japanese Yen"},
+  {code:"CNY",symbol:"¥",label:"CNY — Chinese Yuan"},
+  {code:"INR",symbol:"₹",label:"INR — Indian Rupee"},
+  {code:"SGD",symbol:"S$",label:"SGD — Singapore Dollar"},
+  {code:"HKD",symbol:"HK$",label:"HKD — Hong Kong Dollar"},
+  {code:"SEK",symbol:"kr",label:"SEK — Swedish Krona"},
+  {code:"NOK",symbol:"kr",label:"NOK — Norwegian Krone"},
+  {code:"DKK",symbol:"kr",label:"DKK — Danish Krone"},
+  {code:"PLN",symbol:"zł",label:"PLN — Polish Zloty"},
+  {code:"BRL",symbol:"R$",label:"BRL — Brazilian Real"},
+  {code:"MXN",symbol:"$",label:"MXN — Mexican Peso"},
+  {code:"ZAR",symbol:"R",label:"ZAR — South African Rand"},
+  {code:"AED",symbol:"AED",label:"AED — UAE Dirham"},
+  {code:"KRW",symbol:"₩",label:"KRW — South Korean Won"},
+  {code:"TRY",symbol:"₺",label:"TRY — Turkish Lira"},
+  {code:"THB",symbol:"฿",label:"THB — Thai Baht"},
+  {code:"MYR",symbol:"RM",label:"MYR — Malaysian Ringgit"},
+  {code:"IDR",symbol:"Rp",label:"IDR — Indonesian Rupiah"},
+  {code:"PHP",symbol:"₱",label:"PHP — Philippine Peso"},
+  {code:"VND",symbol:"₫",label:"VND — Vietnamese Dong"},
+  {code:"PKR",symbol:"₨",label:"PKR — Pakistani Rupee"},
+  {code:"BDT",symbol:"৳",label:"BDT — Bangladeshi Taka"},
+  {code:"EGP",symbol:"E£",label:"EGP — Egyptian Pound"},
+  {code:"NGN",symbol:"₦",label:"NGN — Nigerian Naira"},
+  {code:"KES",symbol:"KSh",label:"KES — Kenyan Shilling"},
+  {code:"GHS",symbol:"₵",label:"GHS — Ghanaian Cedi"},
+  {code:"MAD",symbol:"MAD",label:"MAD — Moroccan Dirham"},
+  {code:"SAR",symbol:"﷼",label:"SAR — Saudi Riyal"},
+  {code:"QAR",symbol:"QR",label:"QAR — Qatari Riyal"},
+  {code:"ILS",symbol:"₪",label:"ILS — Israeli Shekel"},
+  {code:"CZK",symbol:"Kč",label:"CZK — Czech Koruna"},
+  {code:"HUF",symbol:"Ft",label:"HUF — Hungarian Forint"},
+  {code:"RON",symbol:"lei",label:"RON — Romanian Leu"},
+  {code:"HRK",symbol:"kn",label:"HRK — Croatian Kuna"},
+  {code:"RUB",symbol:"₽",label:"RUB — Russian Ruble"},
+  {code:"UAH",symbol:"₴",label:"UAH — Ukrainian Hryvnia"},
+  {code:"CLP",symbol:"$",label:"CLP — Chilean Peso"},
+  {code:"COP",symbol:"$",label:"COP — Colombian Peso"},
+  {code:"ARS",symbol:"$",label:"ARS — Argentine Peso"},
+  {code:"PEN",symbol:"S/",label:"PEN — Peruvian Sol"},
+  {code:"OTHER",symbol:"$",label:"OTHER — Other Currency"},
+];
+function getCurrencySymbol(code){
+  if(!code)return"$";
+  const found=CURRENCY_OPTIONS.find(c=>c.code===code);
+  if(found)return found.symbol;
+  // Legacy country code fallback
+  const legacy={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥"};
+  return legacy[code]||"$";
+}
 const SPORTS=["Gym / Weightlifting","Running","Cycling","CrossFit","Swimming","Football","Rugby","Basketball","MMA / Boxing","Tennis","Triathlon","Yoga / Pilates","Other"];
 
 // ── Supplement Benefits Database ─────────────────────────────────────────────
@@ -1399,7 +1347,7 @@ function SupplementDetailSheet({supp,logs,onClose,onEdit,onReAdd,profile,readOnl
   const totalConsumed=supp.consumed||0;
   const startedDate=supp.createdAt?new Date(supp.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"Unknown";
   const dailyCostVal=supp.price&&supp.totalAmount?(supp.price/Math.floor(supp.totalAmount/supp.servingSize))*supp.servingsPerDay:null;
-  const currency=CURRENCIES[profile?.country||"Other"]||"$";
+  const currency=getCurrencySymbol(profile?.currency||profile?.country);
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)",zIndex:90,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div ref={sheetRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onClick={e=>e.stopPropagation()} style={{background:isDepleted?"#141516":"#1C1D1F",borderRadius:"20px 20px 0 0",border:"1px solid #2A2B2E",borderBottom:"none",width:"100%",maxWidth:480,padding:"14px 16px calc(16px + env(safe-area-inset-bottom,0px))",minHeight:"60vh",maxHeight:"92vh",overflowY:"auto",transition:"transform 0.15s ease",willChange:"transform"}}>
@@ -1758,7 +1706,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
           <div className="field flex-1"><span className="section-label">SERVING *</span><input type="number" className={ic("servingSize")} placeholder="eg. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
           <div className="field flex-1"><span className="section-label">/ DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="eg. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
-        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{CURRENCIES[profile?.country||"Other"]||"£"}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
+        <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{getCurrencySymbol(profile?.currency||profile?.country)}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
         <div className="field">
           <span className="section-label">DATE ADDED</span>
           <div style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box",width:"100%"}}>
@@ -1956,7 +1904,7 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,onView,
 }
 
 // ── FeedbackModal ─────────────────────────────────────────────────────────────
-function FeedbackModal({onClose,isAutoPrompt=false}){
+function FeedbackModal({onClose,isAutoPrompt=false,onCancel=null}){
   const [step,setStep]=useState("form");
   const [rating,setRating]=useState(0);
   const [hovered,setHovered]=useState(0);
@@ -1982,7 +1930,7 @@ function FeedbackModal({onClose,isAutoPrompt=false}){
         <div className="field"><span className="section-label">YOUR FEEDBACK *</span><textarea className="inp" rows={4} placeholder="Tell us what's working, what's broken, or what you'd love to see next..." value={message} onChange={e=>setMessage(e.target.value)}/>{submitted&&!message.trim()&&<div className="err-msg">⚠ Please add a message</div>}</div>
         <div className="field"><span className="section-label">YOUR NAME (OPTIONAL)</span><input className="inp" placeholder="So we know who to thank" value={name} onChange={e=>setName(e.target.value)}/></div>
         <div className="flex gap-10">
-          <button className="btn-cancel flex-1" onClick={handleClose}>{isAutoPrompt?"Maybe later":"Cancel"}</button>
+          <button className="btn-cancel flex-1" onClick={()=>{if(!isAutoPrompt&&onCancel){onCancel();}else{handleClose();}}}>{isAutoPrompt?"Maybe later":"Cancel"}</button>
           <button onClick={handleSubmit} disabled={sending} style={{flex:2,padding:12,borderRadius:10,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:13,letterSpacing:"0.5px",border:"none",background:(rating&&category&&message.trim())?"linear-gradient(135deg,#E8A830,#C88820)":"#3A3B3E",color:(rating&&category&&message.trim())?"#111213":"#7A7D85",opacity:(rating&&category&&message.trim())?1:0.5,cursor:(rating&&category&&message.trim())?"pointer":"not-allowed",transition:"all 0.2s"}}>{sending?"SENDING...":"SEND FEEDBACK"}</button>
         </div>
       </div>
@@ -2419,15 +2367,15 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
 // ── ProfileModal ──────────────────────────────────────────────────────────────
 function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
   const [editing,setEditing]=useState(false);
+  const [showFeedbackInProfile,setShowFeedbackInProfile]=useState(false);
   const [form,setForm]=useState({...profile});
   const [photoPreview,setPhotoPreview]=useState(profile?.photo||null);
   const [cropSrc,setCropSrc]=useState(null);
   const [viewingPhoto,setViewingPhoto]=useState(false);
   const [importMsg,setImportMsg]=useState(null);
   const photoInputRef=useRef(null);
-  const importRef=useRef(null);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const currency=CURRENCIES[profile?.country||"Other"]||"£";
+  const currency=getCurrencySymbol(profile?.currency||profile?.country);
   const handlePhotoChange=(e)=>{
     const file=e.target.files?.[0];
     if(!file)return;
@@ -2436,35 +2384,83 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
     reader.readAsDataURL(file);
   };
   const handleSave=()=>{onUpdate({...form,photo:photoPreview});setEditing(false);};
-  const handleExport=()=>{
-    const data={version:1,exportedAt:new Date().toISOString(),profile,supplements,logs};
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-    a.download=`suppstackd-backup-${new Date().toISOString().slice(0,10)}.json`;
-    a.click();URL.revokeObjectURL(a.href);
+  const [backupMode,setBackupMode]=useState(null);
+  const [backupCode,setBackupCode]=useState("");
+  const [restoreInput,setRestoreInput]=useState("");
+
+  const compressData=(data)=>{
+    const p={...data.profile};delete p.photo;
+    const trimmedLogs=(data.logs||[]).slice(-90).map(l=>({id:l.id,suppId:l.suppId,date:l.date||"",taken:l.taken,amount:l.amount,feel:l.feel,ts:l.ts}));
+    const trimmedSupps=(data.supplements||[]).map(s=>({id:s.id,name:s.name,type:s.type,totalAmount:s.totalAmount,consumed:s.consumed,servingSize:s.servingSize,servingsPerDay:s.servingsPerDay,unit:s.unit,cost:s.cost,createdAt:s.createdAt,lastLogged:s.lastLogged,removed:s.removed,discontinued:s.discontinued}));
+    return{v:3,ts:Date.now(),profile:p,supplements:trimmedSupps,logs:trimmedLogs};
   };
-  const handleImport=(e)=>{
-    const file=e.target.files?.[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=(ev)=>{
+
+  const BASE62="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const toBase62=(bytes)=>{
+    let num=BigInt("0x"+Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join(""));
+    let result="";
+    while(num>0n){result=BASE62[Number(num%62n)]+result;num=num/62n;}
+    return result||"0";
+  };
+  const fromBase62=(str)=>{
+    let num=0n;
+    for(const c of str){num=num*62n+BigInt(BASE62.indexOf(c));}
+    const hex=num.toString(16).padStart(2,"0");
+    const bytes=[];
+    for(let i=0;i<hex.length;i+=2)bytes.push(parseInt(hex.substr(i,2),16));
+    return new Uint8Array(bytes);
+  };
+
+  const handleGenerateBackup=async()=>{
+    try{
+      const data=compressData({profile,supplements,logs});
+      const json=JSON.stringify(data);
+      if(typeof CompressionStream!=="undefined"){
+        const stream=new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
+        const compressed=await new Response(stream).arrayBuffer();
+        const bytes=new Uint8Array(compressed);
+        const code="SS-"+toBase62(bytes).toUpperCase().slice(0,40);
+        setBackupCode(code);
+      }else{
+        const code="SS-"+btoa(unescape(encodeURIComponent(json))).replace(/[=+/]/g,"").slice(0,40);
+        setBackupCode(code);
+      }
+      setBackupMode("backup");
+    }catch(e){console.error(e);setImportMsg("⚠ Could not generate backup code.");}
+  };
+
+  const handleRestoreBackup=async()=>{
+    try{
+      const input=restoreInput.trim().toUpperCase();
+      if(!input.startsWith("SS-")){setImportMsg("⚠ Invalid code — must start with SS-");return;}
+      const encoded=input.slice(3);
+      let data;
       try{
-        const data=JSON.parse(ev.target.result);
-        if(!data.supplements||!data.logs){setImportMsg("⚠ Invalid backup file.");return;}
-        save("suppstackd_v1_supplements",data.supplements);
-        save("suppstackd_v1_logs",data.logs);
-        if(data.profile)save("suppstackd_v1_profile",data.profile);
-        setImportMsg("✓ Restored — reload the app to apply.");
-      }catch{setImportMsg("⚠ Could not read file.");}
-    };
-    reader.readAsText(file);e.target.value="";
+        const bytes=fromBase62(encoded);
+        const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+        const text=await new Response(stream).text();
+        data=JSON.parse(text);
+      }catch{
+        try{const raw=decodeURIComponent(escape(atob(encoded)));data=JSON.parse(raw);}
+        catch{setImportMsg("⚠ Invalid or corrupted backup code.");return;}
+      }
+      if(!data.supplements||!data.logs){setImportMsg("⚠ Invalid backup code.");return;}
+      save("suppstackd_v1_supplements",data.supplements);
+      save("suppstackd_v1_logs",data.logs);
+      if(data.profile)save("suppstackd_v1_profile",{...data.profile});
+      setImportMsg("✓ Restored — close and reopen the app to apply.");
+      setBackupMode(null);setRestoreInput("");
+    }catch(e){console.error(e);setImportMsg("⚠ Invalid or corrupted backup code.");}
   };
+  const MM="'Space Mono',monospace";
+  if(showFeedbackInProfile)return(<FeedbackModal onClose={onClose} onCancel={()=>setShowFeedbackInProfile(false)} isAutoPrompt={false}/>);
   return(
-    <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       {/* Fullscreen photo overlay */}
       {viewingPhoto&&(photoPreview||profile?.photo)&&(
         <div onClick={()=>setViewingPhoto(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <img src={photoPreview||profile.photo} style={{width:"85vw",height:"85vw",maxWidth:340,maxHeight:340,borderRadius:"50%",objectFit:"cover",border:"3px solid #E8A830",boxShadow:"0 0 40px rgba(232,168,48,0.3)"}} alt="Profile"/>
-          <div style={{position:"absolute",top:20,right:20,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:"0.5px"}}>TAP TO CLOSE</div>
+          <div style={{position:"absolute",top:20,right:20,color:"#7A7D85",fontFamily:MM,fontSize:10,letterSpacing:"0.5px"}}>TAP TO CLOSE</div>
         </div>
       )}
       {/* Crop editor overlay */}
@@ -2476,29 +2472,22 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
           </div>
         </div>
       )}
-      {/* Full-screen sheet */}
-      <div style={{
-        width:"100%", maxWidth:480,
-        height:"100dvh",
-        background:"#111213",
-        display:"flex", flexDirection:"column",
-        padding:"env(safe-area-inset-top,44px) 0 env(safe-area-inset-bottom,0px)",
-        overflow:"hidden",
-      }}>
+      {/* Centred modal — matches Insights style */}
+      <div className="modal-box" style={{padding:"20px",maxHeight:"88vh",overflowY:"auto"}}>
         {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 clamp(16px,5vw,24px)",marginBottom:"clamp(12px,2.5vh,20px)",flexShrink:0}}>
-          <h2 style={{fontSize:"clamp(18px,4.5vw,22px)",fontWeight:700,color:"#F0F0F0",margin:0}}>{editing?"Edit Profile":"Profile"}</h2>
-          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:22,fontWeight:700,color:"#E8A830",lineHeight:1,padding:"4px 6px"}}>✕</button>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <h2 style={{fontSize:16,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,letterSpacing:"0.5px"}}>{editing?"EDIT PROFILE":"PROFILE"}</h2>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:20,fontWeight:700,color:"#E8A830",lineHeight:1,padding:0}}>✕</button>
         </div>
 
         {/* Avatar */}
-        <div style={{display:"flex",justifyContent:"center",marginBottom:"clamp(10px,2vh,18px)",flexShrink:0}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
           <div style={{position:"relative"}}>
             <div onClick={()=>{if(!editing&&(photoPreview||profile?.photo))setViewingPhoto(true);}}
-              style={{width:"clamp(68px,16vw,96px)",height:"clamp(68px,16vw,96px)",borderRadius:"50%",background:"#1C1D1F",border:"2px solid #E8A830",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:(!editing&&(photoPreview||profile?.photo))?"zoom-in":"default"}}>
+              style={{width:80,height:80,borderRadius:"50%",background:"#1C1D1F",border:"2px solid #E8A830",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:(!editing&&(photoPreview||profile?.photo))?"zoom-in":"default"}}>
               {(photoPreview||profile?.photo)
                 ?<img src={photoPreview||profile.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
-                :<span style={{fontSize:"clamp(24px,6vw,36px)",color:"#7A7D85"}}>{profile?.name?profile.name[0].toUpperCase():"?"}</span>
+                :<span style={{fontSize:30,color:"#7A7D85"}}>{profile?.name?profile.name[0].toUpperCase():"?"}</span>
               }
             </div>
             {editing&&(
@@ -2508,13 +2497,13 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
           </div>
         </div>
 
-        {/* Scrollable content — only the inner area scrolls if truly needed */}
-        <div style={{flex:1,overflowY:"auto",padding:"0 clamp(14px,5vw,24px)",display:"flex",flexDirection:"column",gap:"clamp(8px,1.5vh,12px)"}}>
+        {/* Content */}
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {!editing?(
             <>
               {/* Info rows */}
               <div style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:12,padding:"clamp(10px,2.5vw,16px) clamp(12px,3vw,18px)"}}>
-                {[{label:"NAME",value:profile?.name||"Not set"},{label:"EMAIL",value:profile?.email||"Not set"},{label:"AGE",value:profile?.age||"Not set"},{label:"COUNTRY",value:profile?.country||"Not set"},{label:"CURRENCY",value:currency}].map((row,i,arr)=>(
+                {[{label:"NAME",value:profile?.name||"Not set"},{label:"EMAIL",value:profile?.email||"Not set"},{label:"AGE",value:profile?.age||"Not set"},{label:"CURRENCY",value:(()=>{const c=CURRENCY_OPTIONS.find(x=>x.code===(profile?.currency||profile?.country));if(!c)return profile?.country||"Not set";const sym=c.symbol.replace(/^[A-Za-z]+(?=\$)/,"").replace(/^[A-Za-z]+(?=£)/,"").replace(/^[A-Za-z]+(?=€)/,"");return `${sym} ${c.code}`;})()}].map((row,i,arr)=>(
                   <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:"clamp(6px,1.5vh,10px)",marginBottom:"clamp(6px,1.5vh,10px)",borderBottom:i!==arr.length-1?"1px solid #2A2B2E":"none"}}>
                     <span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(9px,2.2vw,11px)",letterSpacing:"0.8px"}}>{row.label}</span>
                     <span style={{color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:"clamp(11px,2.8vw,13px)",fontWeight:600}}>{row.value}</span>
@@ -2537,19 +2526,46 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 
               {/* Action buttons */}
               <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>setEditing(true)} style={{flex:1,padding:"clamp(8px,2vh,11px)",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer"}}>EDIT PROFILE</button>
-                <button onClick={()=>{onClose();setTimeout(()=>window._openFeedback&&window._openFeedback(),50);}} style={{flex:1,padding:"clamp(8px,2vh,11px)",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer"}}>FEEDBACK</button>
+                <button onClick={()=>setEditing(true)} style={{flex:2,padding:"clamp(8px,2vh,11px)",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontSize:"clamp(10px,2.5vw,12px)",fontWeight:700,cursor:"pointer",letterSpacing:"0.5px"}}>EDIT PROFILE</button>
+                <button onClick={()=>setShowFeedbackInProfile(true)} style={{flex:1,padding:"clamp(8px,2vh,11px)",background:"transparent",border:"1px solid rgba(91,173,114,0.4)",borderRadius:9,color:"#5BAD72",fontFamily:MM,fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer"}}>FEEDBACK</button>
               </div>
 
               {/* Data & Backup */}
               <div style={{background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:10,padding:"clamp(10px,2.5vw,14px) clamp(12px,3vw,16px)"}}>
-                <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(8px,2vw,10px)",letterSpacing:"1.5px",margin:"0 0 10px"}}>DATA & BACKUP</p>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={handleExport} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬇ EXPORT</button>
-                  <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬆ IMPORT</button>
-                </div>
-                {importMsg&&<p style={{color:importMsg.startsWith("✓")?"#5BAD72":"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:10,margin:"8px 0 0",lineHeight:1.5}}>{importMsg}</p>}
-                <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport}/>
+                <p style={{color:"#7A7D85",fontFamily:MM,fontSize:"clamp(8px,2vw,10px)",letterSpacing:"1.5px",margin:"0 0 10px"}}>DATA & BACKUP</p>
+                {!backupMode?(
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>handleGenerateBackup()} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬇ BACKUP</button>
+                    <button onClick={()=>setBackupMode("restore")} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬆ RESTORE</button>
+                  </div>
+                ):backupMode==="backup"?(
+                  <div>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Screenshot or copy this code. Use it to restore your full stack on any device.</p>
+                    <div style={{background:"#0A0A0A",border:"1px solid rgba(232,168,48,0.3)",borderRadius:10,padding:"14px 12px",marginBottom:10,textAlign:"center"}}>
+                      <div style={{color:"#4A4B4F",fontFamily:MM,fontSize:8,letterSpacing:"1px",marginBottom:6}}>YOUR BACKUP CODE</div>
+                      <div style={{color:"#E8A830",fontFamily:MM,fontSize:13,fontWeight:700,letterSpacing:"2px",wordBreak:"break-all",lineHeight:1.8}}>{backupCode}</div>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>{navigator.clipboard?.writeText(backupCode).then(()=>setImportMsg("✓ Copied to clipboard!")).catch(()=>setImportMsg("⚠ Copy failed — screenshot the code instead."));}} style={{flex:2,padding:"9px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>COPY CODE</button>
+                      <button onClick={()=>{setBackupMode(null);setBackupCode("");setImportMsg(null);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>DONE</button>
+                    </div>
+                  </div>
+                ):(
+                  <div>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Enter your backup code to restore your supplements, logs and profile.</p>
+                    <input
+                      value={restoreInput}
+                      onChange={e=>setRestoreInput(e.target.value.toUpperCase())}
+                      placeholder="SS-XXXXXXXXXXXXXXXX"
+                      style={{width:"100%",background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:"10px 12px",color:"#E8A830",fontFamily:MM,fontSize:12,letterSpacing:"2px",outline:"none",marginBottom:8,boxSizing:"border-box",textAlign:"center"}}
+                    />
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={handleRestoreBackup} style={{flex:2,padding:"9px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>RESTORE DATA</button>
+                      <button onClick={()=>{setBackupMode(null);setRestoreInput("");setImportMsg(null);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>CANCEL</button>
+                    </div>
+                  </div>
+                )}
+                {importMsg&&<p style={{color:importMsg.startsWith("✓")?"#5BAD72":"#C0392B",fontFamily:MM,fontSize:10,margin:"8px 0 0",lineHeight:1.5}}>{importMsg}</p>}
               </div>
             </>
           ):(
@@ -2557,7 +2573,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
               <div className="field"><span className="section-label">FIRST NAME</span><input className="inp" value={form.name||""} onChange={e=>set("name",e.target.value)}/></div>
               <div className="field"><span className="section-label">EMAIL</span><input className="inp" type="email" value={form.email||""} onChange={e=>set("email",e.target.value)}/></div>
               <div className="field"><span className="section-label">AGE</span><input className="inp" type="number" value={form.age||""} onChange={e=>set("age",e.target.value)}/></div>
-              <div className="field"><span className="section-label">COUNTRY</span><select className="inp" value={form.country||""} onChange={e=>set("country",e.target.value)}><option value="">Select country</option>{COUNTRIES.map(c=><option key={c} value={c.split(" — ")[0]}>{c}</option>)}</select></div>
+              <div className="field"><span className="section-label">CURRENCY</span><select className="inp" value={form.currency||form.country||""} onChange={e=>set("currency",e.target.value)}><option value="">Select currency</option>{CURRENCY_OPTIONS.map(c=><option key={c.code} value={c.code}>{c.label}</option>)}</select></div>
               <div style={{display:"flex",gap:10,marginTop:4}}>
                 <button className="btn-cancel flex-1" onClick={()=>{setForm({...profile});setPhotoPreview(profile?.photo||null);setEditing(false);}}>Cancel</button>
                 <button className="btn-primary" style={{flex:2}} onClick={handleSave}>SAVE CHANGES</button>
@@ -2574,7 +2590,9 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 function InsightsModal({onClose,logs,supplements,isPro}){
   const [tab,setTab]=React.useState("feel");
   const [debriefText,setDebriefText]=React.useState(null);
+  const [debriefPoints,setDebriefPoints]=React.useState([]);
   const [debriefLoading,setDebriefLoading]=React.useState(false);
+  const [debriefExpanded,setDebriefExpanded]=React.useState(false);
   const [vaultSearch,setVaultSearch]=React.useState("");
   const [vaultSelected,setVaultSelected]=React.useState(null);
 
@@ -2643,33 +2661,125 @@ function InsightsModal({onClose,logs,supplements,isPro}){
     return acc;
   },{});
 
-  // ── AI Weekly Debrief ──────────────────────────────────────────────────────
-  const generateDebrief=async()=>{
+  // ── Weekly Debrief — smart client-side template engine ───────────────────
+  // Supplement → metric support map
+  const SUPP_METRIC_MAP={
+    energy:["creatine","caffeine","b complex","vitamin b12","iron","cordyceps","rhodiola rosea","coq10","nmn","nr","maca","panax ginseng","ashwagandha","alpha gpc","l-carnitine","shilajit","vitamin d3","vitamin d"],
+    recovery:["omega-3","fish oil","turmeric","curcumin","vitamin c","glutamine","l-glutamine","taurine","magnesium","zinc","collagen","collagen peptides","hmb","bcaa","eaa","krill oil"],
+    mood:["ashwagandha","rhodiola rosea","5-htp","inositol","l-theanine","lions mane","vitamin d3","vitamin d","magnesium","probiotics","panax ginseng","reishi"],
+    sleep:["magnesium","magnesium glycinate","melatonin","l-theanine","reishi","5-htp","inositol","ashwagandha","valerian root","gaba"],
+  };
+
+  const generateDebrief=()=>{
     setDebriefLoading(true);
-    const suppNames=supplements.filter(s=>!s.removed).map(s=>s.name).join(", ");
-    const feelAvgs=[
-      {k:"energy",v:avgScore("energy")},
-      {k:"recovery",v:avgScore("recovery")},
-      {k:"mood",v:avgScore("mood")},
-      {k:"sleep",v:avgScore("sleep")}
-    ].filter(x=>x.v).map(x=>`${x.k}: ${x.v}/5`).join(", ");
-    const prompt=`You are a supplement tracking assistant writing a weekly summary for an athlete. Be warm, direct, and honest. 3-4 sentences max. No bullet points. No headers.\n\nThis week:\n- Days logged: ${daysLogged}/7 (missed: ${daysMissed})\n- Current streak: ${streak} days\n- 30-day consistency: ${adherencePct}%\n- Supplements tracked: ${suppNames||"various"}\n- Feel score averages: ${feelAvgs||"not enough data yet"}\n- Typical log time: ${timeLabel||"varies"}\n- Full-stack days avg feel: ${fullAvg||"n/a"} vs partial days: ${partialAvg||"n/a"}\n\nWrite the summary now. Lead with consistency this week, reference feel scores if available, note log timing briefly, close with one forward-looking sentence. Never use the word "data". Stay under 80 words. Make it feel personal, not generic.`;
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:200,
-          messages:[{role:"user",content:prompt}]
-        })
-      });
-      const json=await res.json();
-      setDebriefText(json.content?.[0]?.text||"Couldn't generate summary — try again shortly.");
-    }catch{
-      setDebriefText("Connection error. Check your internet and try again.");
-    }
-    setDebriefLoading(false);
+    setDebriefExpanded(false);
+    setTimeout(()=>{
+      try{
+        const activeSupps=supplements.filter(s=>!s.removed);
+        const suppNames=activeSupps.map(s=>s.name);
+        const suppCount=suppNames.length;
+        const energy=parseFloat(avgScore("energy")||0);
+        const recovery=parseFloat(avgScore("recovery")||0);
+        const mood=parseFloat(avgScore("mood")||0);
+        const sleep=parseFloat(avgScore("sleep")||0);
+        const hasFeel=energy>0||recovery>0||mood>0||sleep>0;
+        const overallFeel=hasFeel?([energy,recovery,mood,sleep].filter(v=>v>0).reduce((a,b)=>a+b,0)/[energy,recovery,mood,sleep].filter(v=>v>0).length):0;
+        const metrics=[{k:"energy",v:energy},{k:"recovery",v:recovery},{k:"mood",v:mood},{k:"sleep",v:sleep}].filter(x=>x.v>0);
+        const strongestMetric=[...metrics].sort((a,b)=>b.v-a.v)[0];
+        // All metrics below 4 are "needs attention"
+        const lowMetrics=metrics.filter(m=>m.v<4).sort((a,b)=>a.v-b.v);
+        const weakestMetric=lowMetrics[0]||null;
+        const allStrong=metrics.length>0&&metrics.every(m=>m.v>=4);
+        const points=[];
+
+        // Point 1: This week consistency
+        if(daysLogged===7)points.push(`• Perfect week — all 7 days logged${streak>3?`, streak now at ${streak} days`:""}.`);
+        else if(daysLogged>=5)points.push(`• ${daysLogged}/7 days logged${streak>3?`, ${streak}-day streak`:""}. ${daysMissed===1?"One missed day — no big deal.":"A couple of gaps to close next week."}`);
+        else if(daysLogged>=3)points.push(`• ${daysLogged}/7 days logged — decent effort, ${daysMissed} gaps to close next week.`);
+        else points.push(`• ${daysLogged||"No"} day${daysLogged!==1?"s":""} logged this week. Getting the daily habit back will make a real difference.`);
+
+        // Point 2: Feel scores — threshold is 4.0
+        if(hasFeel){
+          if(allStrong){
+            points.push(`• Feel scores are all at 4 or above${strongestMetric?` — ${strongestMetric.k} leading at ${strongestMetric.v}/5`:""}. Solid across the board.`);
+          }else if(overallFeel>=3){
+            points.push(`• Feel scores are moderate${weakestMetric?` — ${weakestMetric.k} is your lowest at ${weakestMetric.v}/5, which is below the 4.0 target`:""}. There's room to push higher.`);
+          }else{
+            points.push(`• Feel scores need attention${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is the main area to address`:""}. Consistent logging will help identify the pattern.`);
+          }
+        }else{
+          points.push(`• No feel scores logged yet — rate your energy, recovery, mood and sleep each day to unlock trend insights.`);
+        }
+
+        // Point 3: Full stack vs partial
+        if(fullAvg&&partialAvg&&parseFloat(fullAvg)>parseFloat(partialAvg)){
+          points.push(`• Full stack days average ${fullAvg}/5 vs ${partialAvg}/5 on partial days. That gap makes the case for staying consistent.`);
+        }else if(timeLabel&&suppCount>0){
+          points.push(`• Most logs happening ${timeLabel.toLowerCase()}${suppCount>1?` across ${suppCount} supplements`:""}${timeLabel.toLowerCase().includes("morning")?" — a solid habit to lock in":""}.`);
+        }
+
+        // Point 4: 30-day score — only after 25+ days
+        const firstLogTs=logs.length?Math.min(...logs.map(l=>{try{return new Date(l.date||l.ts).getTime();}catch{return Date.now();}})):Date.now();
+        const daysSinceFirst=Math.floor((Date.now()-firstLogTs)/(1000*60*60*24));
+        if(daysSinceFirst>=25){
+          if(adherencePct>=80)points.push(`• 30-day streak score: ${adherencePct}% — elite level. That consistency is what makes the insights here meaningful.`);
+          else if(adherencePct>=60)points.push(`• 30-day streak score: ${adherencePct}% — solid base. Push above 80% and the patterns will get sharper.`);
+          else points.push(`• 30-day streak score: ${adherencePct}% — room to build. Adding 2–3 more logging days per week will move this quickly.`);
+        }
+
+        // Point 5: Stack + metric suggestions — any metric under 4.0
+        if(hasFeel&&weakestMetric){
+          const wk=weakestMetric.k;
+          const relevantSupps=SUPP_METRIC_MAP[wk]||[];
+          const userHas=suppNames.filter(n=>relevantSupps.some(r=>n.toLowerCase().includes(r)||r.includes(n.toLowerCase())));
+          const userMissing=relevantSupps.filter(r=>!suppNames.some(n=>n.toLowerCase().includes(r)||r.includes(n.toLowerCase()))).slice(0,2);
+          if(userHas.length>0){
+            points.push(`• ${wk.charAt(0).toUpperCase()+wk.slice(1)} is below 4.0 — you have ${userHas[0]} in your stack which research links to ${wk}. Make sure you're not skipping it.`);
+          }else if(userMissing.length>0){
+            const sug=userMissing.map(s=>s.split(" ").map(w=>w[0].toUpperCase()+w.slice(1)).join(" ")).join(" or ");
+            points.push(`• ${wk.charAt(0).toUpperCase()+wk.slice(1)} is at ${weakestMetric.v}/5. Research links ${sug} to ${wk} support — worth exploring in The Vault.`);
+          }
+        }
+
+        // Point 6: Forward look — maintain if all strong, push if not
+        if(allStrong&&hasFeel){
+          points.push(`• All scores at target. Keep doing what you're doing — and consider The Vault if you want to optimise further.`);
+        }else if(daysLogged<5){
+          points.push(`• Next week: aim for 5+ logged days — small step, real impact on your trends.`);
+        }else if(!hasFeel){
+          points.push(`• Start logging feel scores tomorrow — the single biggest unlock for meaningful insights here.`);
+        }else{
+          points.push(`• Keep building. The picture gets sharper every week you log consistently.`);
+        }
+
+        // ── Recommendations section (expanded view only) ──────────────────
+        // Build RECOMMENDED list for any metric below 4
+        const recommendations=[];
+        if(hasFeel){
+          lowMetrics.forEach(m=>{
+            const rel=SUPP_METRIC_MAP[m.k]||[];
+            const missing=rel.filter(r=>!suppNames.some(n=>n.toLowerCase().includes(r)||r.includes(n.toLowerCase()))).slice(0,2);
+            const inStack=suppNames.filter(n=>rel.some(r=>n.toLowerCase().includes(r)||r.includes(n.toLowerCase()))).slice(0,1);
+            missing.forEach(r=>{
+              const name=r.split(" ").map(w=>w[0].toUpperCase()+w.slice(1)).join(" ");
+              recommendations.push({metric:m.k,name,inStack:false,score:m.v});
+            });
+            inStack.forEach(n=>{
+              recommendations.push({metric:m.k,name:n,inStack:true,score:m.v});
+            });
+          });
+        }
+
+        // Store recommendations separately in the text for expanded view
+        const recoStr=recommendations.length>0?("__RECO__"+JSON.stringify(recommendations)):"";
+        setDebriefPoints(points);
+        setDebriefText(points.join("||")+recoStr);
+      }catch(e){
+        setDebriefPoints(["Something went wrong. Tap regenerate to try again."]);
+        setDebriefText("error");
+      }
+      setDebriefLoading(false);
+    },600);
   };
 
   // ── Shared styles ──────────────────────────────────────────────────────────
@@ -2683,8 +2793,8 @@ function InsightsModal({onClose,logs,supplements,isPro}){
     cursor:"pointer",
     fontFamily:MM,
     fontWeight:700,
-    fontSize:"8.5px",
-    letterSpacing:"0.4px",
+    fontSize:"11px",
+    letterSpacing:"0.5px",
     textAlign:"center",
     background:tab===t?"rgba(232,168,48,0.18)":"transparent",
     color:tab===t?"#E8A830":"#4A4B4F",
@@ -2739,10 +2849,17 @@ function InsightsModal({onClose,logs,supplements,isPro}){
     return(
       <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)setVaultSelected(null);}}>
         <div className="modal-box" style={{padding:"20px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-            <button onClick={()=>setVaultSelected(null)} style={{background:"transparent",border:"none",cursor:"pointer",color:"#E8A830",fontFamily:MM,fontSize:10,fontWeight:700,padding:0,flexShrink:0,letterSpacing:"0.5px"}}>← VAULT</button>
-            <h2 style={{fontSize:13,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,flex:1,letterSpacing:"0.3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vaultSelected.name.toUpperCase()}</h2>
-            <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,fontWeight:700,color:"#4A4B4F",lineHeight:1,padding:0,flexShrink:0}}>✕</button>
+          {/* Back row */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <button onClick={()=>setVaultSelected(null)} style={{background:"transparent",border:"none",cursor:"pointer",color:"#E8A830",fontFamily:MM,fontSize:13,fontWeight:700,padding:"6px 0",display:"flex",alignItems:"center",gap:6,letterSpacing:"0.5px"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A830" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              VAULT
+            </button>
+            <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:18,fontWeight:700,color:"#4A4B4F",lineHeight:1,padding:0}}>✕</button>
+          </div>
+          {/* Supplement name — centred */}
+          <div style={{textAlign:"center",marginBottom:18,padding:"0 8px"}}>
+            <h2 style={{fontSize:16,fontWeight:700,color:"#F0F0F0",margin:0,fontFamily:MM,letterSpacing:"0.5px",lineHeight:1.3}}>{vaultSelected.name.toUpperCase()}</h2>
           </div>
 
           <div style={{...card(),padding:"14px",marginBottom:10}}>
@@ -2759,7 +2876,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
             <div style={{...card(),padding:"14px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <p style={label()}>TIMING WINDOW</p>
-                <span style={{color:"#E8A830",fontFamily:MM,fontSize:9,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"2px 8px",flexShrink:0,marginLeft:10}}>{vaultSelected.timing.window}</span>
+                <span style={{color:"#E8A830",fontFamily:MM,fontSize:12,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:6,padding:"4px 10px",flexShrink:0,marginLeft:10}}>{vaultSelected.timing.window}</span>
               </div>
               <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7}}>{vaultSelected.timing.tip}</p>
             </div>
@@ -2843,7 +2960,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                 <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>30-DAY SCORE</div>
               </div>
               <div style={{...card(),padding:"16px 12px",textAlign:"center"}}>
-                <div style={{fontSize:28,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1}}>{streak}</div>
+                <div style={{fontSize:28,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1}}>{Math.min(streak,30)}{streak>30?"+":" "}</div>
                 <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:5,letterSpacing:"1px"}}>DAY STREAK</div>
               </div>
             </div>
@@ -2879,25 +2996,27 @@ function InsightsModal({onClose,logs,supplements,isPro}){
         {/* ── TIMING TAB ───────────────────────────────────────────────────── */}
         {tab==="timing"&&(
           <div>
-            <p style={{...label(),marginBottom:14}}>RESEARCH-BASED WINDOWS — YOUR STACK</p>
+            <p style={{...label(),marginBottom:10}}>RESEARCH-BASED WINDOWS — YOUR STACK</p>
             {timingEntries.length===0?(
-              <div style={{textAlign:"center",padding:"32px 0 24px"}}>
+              <div style={{textAlign:"center",padding:"24px 0 16px"}}>
                 <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:11,lineHeight:1.8,margin:0}}>Add supplements to your stack<br/>to see timing windows here.</p>
               </div>
             ):(
               <div>
-                {timingEntries.map((e,i)=>(
-                  <div key={i} style={{paddingBottom:12,marginBottom:12,borderBottom:i<timingEntries.length-1?"1px solid #1C1D1F":"none"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5,gap:8}}>
-                      <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,fontWeight:700,flex:1}}>{e.name}</span>
-                      <span style={{color:"#E8A830",fontFamily:MM,fontSize:8,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"3px 7px",flexShrink:0,whiteSpace:"nowrap"}}>{e.timing.window}</span>
+                <div style={{overflowY:"auto",maxHeight:"44vh"}}>
+                  {timingEntries.map((e,i)=>(
+                    <div key={i} style={{paddingBottom:8,marginBottom:8,borderBottom:i<timingEntries.length-1?"1px solid #1C1D1F":"none"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3,gap:8}}>
+                        <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,fontWeight:700,flex:1,lineHeight:1.2}}>{e.name}</span>
+                        <span style={{color:"#E8A830",fontFamily:MM,fontSize:9,fontWeight:700,background:"rgba(232,168,48,0.1)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:5,padding:"2px 7px",flexShrink:0,whiteSpace:"nowrap"}}>{e.timing.window}</span>
+                      </div>
+                      <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:0,lineHeight:1.55}}>{e.timing.tip}</p>
                     </div>
-                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.65}}>{e.timing.tip}</p>
-                  </div>
-                ))}
-                <div style={{background:"rgba(91,173,114,0.05)",border:"1px solid rgba(91,173,114,0.15)",borderRadius:9,padding:"11px 13px",marginTop:4}}>
-                  <p style={{color:"#5BAD72",fontFamily:MM,fontSize:9,fontWeight:700,margin:"0 0 4px",letterSpacing:"0.5px"}}>NOTE</p>
-                  <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:0,lineHeight:1.65}}>These windows reflect what published research commonly examines. Consistency matters more than perfect timing for most supplements.</p>
+                  ))}
+                </div>
+                <div style={{background:"rgba(91,173,114,0.05)",border:"1px solid rgba(91,173,114,0.15)",borderRadius:8,padding:"8px 11px",marginTop:8}}>
+                  <p style={{color:"#5BAD72",fontFamily:MM,fontSize:8,fontWeight:700,margin:"0 0 3px",letterSpacing:"0.5px"}}>NOTE</p>
+                  <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:0,lineHeight:1.55}}>These windows reflect what published research commonly examines. Consistency matters more than precise timing for most supplements.</p>
                 </div>
               </div>
             )}
@@ -2908,18 +3027,19 @@ function InsightsModal({onClose,logs,supplements,isPro}){
         {tab==="debrief"&&(
           <div>
             {/* Stat row */}
+            <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 8px",letterSpacing:"1px"}}>THIS WEEK — 7 DAYS</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
               <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
-                <div style={{fontSize:24,fontWeight:800,color:"#5BAD72",fontFamily:MM,lineHeight:1}}>{daysLogged}</div>
-                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>LOGGED</div>
+                <div style={{fontSize:24,fontWeight:800,color:"#5BAD72",fontFamily:MM,lineHeight:1}}>{daysLogged}/7</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>DAYS LOGGED</div>
               </div>
               <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
                 <div style={{fontSize:24,fontWeight:800,color:daysMissed>3?"#C0392B":"#E8A830",fontFamily:MM,lineHeight:1}}>{daysMissed}</div>
-                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>MISSED</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>DAYS MISSED</div>
               </div>
               <div style={{...card(),padding:"12px 8px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1,marginTop:4}}>{timeLabel?timeLabel.split(" ")[0].slice(0,5).toUpperCase():"—"}</div>
-                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>LOG TIME</div>
+                <div style={{fontSize:13,fontWeight:800,color:"#E8A830",fontFamily:MM,lineHeight:1,marginTop:2}}>{timeLabel||"—"}</div>
+                <div style={{fontSize:8,color:"#7A7D85",fontFamily:MM,marginTop:4,letterSpacing:"0.8px"}}>USUAL LOG TIME</div>
               </div>
             </div>
 
@@ -2942,17 +3062,61 @@ function InsightsModal({onClose,logs,supplements,isPro}){
               </div>
             )}
 
-            {/* AI output box */}
-            <div style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:10,padding:"14px",marginBottom:10,minHeight:80,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {debriefLoading?(
-                <div style={{textAlign:"center",width:"100%"}}>
-                  <div style={{color:"#E8A830",fontFamily:MM,fontSize:10,letterSpacing:"1px",marginBottom:6}}>GENERATING...</div>
-                  <div style={{width:40,height:2,background:"rgba(232,168,48,0.3)",borderRadius:2,margin:"0 auto",animation:"none"}}/>
+            {/* Debrief output — dot points, tap to expand */}
+            {debriefExpanded&&debriefPoints.length>0&&(()=>{
+              // Parse recommendations from debriefText
+              const recoMatch=debriefText&&debriefText.includes("__RECO__")?JSON.parse(debriefText.split("__RECO__")[1]):[];
+              return(
+              <div onClick={()=>setDebriefExpanded(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+                <div style={{background:"#161718",border:"1px solid #2A2B2E",borderRadius:16,padding:"20px",width:"100%",maxWidth:480,maxHeight:"78vh",overflowY:"auto",boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}} onClick={e=>e.stopPropagation()}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+                    <p style={{color:"#E8A830",fontFamily:MM,fontSize:12,fontWeight:700,margin:0,letterSpacing:"0.5px"}}>WEEKLY DEBRIEF</p>
+                    <button onClick={()=>setDebriefExpanded(false)} style={{background:"transparent",border:"none",color:"#7A7D85",cursor:"pointer",fontSize:18,fontWeight:700,padding:0,lineHeight:1}}>✕</button>
+                  </div>
+                  {debriefPoints.map((pt,i)=>(
+                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:12,paddingBottom:12,borderBottom:i<debriefPoints.length-1?"1px solid #1C1D1F":"none"}}>
+                      <span style={{color:"#E8A830",fontSize:14,lineHeight:"1.6",flexShrink:0,marginTop:1}}>•</span>
+                      <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:12,margin:0,lineHeight:1.75}}>{pt.replace(/^•\s*/,"")}</p>
+                    </div>
+                  ))}
+                  {recoMatch.length>0&&(
+                    <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid #2A2B2E"}}>
+                      <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",letterSpacing:"1px"}}>RECOMMENDED FOR YOUR STACK</p>
+                      {recoMatch.map((r,i)=>(
+                        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<recoMatch.length-1?"1px solid #1C1D1F":"none"}}>
+                          <div>
+                            <span style={{color:r.inStack?"#5BAD72":"#F0F0F0",fontFamily:MM,fontSize:11,fontWeight:700}}>{r.name}</span>
+                            {r.inStack&&<span style={{color:"#5BAD72",fontFamily:MM,fontSize:9,marginLeft:6}}>IN YOUR STACK</span>}
+                          </div>
+                          <span style={{color:"#7A7D85",fontFamily:MM,fontSize:9,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.2)",borderRadius:4,padding:"2px 7px"}}>{r.metric.toUpperCase()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,margin:"14px 0 0",textAlign:"center"}}>TAP ANYWHERE TO CLOSE</p>
                 </div>
-              ):debriefText?(
-                <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.85,width:"100%"}}>{debriefText}</p>
+              </div>
+              );
+            })()}
+            <div onClick={()=>{if(debriefPoints.length>0)setDebriefExpanded(true);}} style={{background:"rgba(232,168,48,0.05)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:10,padding:"12px 14px",marginBottom:10,minHeight:88,cursor:debriefPoints.length>0?"pointer":"default"}}>
+              {debriefLoading?(
+                <div style={{textAlign:"center",padding:"12px 0"}}>
+                  <div style={{color:"#E8A830",fontFamily:MM,fontSize:10,letterSpacing:"1px"}}>GENERATING...</div>
+                </div>
+              ):debriefPoints.length>0?(
+                <div>
+                  {debriefPoints.slice(0,3).map((pt,i)=>(
+                    <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:i<2?8:0}}>
+                      <span style={{color:"#E8A830",fontSize:13,lineHeight:"1.55",flexShrink:0}}>•</span>
+                      <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:11,margin:0,lineHeight:1.6}}>{pt.replace(/^•\s*/,"")}</p>
+                    </div>
+                  ))}
+                  {debriefPoints.length>3&&(
+                    <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,margin:"8px 0 0 21px",letterSpacing:"0.5px"}}>+ {debriefPoints.length-3} more — tap to expand</p>
+                  )}
+                </div>
               ):(
-                <p style={{color:"#3A3B3E",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7,textAlign:"center",fontStyle:"italic"}}>Your personalised weekly summary<br/>will appear here.</p>
+                <p style={{color:"#3A3B3E",fontFamily:MM,fontSize:10,margin:0,lineHeight:1.7,textAlign:"center",fontStyle:"italic",paddingTop:8}}>Your personalised weekly summary<br/>will appear here.</p>
               )}
             </div>
 
@@ -3019,12 +3183,12 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                         }}
                       >
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,fontWeight:700,margin:"0 0 2px"}}>{e.name}</p>
-                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.benefits[0].slice(0,46)}{e.benefits[0].length>46?"…":""}</p>
+                          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:12,fontWeight:700,margin:"0 0 3px"}}>{e.name}</p>
+                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:10,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.benefits[0].slice(0,46)}{e.benefits[0].length>46?"…":""}</p>
                         </div>
                         {e.timing&&(
-                          <span style={{color:"#E8A830",fontFamily:MM,fontSize:8,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"2px 6px",whiteSpace:"nowrap",flexShrink:0}}>
-                            {e.timing.window.split(" ")[0]}
+                          <span style={{color:"#E8A830",fontFamily:MM,fontSize:11,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"3px 7px",whiteSpace:"nowrap",flexShrink:0}}>
+                            {e.timing.window.split(',')[0].split(' or ')[0].split(' and ')[0].replace('30–60','Pre-workout').replace('20–30','Pre-workout').replace('60–90','Pre-exercise').replace('2–3','Pre-exercise')}
                           </span>
                         )}
                       </button>
@@ -3043,7 +3207,7 @@ function InsightsModal({onClose,logs,supplements,isPro}){
 
 // ── DailyCostModal ────────────────────────────────────────────────────────────
 function DailyCostModal({supplements,profile,onClose}){
-  const currency=CURRENCIES[profile?.country||"GB"]||"£";
+  const currency=getCurrencySymbol(profile?.currency||profile?.country);
 
   const items=supplements.map(s=>{
     if(!s.price||!s.totalAmount||!s.servingSize||!s.servingsPerDay)return null;
@@ -3167,6 +3331,9 @@ function App(){
   const [showBatchLog,setShowBatchLog]=useState(false);
   const [showProfile,setShowProfile]=useState(false);
   const [showInsights,setShowInsights]=useState(false);
+  const [showUpgrade,setShowUpgrade]=useState(false);
+  const [stripeData,setStripeData]=useState(()=>load(STRIPE_CUSTOMER_KEY,null));
+  const [stripeVerified,setStripeVerified]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -3193,6 +3360,70 @@ function App(){
       if(prof)setProfile(prof);
     }).catch(()=>{});
   },[]);
+
+  // ── Stripe verification on load ───────────────────────────────────────────
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const sessionId=params.get("session_id");
+    const upgraded=params.get("upgraded");
+    const cancelled=params.get("cancelled");
+    if(sessionId||upgraded||cancelled){
+      window.history.replaceState({},"",window.location.pathname);
+    }
+    if(cancelled){setStripeVerified(true);return;}
+    const verify=async(sId,cId)=>{
+      try{
+        const res=await fetch("/.netlify/functions/verify-session",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({sessionId:sId||null,customerId:cId||null})
+        });
+        const data=await res.json();
+        if(data.isPro){
+          const stripeRecord={customerId:data.customerId,subscriptionId:data.subscriptionId,plan:data.plan,verifiedAt:new Date().toISOString()};
+          setStripeData(stripeRecord);
+          save(STRIPE_CUSTOMER_KEY,stripeRecord);
+          setProfile(p=>{
+            if(!p)return p;
+            const updated={...p,plan:"pro"};
+            save(PROFILE_KEY,updated);
+            return updated;
+          });
+        }else{
+          setProfile(p=>{
+            if(!p||p.plan!=="pro")return p;
+            const updated={...p,plan:"free"};
+            save(PROFILE_KEY,updated);
+            return updated;
+          });
+        }
+        setStripeVerified(true);
+      }catch(e){
+        console.warn("Stripe verify failed — defaulting to stored plan",e);
+        setStripeVerified(true);
+      }
+    };
+    if(sessionId){verify(sessionId,null);}
+    else if(stripeData?.customerId){verify(null,stripeData.customerId);}
+    else{setStripeVerified(true);}
+  },[]);
+
+  // ── Stripe checkout launcher ───────────────────────────────────────────────
+  const launchCheckout=async(plan="monthly")=>{
+    try{
+      const res=await fetch("/.netlify/functions/create-checkout",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({plan})
+      });
+      const data=await res.json();
+      if(data.url)window.location.href=data.url;
+      else alert("Could not start checkout. Please try again.");
+    }catch(e){
+      console.error("Checkout error:",e);
+      alert("Something went wrong. Please try again.");
+    }
+  };
 
   const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
   useEffect(()=>{window._openFeedback=openManualFeedback;},[]);
@@ -3397,7 +3628,7 @@ function App(){
               {[
                 {label:"TRACKING",value:supplements.length,color:"#F0F0F0",onClick:null},
                 {label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85",onClick:()=>setFilter(f=>f==="urgent"?"all":"urgent")},
-                ...(dailyCost>0?[{label:"DAILY COST",value:`${CURRENCIES[profile?.country||"GB"]||"£"}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:()=>setShowCostBreakdown(true)}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
+                ...(dailyCost>0?[{label:"DAILY COST",value:`${getCurrencySymbol(profile?.currency||profile?.country)}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:()=>setShowCostBreakdown(true)}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
               ].map(s=>(
                 <div key={s.label} onClick={s.onClick||undefined} style={{flex:1,background:s.label==="URGENT"&&filter==="urgent"?"rgba(192,57,43,0.12)":s.label==="DAILY COST"&&dailyCost>0?"rgba(232,168,48,0.06)":"#1C1D1F",border:s.label==="URGENT"&&filter==="urgent"?"1px solid rgba(192,57,43,0.4)":s.label==="DAILY COST"&&dailyCost>0?"1px solid rgba(232,168,48,0.3)":"1px solid #2A2B2E",borderRadius:8,padding:"5px 4px",textAlign:"center",cursor:s.onClick?"pointer":"default",transition:"all 0.15s"}}>
                   <div style={{fontSize:s.label==="DAILY COST"&&dailyCost>0?11:14,fontWeight:800,color:s.color,fontFamily:"'Space Mono',monospace",lineHeight:1.2}}>{s.value}</div>
