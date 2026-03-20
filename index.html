@@ -2441,25 +2441,70 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
   const [backupMode,setBackupMode]=useState(null);
   const [backupCode,setBackupCode]=useState("");
   const [restoreInput,setRestoreInput]=useState("");
-  const handleGenerateBackup=()=>{
-    try{
-      const data={v:2,ts:Date.now(),profile,supplements,logs};
-      const code=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-      setBackupCode(code);
-      setBackupMode("backup");
-    }catch{setImportMsg("⚠ Could not generate backup code.");}
+
+  const compressData=(data)=>{
+    const p={...data.profile};delete p.photo;
+    const trimmedLogs=(data.logs||[]).slice(-90).map(l=>({id:l.id,suppId:l.suppId,date:l.date||"",taken:l.taken,amount:l.amount,feel:l.feel,ts:l.ts}));
+    const trimmedSupps=(data.supplements||[]).map(s=>({id:s.id,name:s.name,type:s.type,totalAmount:s.totalAmount,consumed:s.consumed,servingSize:s.servingSize,servingsPerDay:s.servingsPerDay,unit:s.unit,cost:s.cost,createdAt:s.createdAt,lastLogged:s.lastLogged,removed:s.removed,discontinued:s.discontinued}));
+    return{v:3,ts:Date.now(),profile:p,supplements:trimmedSupps,logs:trimmedLogs};
   };
-  const handleRestoreBackup=()=>{
+
+  const BASE62="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const toBase62=(bytes)=>{
+    let num=BigInt("0x"+Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join(""));
+    let result="";
+    while(num>0n){result=BASE62[Number(num%62n)]+result;num=num/62n;}
+    return result||"0";
+  };
+  const fromBase62=(str)=>{
+    let num=0n;
+    for(const c of str){num=num*62n+BigInt(BASE62.indexOf(c));}
+    const hex=num.toString(16).padStart(2,"0");
+    const bytes=[];
+    for(let i=0;i<hex.length;i+=2)bytes.push(parseInt(hex.substr(i,2),16));
+    return new Uint8Array(bytes);
+  };
+
+  const handleGenerateBackup=async()=>{
     try{
-      const raw=decodeURIComponent(escape(atob(restoreInput.trim())));
-      const data=JSON.parse(raw);
+      const data=compressData({profile,supplements,logs});
+      const json=JSON.stringify(data);
+      if(typeof CompressionStream!=="undefined"){
+        const stream=new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
+        const compressed=await new Response(stream).arrayBuffer();
+        const bytes=new Uint8Array(compressed);
+        const code="SS-"+toBase62(bytes).toUpperCase().slice(0,40);
+        setBackupCode(code);
+      }else{
+        const code="SS-"+btoa(unescape(encodeURIComponent(json))).replace(/[=+/]/g,"").slice(0,40);
+        setBackupCode(code);
+      }
+      setBackupMode("backup");
+    }catch(e){console.error(e);setImportMsg("⚠ Could not generate backup code.");}
+  };
+
+  const handleRestoreBackup=async()=>{
+    try{
+      const input=restoreInput.trim().toUpperCase();
+      if(!input.startsWith("SS-")){setImportMsg("⚠ Invalid code — must start with SS-");return;}
+      const encoded=input.slice(3);
+      let data;
+      try{
+        const bytes=fromBase62(encoded);
+        const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+        const text=await new Response(stream).text();
+        data=JSON.parse(text);
+      }catch{
+        try{const raw=decodeURIComponent(escape(atob(encoded)));data=JSON.parse(raw);}
+        catch{setImportMsg("⚠ Invalid or corrupted backup code.");return;}
+      }
       if(!data.supplements||!data.logs){setImportMsg("⚠ Invalid backup code.");return;}
       save("suppstackd_v1_supplements",data.supplements);
       save("suppstackd_v1_logs",data.logs);
-      if(data.profile)save("suppstackd_v1_profile",data.profile);
+      if(data.profile)save("suppstackd_v1_profile",{...data.profile});
       setImportMsg("✓ Restored — close and reopen the app to apply.");
       setBackupMode(null);setRestoreInput("");
-    }catch{setImportMsg("⚠ Invalid or corrupted backup code.");}
+    }catch(e){console.error(e);setImportMsg("⚠ Invalid or corrupted backup code.");}
   };
   const MM="'Space Mono',monospace";
   if(showFeedbackInProfile)return(<FeedbackModal onClose={onClose} onCancel={()=>setShowFeedbackInProfile(false)} isAutoPrompt={false}/>);
@@ -2544,25 +2589,33 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
                 <p style={{color:"#7A7D85",fontFamily:MM,fontSize:"clamp(8px,2vw,10px)",letterSpacing:"1.5px",margin:"0 0 10px"}}>DATA & BACKUP</p>
                 {!backupMode?(
                   <div style={{display:"flex",gap:8}}>
-                    <button onClick={handleGenerateBackup} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬇ BACKUP</button>
+                    <button onClick={()=>handleGenerateBackup()} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬇ BACKUP</button>
                     <button onClick={()=>setBackupMode("restore")} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬆ RESTORE</button>
                   </div>
                 ):backupMode==="backup"?(
                   <div>
-                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 8px",lineHeight:1.6}}>Copy this code and save it somewhere safe. Paste it back here to restore your data on any device.</p>
-                    <div style={{background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:"10px",marginBottom:8,wordBreak:"break-all",fontFamily:MM,fontSize:9,color:"#E8A830",lineHeight:1.5,maxHeight:80,overflowY:"auto"}}>{backupCode}</div>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Screenshot or copy this code. Use it to restore your full stack on any device.</p>
+                    <div style={{background:"#0A0A0A",border:"1px solid rgba(232,168,48,0.3)",borderRadius:10,padding:"14px 12px",marginBottom:10,textAlign:"center"}}>
+                      <div style={{color:"#4A4B4F",fontFamily:MM,fontSize:8,letterSpacing:"1px",marginBottom:6}}>YOUR BACKUP CODE</div>
+                      <div style={{color:"#E8A830",fontFamily:MM,fontSize:13,fontWeight:700,letterSpacing:"2px",wordBreak:"break-all",lineHeight:1.8}}>{backupCode}</div>
+                    </div>
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>{navigator.clipboard?.writeText(backupCode);setImportMsg("✓ Copied to clipboard!");}} style={{flex:2,padding:"8px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer"}}>COPY CODE</button>
-                      <button onClick={()=>{setBackupMode(null);setBackupCode("");}} style={{flex:1,padding:"8px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>DONE</button>
+                      <button onClick={()=>{navigator.clipboard?.writeText(backupCode).then(()=>setImportMsg("✓ Copied to clipboard!")).catch(()=>setImportMsg("⚠ Copy failed — screenshot the code instead."));}} style={{flex:2,padding:"9px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>COPY CODE</button>
+                      <button onClick={()=>{setBackupMode(null);setBackupCode("");setImportMsg(null);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>DONE</button>
                     </div>
                   </div>
                 ):(
                   <div>
-                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 8px",lineHeight:1.6}}>Paste your backup code below to restore your supplements, logs and profile.</p>
-                    <textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="Paste backup code here..." style={{width:"100%",background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:10,color:"#F0F0F0",fontFamily:MM,fontSize:10,resize:"none",height:70,boxSizing:"border-box",outline:"none",marginBottom:8}}/>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Enter your backup code to restore your supplements, logs and profile.</p>
+                    <input
+                      value={restoreInput}
+                      onChange={e=>setRestoreInput(e.target.value.toUpperCase())}
+                      placeholder="SS-XXXXXXXXXXXXXXXX"
+                      style={{width:"100%",background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:"10px 12px",color:"#E8A830",fontFamily:MM,fontSize:12,letterSpacing:"2px",outline:"none",marginBottom:8,boxSizing:"border-box",textAlign:"center"}}
+                    />
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={handleRestoreBackup} style={{flex:2,padding:"8px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer"}}>RESTORE</button>
-                      <button onClick={()=>{setBackupMode(null);setRestoreInput("");}} style={{flex:1,padding:"8px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>CANCEL</button>
+                      <button onClick={handleRestoreBackup} style={{flex:2,padding:"9px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>RESTORE DATA</button>
+                      <button onClick={()=>{setBackupMode(null);setRestoreInput("");setImportMsg(null);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>CANCEL</button>
                     </div>
                   </div>
                 )}
