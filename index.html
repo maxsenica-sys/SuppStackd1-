@@ -91,132 +91,14 @@
 <script>
 // ── Service Worker for background notifications ───────────────────────────────
 // Injected as a blob so it works from a single HTML file
-const SW_SCRIPT = `
-const CACHE = 'suppstackd-sw-v3';
-const NOTIF_STORE = 'suppstackd_sw_notifs';
-
-// Listen for messages from the main app
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SCHEDULE_NOTIFS') {
-    // Store supplement data in cache storage for later use
-    caches.open(NOTIF_STORE).then(cache => {
-      cache.put('/__sw_data__', new Response(JSON.stringify(e.data.payload)));
-    });
-    scheduleNotifs(e.data.payload);
-  }
-});
-
-// On SW activation, reload stored data and reschedule
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    Promise.all([
-      self.clients.claim(),
-      caches.open(NOTIF_STORE).then(cache =>
-        cache.match('/__sw_data__').then(res => {
-          if (res) res.json().then(data => scheduleNotifs(data));
-        })
-      )
-    ])
-  );
-});
-
-self.addEventListener('install', () => self.skipWaiting());
-
-// Clear old timers map on each schedule call
-const timers = [];
-function scheduleNotifs(data) {
-  // Clear any existing timers
-  timers.forEach(t => clearTimeout(t));
-  timers.length = 0;
-
-  const { supplements, scheduledTime } = data;
-  if (!supplements || !supplements.length) return;
-
-  const now = Date.now();
-
-  // ── Daily log reminder at scheduled time ──
-  if (scheduledTime && scheduledTime > now) {
-    timers.push(setTimeout(() => {
-      caches.open(NOTIF_STORE).then(cache =>
-        cache.match('/__sw_data__').then(res => {
-          if (!res) return;
-          res.json().then(d => {
-            const unlogged = (d.supplements || []).filter(s => s.lastLogged !== d.todayStr);
-            if (unlogged.length > 0) {
-              self.registration.showNotification('Suppstackd', {
-                body: unlogged.length === 1
-                  ? unlogged[0].name + ' not logged today.'
-                  : unlogged.length + ' supplements not logged today.',
-                tag: 'suppstackd-daily',
-                silent: false
-              });
-            }
-          });
-        })
-      );
-    }, scheduledTime - now));
-  }
-
-  // ── Low stock alerts — fire after short delay on load ──
-  const critical = supplements.filter(s => {
-    if (!s.totalAmount || !s.servingSize || !s.servingsPerDay) return false;
-    const rem = (s.totalAmount || 0) - (s.consumed || 0);
-    const daysLeft = rem <= 0 ? 0 : Math.ceil(rem / (s.servingSize * s.servingsPerDay));
-    return daysLeft >= 0 && daysLeft <= 7;
-  });
-
-  if (critical.length > 0) {
-    // Only fire if not already shown today
-    const todayKey = new Date().toISOString().slice(0, 10);
-    caches.open(NOTIF_STORE).then(cache =>
-      cache.match('/__sw_lastLowAlert__').then(res => {
-        if (res) {
-          res.text().then(t => {
-            if (t === todayKey) return; // already shown today
-            sendLowStockNotif(cache, critical, todayKey);
-          });
-        } else {
-          sendLowStockNotif(cache, critical, todayKey);
-        }
-      })
-    );
-  }
-}
-
-function sendLowStockNotif(cache, critical, todayKey) {
-  cache.put('/__sw_lastLowAlert__', new Response(todayKey));
-  timers.push(setTimeout(() => {
-    const names = critical.map(s => {
-      const rem = (s.totalAmount || 0) - (s.consumed || 0);
-      const d = rem <= 0 ? 0 : Math.ceil(rem / (s.servingSize * s.servingsPerDay));
-      return s.name + ' (' + d + 'd)';
-    }).join(', ');
-    const body = critical.length === 1
-      ? critical[0].name + ' — approx ' + (Math.ceil(((critical[0].totalAmount||0)-(critical[0].consumed||0))/(critical[0].servingSize*critical[0].servingsPerDay))) + ' days left. Time to reorder.'
-      : critical.length + ' supps running low: ' + names;
-    self.registration.showNotification('Suppstackd — Low stock', {
-      body,
-      tag: 'suppstackd-lowstock',
-      silent: false
-    });
-  }, 2000));
-}
-
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(clients.openWindow('/'));
-});
-`;
-
+// Service Worker — registered from /sw.js
 if ('serviceWorker' in navigator) {
-  const blob = new Blob([SW_SCRIPT], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl, { scope: '/' })
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
     .then(reg => {
       window._swReg = reg;
       console.log('[SW] Registered');
     })
-    .catch(err => console.warn('[SW] Registration failed (blob SW requires HTTPS or localhost):', err));
+    .catch(err => console.warn('[SW] Registration failed:', err));
 }
 
 // Called by the app to push supplement data into the SW
@@ -287,6 +169,9 @@ const UNITS=["g","kg","mg","ml","lb","oz","fl oz","count"];
 const SUPP_DATABASE=["Creatine Monohydrate","Creatine HCL","Whey Protein","Whey Isolate","Casein Protein","Plant Protein","Pea Protein","Collagen Peptides","BCAA","EAA","Beta-Alanine","L-Citrulline","Citrulline Malate","L-Arginine","L-Glutamine","HMB","Pre-Workout","Caffeine","L-Theanine","Alpha GPC","Lion's Mane","Ashwagandha","Rhodiola Rosea","Panax Ginseng","Maca Root","Magnesium Glycinate","Magnesium Citrate","Magnesium Malate","Zinc","Zinc Bisglycinate","Iron","Calcium","Vitamin D3","Vitamin D3 + K2","Vitamin K2","Vitamin C","Vitamin B12","Vitamin B6","Vitamin A","Vitamin E","B Complex","Multivitamin","Omega-3","Fish Oil","Krill Oil","Algae Oil","Probiotics","Prebiotics","Psyllium Husk","Fiber","Electrolytes","Sodium","Potassium","Magnesium","Selenium","Iodine","Chromium","CoQ10","NAC","NMN","NR","Resveratrol","Quercetin","Berberine","Inositol","Melatonin","5-HTP","GABA","Valerian Root","Turmeric","Curcumin","Ginger","Milk Thistle","Saw Palmetto","Fenugreek","Tongkat Ali","Fadogia Agrestis","Shilajit","Boron","Glucosamine","Chondroitin","MSM","Collagen Type II","Hyaluronic Acid","Biotin","Spirulina","Chlorella","Matcha","Green Tea Extract","Caffeine Anhydrous","Cocoa Powder","Cacao","Dark Chocolate Extract","L-Carnitine","Taurine","Beetroot Powder","Sodium Bicarbonate","Digestive Enzymes","CLA","Vitamin B1","Vitamin B2","Vitamin B3","Vitamin B5","Folate","Copper","Manganese","Molybdenum","Lithium Orotate","Phosphatidylserine","Huperzine A","Bacopa Monnieri","Ginkgo Biloba","Cordyceps","Reishi","Turkey Tail","Chaga","NAD+","Spermidine","Urolithin A","PQQ","Acetyl L-Carnitine","R-Alpha Lipoic Acid","MSM","Pycnogenol","Astaxanthin","Kefir","Colostrum","Deer Antler Velvet","Turkesterone","Ecdysterone"];
 
 const DEV_PRO_MODE=true;
+const FREE_SUPPLEMENT_LIMIT=2;
+const STRIPE_PK="pk_test_51SsruuLqLTr81KltF0rvU20vqmhd2WcCJA3UcPXrajcCmT1MVf6miAq4vbpsEZYIetCU9WAr9TnnRQwZKolpIXzd00kwpcEuhp";
+const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
 const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
 const CURRENCY_OPTIONS=[
@@ -2502,25 +2387,70 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
   const [backupMode,setBackupMode]=useState(null);
   const [backupCode,setBackupCode]=useState("");
   const [restoreInput,setRestoreInput]=useState("");
-  const handleGenerateBackup=()=>{
-    try{
-      const data={v:2,ts:Date.now(),profile,supplements,logs};
-      const code=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-      setBackupCode(code);
-      setBackupMode("backup");
-    }catch{setImportMsg("⚠ Could not generate backup code.");}
+
+  const compressData=(data)=>{
+    const p={...data.profile};delete p.photo;
+    const trimmedLogs=(data.logs||[]).slice(-90).map(l=>({id:l.id,suppId:l.suppId,date:l.date||"",taken:l.taken,amount:l.amount,feel:l.feel,ts:l.ts}));
+    const trimmedSupps=(data.supplements||[]).map(s=>({id:s.id,name:s.name,type:s.type,totalAmount:s.totalAmount,consumed:s.consumed,servingSize:s.servingSize,servingsPerDay:s.servingsPerDay,unit:s.unit,cost:s.cost,createdAt:s.createdAt,lastLogged:s.lastLogged,removed:s.removed,discontinued:s.discontinued}));
+    return{v:3,ts:Date.now(),profile:p,supplements:trimmedSupps,logs:trimmedLogs};
   };
-  const handleRestoreBackup=()=>{
+
+  const BASE62="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const toBase62=(bytes)=>{
+    let num=BigInt("0x"+Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join(""));
+    let result="";
+    while(num>0n){result=BASE62[Number(num%62n)]+result;num=num/62n;}
+    return result||"0";
+  };
+  const fromBase62=(str)=>{
+    let num=0n;
+    for(const c of str){num=num*62n+BigInt(BASE62.indexOf(c));}
+    const hex=num.toString(16).padStart(2,"0");
+    const bytes=[];
+    for(let i=0;i<hex.length;i+=2)bytes.push(parseInt(hex.substr(i,2),16));
+    return new Uint8Array(bytes);
+  };
+
+  const handleGenerateBackup=async()=>{
     try{
-      const raw=decodeURIComponent(escape(atob(restoreInput.trim())));
-      const data=JSON.parse(raw);
+      const data=compressData({profile,supplements,logs});
+      const json=JSON.stringify(data);
+      if(typeof CompressionStream!=="undefined"){
+        const stream=new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
+        const compressed=await new Response(stream).arrayBuffer();
+        const bytes=new Uint8Array(compressed);
+        const code="SS-"+toBase62(bytes).toUpperCase().slice(0,40);
+        setBackupCode(code);
+      }else{
+        const code="SS-"+btoa(unescape(encodeURIComponent(json))).replace(/[=+/]/g,"").slice(0,40);
+        setBackupCode(code);
+      }
+      setBackupMode("backup");
+    }catch(e){console.error(e);setImportMsg("⚠ Could not generate backup code.");}
+  };
+
+  const handleRestoreBackup=async()=>{
+    try{
+      const input=restoreInput.trim().toUpperCase();
+      if(!input.startsWith("SS-")){setImportMsg("⚠ Invalid code — must start with SS-");return;}
+      const encoded=input.slice(3);
+      let data;
+      try{
+        const bytes=fromBase62(encoded);
+        const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+        const text=await new Response(stream).text();
+        data=JSON.parse(text);
+      }catch{
+        try{const raw=decodeURIComponent(escape(atob(encoded)));data=JSON.parse(raw);}
+        catch{setImportMsg("⚠ Invalid or corrupted backup code.");return;}
+      }
       if(!data.supplements||!data.logs){setImportMsg("⚠ Invalid backup code.");return;}
       save("suppstackd_v1_supplements",data.supplements);
       save("suppstackd_v1_logs",data.logs);
-      if(data.profile)save("suppstackd_v1_profile",data.profile);
+      if(data.profile)save("suppstackd_v1_profile",{...data.profile});
       setImportMsg("✓ Restored — close and reopen the app to apply.");
       setBackupMode(null);setRestoreInput("");
-    }catch{setImportMsg("⚠ Invalid or corrupted backup code.");}
+    }catch(e){console.error(e);setImportMsg("⚠ Invalid or corrupted backup code.");}
   };
   const MM="'Space Mono',monospace";
   if(showFeedbackInProfile)return(<FeedbackModal onClose={onClose} onCancel={()=>setShowFeedbackInProfile(false)} isAutoPrompt={false}/>);
@@ -2605,25 +2535,33 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
                 <p style={{color:"#7A7D85",fontFamily:MM,fontSize:"clamp(8px,2vw,10px)",letterSpacing:"1.5px",margin:"0 0 10px"}}>DATA & BACKUP</p>
                 {!backupMode?(
                   <div style={{display:"flex",gap:8}}>
-                    <button onClick={handleGenerateBackup} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬇ BACKUP</button>
+                    <button onClick={()=>handleGenerateBackup()} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬇ BACKUP</button>
                     <button onClick={()=>setBackupMode("restore")} style={{flex:1,padding:"clamp(7px,1.5vh,9px) 6px",background:"transparent",border:"1px solid #3A3B3E",borderRadius:8,color:"#F0F0F0",fontFamily:MM,fontSize:"clamp(10px,2.5vw,11px)",cursor:"pointer"}}>⬆ RESTORE</button>
                   </div>
                 ):backupMode==="backup"?(
                   <div>
-                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 8px",lineHeight:1.6}}>Copy this code and save it somewhere safe. Paste it back here to restore your data on any device.</p>
-                    <div style={{background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:"10px",marginBottom:8,wordBreak:"break-all",fontFamily:MM,fontSize:9,color:"#E8A830",lineHeight:1.5,maxHeight:80,overflowY:"auto"}}>{backupCode}</div>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Screenshot or copy this code. Use it to restore your full stack on any device.</p>
+                    <div style={{background:"#0A0A0A",border:"1px solid rgba(232,168,48,0.3)",borderRadius:10,padding:"14px 12px",marginBottom:10,textAlign:"center"}}>
+                      <div style={{color:"#4A4B4F",fontFamily:MM,fontSize:8,letterSpacing:"1px",marginBottom:6}}>YOUR BACKUP CODE</div>
+                      <div style={{color:"#E8A830",fontFamily:MM,fontSize:13,fontWeight:700,letterSpacing:"2px",wordBreak:"break-all",lineHeight:1.8}}>{backupCode}</div>
+                    </div>
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>{navigator.clipboard?.writeText(backupCode);setImportMsg("✓ Copied to clipboard!");}} style={{flex:2,padding:"8px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer"}}>COPY CODE</button>
-                      <button onClick={()=>{setBackupMode(null);setBackupCode("");}} style={{flex:1,padding:"8px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>DONE</button>
+                      <button onClick={()=>{navigator.clipboard?.writeText(backupCode).then(()=>setImportMsg("✓ Copied to clipboard!")).catch(()=>setImportMsg("⚠ Copy failed — screenshot the code instead."));}} style={{flex:2,padding:"9px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>COPY CODE</button>
+                      <button onClick={()=>{setBackupMode(null);setBackupCode("");setImportMsg(null);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>DONE</button>
                     </div>
                   </div>
                 ):(
                   <div>
-                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 8px",lineHeight:1.6}}>Paste your backup code below to restore your supplements, logs and profile.</p>
-                    <textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="Paste backup code here..." style={{width:"100%",background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:10,color:"#F0F0F0",fontFamily:MM,fontSize:10,resize:"none",height:70,boxSizing:"border-box",outline:"none",marginBottom:8}}/>
+                    <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Enter your backup code to restore your supplements, logs and profile.</p>
+                    <input
+                      value={restoreInput}
+                      onChange={e=>setRestoreInput(e.target.value.toUpperCase())}
+                      placeholder="SS-XXXXXXXXXXXXXXXX"
+                      style={{width:"100%",background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:"10px 12px",color:"#E8A830",fontFamily:MM,fontSize:12,letterSpacing:"2px",outline:"none",marginBottom:8,boxSizing:"border-box",textAlign:"center"}}
+                    />
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={handleRestoreBackup} style={{flex:2,padding:"8px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer"}}>RESTORE</button>
-                      <button onClick={()=>{setBackupMode(null);setRestoreInput("");}} style={{flex:1,padding:"8px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>CANCEL</button>
+                      <button onClick={handleRestoreBackup} style={{flex:2,padding:"9px",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:MM,fontSize:11,fontWeight:700,cursor:"pointer",letterSpacing:"0.3px"}}>RESTORE DATA</button>
+                      <button onClick={()=>{setBackupMode(null);setRestoreInput("");setImportMsg(null);}} style={{flex:1,padding:"9px",background:"transparent",border:"1px solid #2A2B2E",borderRadius:8,color:"#7A7D85",fontFamily:MM,fontSize:11,cursor:"pointer"}}>CANCEL</button>
                     </div>
                   </div>
                 )}
@@ -3393,6 +3331,9 @@ function App(){
   const [showBatchLog,setShowBatchLog]=useState(false);
   const [showProfile,setShowProfile]=useState(false);
   const [showInsights,setShowInsights]=useState(false);
+  const [showUpgrade,setShowUpgrade]=useState(false);
+  const [stripeData,setStripeData]=useState(()=>load(STRIPE_CUSTOMER_KEY,null));
+  const [stripeVerified,setStripeVerified]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -3419,6 +3360,70 @@ function App(){
       if(prof)setProfile(prof);
     }).catch(()=>{});
   },[]);
+
+  // ── Stripe verification on load ───────────────────────────────────────────
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const sessionId=params.get("session_id");
+    const upgraded=params.get("upgraded");
+    const cancelled=params.get("cancelled");
+    if(sessionId||upgraded||cancelled){
+      window.history.replaceState({},"",window.location.pathname);
+    }
+    if(cancelled){setStripeVerified(true);return;}
+    const verify=async(sId,cId)=>{
+      try{
+        const res=await fetch("/.netlify/functions/verify-session",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({sessionId:sId||null,customerId:cId||null})
+        });
+        const data=await res.json();
+        if(data.isPro){
+          const stripeRecord={customerId:data.customerId,subscriptionId:data.subscriptionId,plan:data.plan,verifiedAt:new Date().toISOString()};
+          setStripeData(stripeRecord);
+          save(STRIPE_CUSTOMER_KEY,stripeRecord);
+          setProfile(p=>{
+            if(!p)return p;
+            const updated={...p,plan:"pro"};
+            save(PROFILE_KEY,updated);
+            return updated;
+          });
+        }else{
+          setProfile(p=>{
+            if(!p||p.plan!=="pro")return p;
+            const updated={...p,plan:"free"};
+            save(PROFILE_KEY,updated);
+            return updated;
+          });
+        }
+        setStripeVerified(true);
+      }catch(e){
+        console.warn("Stripe verify failed — defaulting to stored plan",e);
+        setStripeVerified(true);
+      }
+    };
+    if(sessionId){verify(sessionId,null);}
+    else if(stripeData?.customerId){verify(null,stripeData.customerId);}
+    else{setStripeVerified(true);}
+  },[]);
+
+  // ── Stripe checkout launcher ───────────────────────────────────────────────
+  const launchCheckout=async(plan="monthly")=>{
+    try{
+      const res=await fetch("/.netlify/functions/create-checkout",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({plan})
+      });
+      const data=await res.json();
+      if(data.url)window.location.href=data.url;
+      else alert("Could not start checkout. Please try again.");
+    }catch(e){
+      console.error("Checkout error:",e);
+      alert("Something went wrong. Please try again.");
+    }
+  };
 
   const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
   useEffect(()=>{window._openFeedback=openManualFeedback;},[]);
