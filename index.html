@@ -2473,10 +2473,16 @@ function UpgradeModal({onClose,limit,onUpgrade}){
   const MM="'Space Mono',monospace";
   const [selectedPlan,setSelectedPlan]=React.useState("monthly");
   const [loading,setLoading]=React.useState(false);
+  const [loadingMsg,setLoadingMsg]=React.useState("LOADING...");
   const handleUpgrade=async()=>{
     setLoading(true);
+    setLoadingMsg("CONNECTING...");
+    // Show retry message after 3 seconds
+    const msgTimer=setTimeout(()=>setLoadingMsg("STILL CONNECTING..."),3000);
     await onUpgrade(selectedPlan);
+    clearTimeout(msgTimer);
     setLoading(false);
+    setLoadingMsg("LOADING...");
   };
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={{zIndex:9999}}>
@@ -2513,7 +2519,7 @@ function UpgradeModal({onClose,limit,onUpgrade}){
           ))}
         </div>
         <button onClick={handleUpgrade} disabled={loading} style={{width:"100%",padding:"13px 0",background:loading?"#3A3B3E":"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:loading?"#7A7D85":"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:loading?"not-allowed":"pointer",letterSpacing:"0.5px",marginBottom:10,transition:"all 0.2s"}}>
-          {loading?"LOADING...":"UPGRADE TO PRO →"}
+          {loading?loadingMsg:"UPGRADE TO PRO →"}
         </button>
         <button onClick={onClose} style={{width:"100%",padding:"10px 0",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#4A4B4F",fontFamily:MM,fontSize:11,cursor:"pointer",letterSpacing:"0.3px"}}>
           MAYBE LATER
@@ -3619,20 +3625,35 @@ function App(){
   },[]);
 
   // ── Stripe checkout launcher ───────────────────────────────────────────────
-  const launchCheckout=async(plan="monthly")=>{
+  const launchCheckout=async(plan="monthly",attempt=1)=>{
     if(typeof posthog!=="undefined")posthog.capture("upgrade_clicked",{plan});
     try{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000); // 12s timeout
       const res=await fetch("/.netlify/functions/create-checkout",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({plan})
+        body:JSON.stringify({plan}),
+        signal:controller.signal
       });
+      clearTimeout(timeout);
       const data=await res.json();
       if(data.url)window.location.href=data.url;
-      else alert("Could not start checkout. Please try again.");
+      else if(attempt<3){
+        // Auto retry on failure
+        setTimeout(()=>launchCheckout(plan,attempt+1),1500);
+      } else {
+        alert("Could not start checkout. Please try again.");
+      }
     }catch(e){
-      console.error("Checkout error:",e);
-      alert("Something went wrong. Please try again.");
+      if(attempt<3){
+        // Auto retry on timeout or network error
+        console.warn("Checkout attempt "+attempt+" failed, retrying...");
+        setTimeout(()=>launchCheckout(plan,attempt+1),1500);
+      } else {
+        console.error("Checkout error:",e);
+        alert("Something went wrong. Please check your connection and try again.");
+      }
     }
   };
 
