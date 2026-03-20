@@ -171,6 +171,8 @@ const DEV_PRO_MODE=false;
 const FREE_SUPPLEMENT_LIMIT=2;
 const STRIPE_PK="pk_test_51SsruuLqLTr81KltF0rvU20vqmhd2WcCJA3UcPXrajcCmT1MVf6miAq4vbpsEZYIetCU9WAr9TnnRQwZKolpIXzd00kwpcEuhp";
 const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
+const PRO_TEASER_KEY="suppstackd_v1_pro_teaser_shown";
+const PRO_TEASER_DAYS=4;
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
 const COUNTRIES=["GB — United Kingdom","US — United States","EU — European Union","AU — Australia","CA — Canada","NZ — New Zealand","IN — India","JP — Japan","CH — Switzerland","SE — Sweden","NO — Norway","DK — Denmark","PL — Poland","BR — Brazil","MX — Mexico","ZA — South Africa","AE — UAE","SG — Singapore","HK — Hong Kong","TR — Turkey","KR — South Korea","CN — China","Other"];
 const CURRENCY_OPTIONS=[
@@ -2363,6 +2365,69 @@ function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
   );
 }
 
+// ── ProTeaserSheet ────────────────────────────────────────────────────────────
+function ProTeaserSheet({onClose,onUpgrade,daysOnApp}){
+  const MM="'Space Mono',monospace";
+  const [visible,setVisible]=React.useState(false);
+  React.useEffect(()=>{setTimeout(()=>setVisible(true),50);},[]);
+  const dismiss=()=>{setVisible(false);setTimeout(onClose,320);};
+  return(
+    <div
+      onClick={e=>{if(e.target===e.currentTarget)dismiss();}}
+      style={{position:"fixed",inset:0,zIndex:9998,background:visible?"rgba(0,0,0,0.6)":"rgba(0,0,0,0)",transition:"background 0.3s",display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+    >
+      <div style={{
+        width:"100%",maxWidth:480,
+        background:"#161718",
+        borderRadius:"16px 16px 0 0",
+        padding:"20px 20px 36px",
+        transform:visible?"translateY(0)":"translateY(100%)",
+        transition:"transform 0.32s cubic-bezier(0.32,0.72,0,1)",
+        boxShadow:"0 -8px 40px rgba(0,0,0,0.5)"
+      }}>
+        {/* Handle */}
+        <div style={{width:36,height:4,background:"#2A2B2E",borderRadius:2,margin:"0 auto 18px"}}/>
+        {/* Header */}
+        <div style={{marginBottom:14}}>
+          <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 4px"}}>
+            {daysOnApp>0?`${daysOnApp} DAYS ON SUPPSTACKD`:"YOU'VE STARTED YOUR STACK"}
+          </p>
+          <h2 style={{color:"#F0F0F0",fontFamily:"'Barlow Condensed',sans-serif",fontSize:22,fontWeight:900,margin:0,letterSpacing:"0.5px",lineHeight:1.2}}>
+            SEE WHAT PRO UNLOCKS
+          </h2>
+        </div>
+        {/* Feature list */}
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
+          {[
+            {icon:"✦",text:"Unlimited supplements — track your full stack"},
+            {icon:"📈",text:"Feel score trends — see what's actually working"},
+            {icon:"📋",text:"Weekly performance summary — logs reviewed"},
+            {icon:"🔒",text:"Full Vault — 100+ research profiles unlocked"},
+          ].map((f,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E"}}>
+              <span style={{fontSize:14,lineHeight:1,flexShrink:0,width:20,textAlign:"center"}}>{f.icon}</span>
+              <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,lineHeight:1.4}}>{f.text}</span>
+            </div>
+          ))}
+        </div>
+        {/* CTAs */}
+        <button
+          onClick={()=>{dismiss();setTimeout(()=>onUpgrade("monthly"),320);}}
+          style={{width:"100%",padding:"13px 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:9,color:"#111213",fontFamily:MM,fontWeight:700,fontSize:12,cursor:"pointer",letterSpacing:"0.5px",marginBottom:10}}
+        >
+          UPGRADE TO PRO →
+        </button>
+        <button
+          onClick={dismiss}
+          style={{width:"100%",padding:"10px 0",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#4A4B4F",fontFamily:MM,fontSize:11,cursor:"pointer",letterSpacing:"0.3px"}}
+        >
+          NOT NOW
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── UpgradeModal ──────────────────────────────────────────────────────────────
 function UpgradeModal({onClose,limit,onUpgrade}){
   const MM="'Space Mono',monospace";
@@ -3412,6 +3477,7 @@ function App(){
   const [showProfile,setShowProfile]=useState(false);
   const [showInsights,setShowInsights]=useState(false);
   const [showUpgrade,setShowUpgrade]=useState(false);
+  const [showProTeaser,setShowProTeaser]=useState(false);
   const [stripeData,setStripeData]=useState(()=>load(STRIPE_CUSTOMER_KEY,null));
   const [stripeVerified,setStripeVerified]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
@@ -3504,6 +3570,21 @@ function App(){
       alert("Something went wrong. Please try again.");
     }
   };
+
+  // ── Pro teaser trigger ────────────────────────────────────────────────────
+  useEffect(()=>{
+    if(isPro)return; // already pro — never show
+    const alreadyShown=load(PRO_TEASER_KEY,false);
+    if(alreadyShown)return;
+    if(!profile?.createdAt)return;
+    const createdAt=new Date(profile.createdAt);
+    const daysSince=Math.floor((Date.now()-createdAt.getTime())/(1000*60*60*24));
+    if(daysSince>=PRO_TEASER_DAYS){
+      // Small delay so app loads fully first
+      const t=setTimeout(()=>setShowProTeaser(true),1500);
+      return()=>clearTimeout(t);
+    }
+  },[isPro,profile]);
 
   const openManualFeedback=()=>{setIsAutoFeedback(false);setShowFeedback(true);};
   useEffect(()=>{window._openFeedback=openManualFeedback;},[]);
@@ -3868,6 +3949,11 @@ function App(){
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
+      {showProTeaser&&<ProTeaserSheet
+        onClose={()=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);}}
+        onUpgrade={(plan)=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);launchCheckout(plan);}}
+        daysOnApp={profile?.createdAt?Math.floor((Date.now()-new Date(profile.createdAt).getTime())/(1000*60*60*24)):0}
+      />}
       {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
