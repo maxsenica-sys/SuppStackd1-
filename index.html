@@ -153,6 +153,46 @@ window._scheduleSWNotifs = function(supplements, todayStr) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init("MvNsklzhS8eQ1-XbQ");</script>
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="init push capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify alias setPersonProperties groupIdentify setPersonPropertiesForFlags resetGroupPropertiesForFlags setGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init("phc_D9o8zIuNv7EYzmHcbQHVbyRgZYgPsAZp3hIbUo9HWdx",{
+    api_host:"https://us.i.posthog.com",
+    person_profiles:"identified_only",
+    capture_pageview:true,
+    capture_pageleave:true,
+    session_recording:{maskAllInputs:false}
+  });
+</script>
+<script>
+  // Loops email capture helper
+  window.loopsTrack=async function(email,name,eventName,extraProps){
+    try{
+      // Create/update contact
+      await fetch("https://app.loops.so/api/v1/contacts/upsert",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
+        body:JSON.stringify({email,firstName:name||"",userGroup:"free",...(extraProps||{})})
+      });
+      // Send event
+      if(eventName){
+        await fetch("https://app.loops.so/api/v1/events/send",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
+          body:JSON.stringify({email,eventName,...(extraProps||{})})
+        });
+      }
+    }catch(e){console.warn("Loops error:",e);}
+  };
+  window.loopsAddToProList=async function(email){
+    try{
+      await fetch("https://app.loops.so/api/v1/contacts/upsert",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
+        body:JSON.stringify({email,mailingLists:{"cmmz3mpaj0ps70i2j24ku33wf":true}})
+      });
+    }catch(e){console.warn("Loops pro list error:",e);}
+  };
+</script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 const STORAGE_KEY="suppstackd_v1_supplements";
@@ -3503,7 +3543,7 @@ function App(){
     Promise.all([loadAsync(STORAGE_KEY,[]),loadAsync(LOG_KEY,[]),loadAsync(PROFILE_KEY,null)]).then(([supps,lg,prof])=>{
       if(supps&&supps.length>0)setSupplements(supps);
       if(lg&&lg.length>0)setLogs(lg);
-      if(prof)setProfile(prof);
+      if(prof){setProfile(prof);if(typeof posthog!=="undefined"&&prof.email){posthog.identify(prof.email,{name:prof.name,email:prof.email,plan:prof.plan||"free"});}}
     }).catch(()=>{});
   },[]);
 
@@ -3535,6 +3575,8 @@ function App(){
             save(PROFILE_KEY,updated);
             return updated;
           });
+          if(typeof posthog!=='undefined')posthog.capture('upgraded_to_pro',{plan:data.plan});
+          if(profile?.email&&typeof window.loopsAddToProList!=='undefined')window.loopsAddToProList(profile.email);
         }else{
           setProfile(p=>{
             if(!p||p.plan!=="pro")return p;
@@ -3556,6 +3598,7 @@ function App(){
 
   // ── Stripe checkout launcher ───────────────────────────────────────────────
   const launchCheckout=async(plan="monthly")=>{
+    if(typeof posthog!=="undefined")posthog.capture("upgrade_clicked",{plan});
     try{
       const res=await fetch("/.netlify/functions/create-checkout",{
         method:"POST",
@@ -3621,7 +3664,7 @@ function App(){
     return()=>{if(notifTimer)clearTimeout(notifTimer);};
   },[]);
 
-  if(!profile)return<ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});}}/>;
+  if(!profile)return<ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});if(p.email){if(typeof posthog!=="undefined"){posthog.identify(p.email,{name:p.name,email:p.email,plan:"free"});posthog.capture("signed_up",{name:p.name,email:p.email});}if(typeof window.loopsTrack!=="undefined")window.loopsTrack(p.email,p.name,"signed_up");}}}/>; 
 
   const addOrUpdate=s=>{
     const ns={...s,type:normalizeType(s.type)};
@@ -3636,7 +3679,7 @@ function App(){
         }
       }
       // Always store createdAt as a plain YYYY-MM-DD string for reliable comparisons
-      return[...prev,{...ns,createdAt:ns.createdAt||todayISO()}];
+      if(typeof posthog!=="undefined")posthog.capture("supplement_added",{name:ns.name,type:ns.type});return[...prev,{...ns,createdAt:ns.createdAt||todayISO()}];
     });
     setShowAdd(false);setEditSupp(null);
   };
@@ -3717,6 +3760,7 @@ function App(){
   const tryAdd=(callback)=>{
     if(!isPro&&supplements.filter(s=>!s.removed&&!s.discontinued).length>=FREE_SUPPLEMENT_LIMIT){
       setShowUpgrade(true);
+      if(typeof posthog!=="undefined")posthog.capture("upgrade_modal_shown",{trigger:"supplement_limit"});
       return;
     }
     callback();
@@ -3780,7 +3824,7 @@ function App(){
                 pointerEvents:"none",
               }}/>
               {[{id:"stack",label:"MY STACK"},{id:"history",label:"HISTORY"}].map((t)=>(
-                <button key={t.id} onClick={()=>{setTab(t.id);setSlideDir(null);if(t.id!=="stack")setFilter("all");setTimeout(()=>{if(shellScrollRef.current)shellScrollRef.current.scrollTop=0;},10);}}
+                <button key={t.id} onClick={()=>{setTab(t.id);setSlideDir(null);if(t.id!=="stack")setFilter("all");setTimeout(()=>{if(shellScrollRef.current)shellScrollRef.current.scrollTop=0;},10);if(typeof posthog!=="undefined")posthog.capture("tab_viewed",{tab:t.id});}}
                   style={{flex:1,padding:"8px 0",borderRadius:9,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:"0.8px",fontWeight:700,border:"none",background:"transparent",color:tab===t.id?"#E8A830":"#7A7D85",transition:"color 0.28s",position:"relative",zIndex:1}}>
                   {t.label}
                 </button>
