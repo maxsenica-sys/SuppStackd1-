@@ -2459,7 +2459,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
         const stream=new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
         const compressed=await new Response(stream).arrayBuffer();
         const bytes=new Uint8Array(compressed);
-        const code="SS-"+toBase62(bytes).toUpperCase().slice(0,40);
+        const code="SS-"+toBase62(bytes).slice(0,40);
         setBackupCode(code);
       }else{
         const code="SS-"+btoa(unescape(encodeURIComponent(json))).replace(/[=+/]/g,"").slice(0,40);
@@ -2475,16 +2475,37 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
       const inputUpper=input.toUpperCase();
       if(!inputUpper.startsWith("SS-")){setImportMsg("⚠ Invalid code — must start with SS-");return;}
       const encoded=input.slice(3);
+      // Also store original case version for gzip decode
+      const encodedOriginal=restoreInput.trim().slice(3);
       let data;
+      // Try gzip decompress first (new format)
+      let decoded=false;
       try{
-        const bytes=fromBase62(encoded);
+        const bytes=fromBase62(encodedOriginal||encoded);
         const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
         const text=await new Response(stream).text();
         data=JSON.parse(text);
-      }catch{
-        try{const raw=decodeURIComponent(escape(atob(encoded)));data=JSON.parse(raw);}
-        catch{setImportMsg("⚠ Invalid or corrupted backup code.");return;}
+        decoded=true;
+      }catch(e1){}
+      // Try base64 fallback (older format or all-uppercase codes)
+      if(!decoded){
+        try{
+          // Try direct atob on the encoded portion
+          const raw=decodeURIComponent(escape(atob(encoded)));
+          data=JSON.parse(raw);
+          decoded=true;
+        }catch(e2){}
       }
+      // Try treating entire code after SS- as base64
+      if(!decoded){
+        try{
+          const padded=encoded.replace(/-/g,"+").replace(/_/g,"/");
+          const raw=decodeURIComponent(escape(atob(padded)));
+          data=JSON.parse(raw);
+          decoded=true;
+        }catch(e3){}
+      }
+      if(!decoded){setImportMsg("⚠ Invalid or corrupted backup code.");return;}
       if(!data.supplements||!data.logs){setImportMsg("⚠ Invalid backup code.");return;}
       save("suppstackd_v1_supplements",data.supplements);
       save("suppstackd_v1_logs",data.logs);
