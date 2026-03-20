@@ -2459,10 +2459,10 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
         const stream=new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
         const compressed=await new Response(stream).arrayBuffer();
         const bytes=new Uint8Array(compressed);
-        const code="SS-"+toBase62(bytes).slice(0,40);
+        const code="SS-"+toBase62(bytes);
         setBackupCode(code);
       }else{
-        const code="SS-"+btoa(unescape(encodeURIComponent(json))).replace(/[=+/]/g,"").slice(0,40);
+        const code="SS-"+btoa(unescape(encodeURIComponent(json))).replace(/[=+/]/g,"");
         setBackupCode(code);
       }
       setBackupMode("backup");
