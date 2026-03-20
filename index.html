@@ -2471,8 +2471,9 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 
   const handleRestoreBackup=async()=>{
     try{
-      const input=restoreInput.trim().toUpperCase();
-      if(!input.startsWith("SS-")){setImportMsg("⚠ Invalid code — must start with SS-");return;}
+      const input=restoreInput.trim();
+      const inputUpper=input.toUpperCase();
+      if(!inputUpper.startsWith("SS-")){setImportMsg("⚠ Invalid code — must start with SS-");return;}
       const encoded=input.slice(3);
       let data;
       try{
@@ -2595,7 +2596,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
                     <p style={{color:"#7A7D85",fontFamily:MM,fontSize:9,margin:"0 0 10px",lineHeight:1.6}}>Enter your backup code to restore your supplements, logs and profile.</p>
                     <input
                       value={restoreInput}
-                      onChange={e=>setRestoreInput(e.target.value.toUpperCase())}
+                      onChange={e=>setRestoreInput(e.target.value)}
                       placeholder="SS-XXXXXXXXXXXXXXXX"
                       style={{width:"100%",background:"#0A0A0A",border:"1px solid #2A2B2E",borderRadius:8,padding:"10px 12px",color:"#E8A830",fontFamily:MM,fontSize:12,letterSpacing:"2px",outline:"none",marginBottom:8,boxSizing:"border-box",textAlign:"center"}}
                     />
