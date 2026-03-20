@@ -32,11 +32,10 @@ exports.handler = async (event) => {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      // After payment, redirect back to app with session ID
+      allow_promotion_codes: true,
       success_url: `${process.env.APP_URL}?session_id={CHECKOUT_SESSION_ID}&upgraded=true`,
       cancel_url:  `${process.env.APP_URL}?cancelled=true`,
-      // Collect email for customer record
-      customer_email: undefined, // Stripe will ask for it on checkout
+      customer_email: undefined,
       metadata: { plan },
     });
 
