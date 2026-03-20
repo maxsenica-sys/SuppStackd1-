@@ -5,8 +5,8 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const PRICES = {
-  monthly: "price_1TByjDLqLTr81KltCjxpaYNF",
-  annual:  "price_1TByjfLqLTr81KltbScxga2k",
+  monthly: "price_1TBycvLqLTr81KltcbdPDpB6",
+  annual:  "price_1TBydeLqLTr81Klt5qkS2FsE",
 };
 
 exports.handler = async (event) => {
