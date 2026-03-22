@@ -817,7 +817,8 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
 
   const supplementsForDate=supplements.filter(s=>{
     const created=toISODate(s.createdAt);
-    return created&&created<=date;
+    const depleted=(s.totalAmount-(s.consumed||0))<=0||s.discontinued===true;
+    return created&&created<=date&&!depleted;
   });
 
   const loggedSuppIds=new Set(dateLogs.map(l=>l.suppId));
@@ -1691,7 +1692,9 @@ function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
   const showErr=k=>(touched[k]||submitted)&&errors[k];
   const totalNum=parseFloat(form.totalAmount)||0;
   const remaining=totalNum-effectiveConsumed;
-  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0?Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
+  const previewTotal=isKg?(parseFloat(form.totalAmount)||0)*1000:(parseFloat(form.totalAmount)||0);
+  const previewRemaining=previewTotal-effectiveConsumed;
+  const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&previewRemaining>0?Math.ceil(previewRemaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
   const handleSave=()=>{
     setSubmitted(true);if(!isValid)return;
     const saveUnit=isKg?"g":form.unit;
@@ -3715,7 +3718,7 @@ function App(){
         setTimeout(()=>window._scheduleSWNotifs(supplements,todayISO()),1500);
       }
       // Low stock alerts — in-app fallback (fires when app is open)
-      const critical=supplements.filter(s=>{const d=daysFromNow(calcRunOut(s));return d>=0&&d<=7;});
+      const critical=supplements.filter(s=>{const dep=(s.totalAmount-(s.consumed||0))<=0||s.discontinued===true;if(dep)return false;const d=daysFromNow(calcRunOut(s));return d>=1&&d<=7;});
       if(critical.length>0){
         const todayKey=todayISO();
         const notifiable=critical.filter(s=>{
@@ -3835,7 +3838,7 @@ function App(){
     }
     callback();
   };
-  const urgentCount=supplements.filter(s=>daysFromNow(calcRunOut(s))<=7).length;
+  const urgentCount=supplements.filter(s=>{const dep=(s.totalAmount-(s.consumed||0))<=0||s.discontinued===true;return!dep&&daysFromNow(calcRunOut(s))<=7;}).length;
   const todayFeelLog=(()=>{
     const tISO=todayISO();
     // Check feels storage first (most reliable source after logging)
@@ -3916,7 +3919,7 @@ function App(){
           {tab==="stack"&&supplements.length>0&&(
             <div className="flex gap-8" style={{marginBottom:8}}>
               {[
-                {label:"TRACKING",value:supplements.length,color:"#F0F0F0",onClick:null},
+                {label:"TRACKING",value:supplements.filter(s=>(s.totalAmount-(s.consumed||0))>0&&!s.discontinued).length,color:"#F0F0F0",onClick:null},
                 {label:"URGENT",value:urgentCount,color:urgentCount>0?"#C0392B":"#7A7D85",onClick:()=>setFilter(f=>f==="urgent"?"all":"urgent")},
                 ...(dailyCost>0?[{label:"DAILY COST",value:`${getCurrencySymbol(profile?.currency||profile?.country)}${dailyCost.toFixed(2)}`,color:"#E8A830",onClick:()=>setShowCostBreakdown(true)}]:[{label:"DAILY COST",value:"—",color:"#4A4B4F",onClick:null}])
               ].map(s=>(
