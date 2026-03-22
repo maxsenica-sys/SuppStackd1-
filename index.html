@@ -803,7 +803,7 @@ function CalendarBar({logs,supplements,onDateSelect,selectedDate,lockedDate,cale
 }
 
 // ── DateLogModal ──────────────────────────────────────────────────────────────
-function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDeleteLog}){
+function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDeleteLog,onDeleteSupp}){
   const dateObj=new Date(date+"T00:00:00");
   const dateLabel=dateObj.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const todayStr=todayISO();
@@ -1133,7 +1133,10 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
                       <p style={{margin:0,color:"#7A7D85",fontWeight:700,fontSize:13}}>{supp.name}</p>
                       <p style={{margin:"2px 0 0",color:"#4A4B4F",fontFamily:"'Space Mono',monospace",fontSize:10}}>{supp.servingSize}{supp.unit}/serving</p>
                     </div>
-                    <button onClick={()=>handleQuickLog(supp)} style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"6px 12px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",letterSpacing:"0.5px"}}>+ LOG</button>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <button onClick={()=>handleQuickLog(supp)} style={{background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"6px 12px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer",letterSpacing:"0.5px"}}>+ LOG</button>
+                      {(isToday||isFuture)&&onDeleteSupp&&<button onClick={()=>{if(window.confirm("Delete "+supp.name+"? This cannot be undone."))onDeleteSupp(supp.id);}} style={{background:"transparent",border:"1px solid rgba(192,57,43,0.3)",borderRadius:7,padding:"6px 10px",color:"#C0392B",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,cursor:"pointer"}}>DELETE</button>}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1193,7 +1196,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const img=new Image();
     img.onload=()=>{
       imgRef.current=img;
-      const s=Math.max((SIZE*DPR)/img.width,(SIZE*DPR)/img.height);
+      const s=Math.min((SIZE*DPR)/img.width,(SIZE*DPR)/img.height);
       stateRef.current.scale=s;
       stateRef.current.initScale=s;
       stateRef.current.offsetX=0;
@@ -1234,7 +1237,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const s=stateRef.current;
     if(e.touches.length===2&&s.pinching){
       const dist=getDist(e.touches);
-      if(s.lastDist>0){const ratio=dist/s.lastDist;const next=Math.max(s.initScale*0.8,Math.min(s.initScale*6,s.scale*ratio));s.scale=next;}
+      if(s.lastDist>0){const ratio=dist/s.lastDist;const next=Math.max(s.initScale,Math.min(s.initScale*8,s.scale*ratio));s.scale=next;}
       s.lastDist=dist;
       scheduleDraw();
     } else if(e.touches.length===1&&s.dragging&&!s.pinching){
@@ -1509,7 +1512,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0}}>
             <button onClick={e=>{e.stopPropagation();const fresh={...supp,consumed:0,createdAt:todayISO()};onEdit(fresh);}} style={{padding:"5px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
-            <button onClick={e=>{e.stopPropagation();if(window.confirm("Remove "+supp.name+" from your stack?"))onDelete(supp.id);}} style={{padding:"5px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>REMOVE</button>
+            <button onClick={e=>{e.stopPropagation();if(window.confirm("Delete "+supp.name+"? This cannot be undone."))onDelete(supp.id);}} style={{padding:"5px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>DELETE</button>
           </div>
         </div>
       </div>
@@ -1678,7 +1681,9 @@ function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
   const touch=(k)=>setTouched(t=>({...t,[k]:true}));
   const calcConsumed=()=>{const total=parseFloat(form.totalAmount)||0,serving=parseFloat(form.servingSize)||0,perDay=parseFloat(form.servingsPerDay)||1;if(startedMode==="amount"){const left=parseFloat(amountLeft)||0;return Math.max(0,total-left);}else{const days=parseInt(daysAlready)||0;return Math.min(total,days*serving*perDay);}};
   const effectiveConsumed=!isEdit&&alreadyStarted?calcConsumed():parseFloat(form.consumed)||0;
-  const errors={name:!form.name.trim()?"Supplement name is required":null,totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":(!isEdit&&parseFloat(form.servingSize)>parseFloat(form.totalAmount||999999))?"Can't exceed total amount":null,servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null};
+  const isKg=form.unit==="kg";
+  const totalForValidation=isKg?(parseFloat(form.totalAmount)||0)*1000:(parseFloat(form.totalAmount)||0);
+  const errors={name:!form.name.trim()?"Supplement name is required":null,totalAmount:!form.totalAmount?"Total amount is required":parseFloat(form.totalAmount)<=0?"Must be greater than 0":null,servingSize:!form.servingSize?"Serving size is required":parseFloat(form.servingSize)<=0?"Must be greater than 0":(!isEdit&&parseFloat(form.servingSize)>totalForValidation)?"Can't exceed total amount":null,servingsPerDay:!form.servingsPerDay?"Servings per day is required":parseFloat(form.servingsPerDay)<=0?"Must be > 0":null,consumed:isEdit&&form.consumed!==""&&parseFloat(form.consumed)>parseFloat(form.totalAmount||0)?"Can't exceed total amount":null};
   const reqFields=["name","totalAmount","servingSize","servingsPerDay"];
   const isValid=reqFields.every(k=>!errors[k]);
   const completed=reqFields.filter(k=>!errors[k]).length;
@@ -1687,7 +1692,14 @@ function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
   const totalNum=parseFloat(form.totalAmount)||0;
   const remaining=totalNum-effectiveConsumed;
   const preview=form.totalAmount&&form.servingSize&&!errors.totalAmount&&!errors.servingSize&&remaining>0?Math.ceil(remaining/((parseFloat(form.servingSize)||1)*(parseFloat(form.servingsPerDay)||1))):null;
-  const handleSave=()=>{setSubmitted(true);if(!isValid)return;onSave({...form,id:form.id||Date.now().toString(),totalAmount:parseFloat(form.totalAmount),servingSize:parseFloat(form.servingSize),servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:effectiveConsumed,price:parseFloat(form.price)||null,createdAt:form.customDate||todayISO()});};
+  const handleSave=()=>{
+    setSubmitted(true);if(!isValid)return;
+    const saveUnit=isKg?"g":form.unit;
+    const saveTotalAmount=isKg?parseFloat(form.totalAmount)*1000:parseFloat(form.totalAmount);
+    const saveServingSize=isKg?parseFloat(form.servingSize):parseFloat(form.servingSize);
+    const saveConsumed=isKg?effectiveConsumed*1000:effectiveConsumed;
+    onSave({...form,id:form.id||Date.now().toString(),unit:saveUnit,totalAmount:saveTotalAmount,servingSize:saveServingSize,servingsPerDay:parseFloat(form.servingsPerDay)||1,consumed:saveConsumed,price:parseFloat(form.price)||null,createdAt:form.customDate||todayISO()});
+  };
   const ic=k=>`inp${showErr(k)?" error":touched[k]&&!errors[k]?" valid":""}`;
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -1744,7 +1756,7 @@ function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
         </div>
         <div className="flex gap-6">
           <div className="field flex-1"><span className="section-label">TOTAL ({form.unit}) *</span><input type="number" className={ic("totalAmount")} placeholder="eg. 1000" min="0" value={form.totalAmount} onChange={e=>set("totalAmount",e.target.value)} onBlur={()=>touch("totalAmount")}/>{showErr("totalAmount")&&<div className="err-msg">⚠ {errors.totalAmount}</div>}</div>
-          <div className="field flex-1"><span className="section-label">SERVING *</span><input type="number" className={ic("servingSize")} placeholder="eg. 25" min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
+          <div className="field flex-1"><span className="section-label">SERVING ({isKg?"g":form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder={isKg?"eg. 30":"eg. 25"} min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{isKg&&<p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:4}}>Enter serving in g (e.g. 30g per scoop)</p>}{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
           <div className="field flex-1"><span className="section-label">/ DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="eg. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
         <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{getCurrencySymbol(profile?.currency||profile?.country)}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
@@ -2235,8 +2247,9 @@ function ShareCard({supplements,profile,logs,onClose}){
 // ── BatchLogModal ─────────────────────────────────────────────────────────────
 function BatchLogModal({supplements,logs,todayFeel,onClose,onSaveAll}){
   const tISO=todayISO();
-  const unlogged=supplements.filter(s=>!logs.some(l=>l.suppId===s.id&&(l.date===tISO||toISODate(l.ts)===tISO))).sort((a,b)=>a.name.localeCompare(b.name));
-  const alreadyLogged=supplements.filter(s=>logs.some(l=>l.suppId===s.id&&(l.date===tISO||toISODate(l.ts)===tISO)));
+  const activeSupps=supplements.filter(s=>(s.totalAmount-(s.consumed||0))>0&&!s.discontinued);
+  const unlogged=activeSupps.filter(s=>!logs.some(l=>l.suppId===s.id&&(l.date===tISO||toISODate(l.ts)===tISO))).sort((a,b)=>a.name.localeCompare(b.name));
+  const alreadyLogged=activeSupps.filter(s=>logs.some(l=>l.suppId===s.id&&(l.date===tISO||toISODate(l.ts)===tISO)));
   // status: "taken" | "later" | "skip"
   const [rows,setRows]=useState(()=>unlogged.map(s=>({suppId:s.id,name:s.name,unit:s.unit,servingSize:s.servingSize,status:"taken",amount:s.servingSize,notes:""})));
   const isFirstLog=!todayFeel;
@@ -2776,8 +2789,10 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
 // ── InsightsModal ─────────────────────────────────────────────────────────────
 function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
   const [tab,setTab]=React.useState("feel");
-  const [debriefText,setDebriefText]=React.useState(null);
-  const [debriefPoints,setDebriefPoints]=React.useState([]);
+  const DEBRIEF_CACHE_KEY="suppstackd_debrief_cache";
+  const debriefBucket=()=>Math.floor(Date.now()/(6*60*60*1000));
+  const [debriefText,setDebriefText]=React.useState(()=>{try{const c=JSON.parse(localStorage.getItem(DEBRIEF_CACHE_KEY)||"null");if(c&&c.bucket===debriefBucket())return c.text;}catch{}return null;});
+  const [debriefPoints,setDebriefPoints]=React.useState(()=>{try{const c=JSON.parse(localStorage.getItem(DEBRIEF_CACHE_KEY)||"null");if(c&&c.bucket===debriefBucket())return c.points;}catch{}return[];});
   const [debriefLoading,setDebriefLoading]=React.useState(false);
   const [debriefExpanded,setDebriefExpanded]=React.useState(false);
   const [vaultSearch,setVaultSearch]=React.useState("");
@@ -2803,7 +2818,11 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
   }).filter(Boolean));
   const adherencePct=Math.round((adherenceDays.filter(d=>loggedDays.has(d)).length/30)*100);
   let streak=0;
-  for(let i=0;i<adherenceDays.length;i++){if(loggedDays.has(adherenceDays[i]))streak++;else break;}
+  const streakStart=(loggedDays.has(adherenceDays[0])||loggedDays.has(adherenceDays[1]))?0:null;
+  if(streakStart!==null){
+    const offset=loggedDays.has(adherenceDays[0])?0:1;
+    for(let i=offset;i<adherenceDays.length;i++){if(loggedDays.has(adherenceDays[i]))streak++;else break;}
+  }
 
   const last7=adherenceDays.slice(0,7);
   const last7Logs=logs.filter(l=>{
@@ -2857,9 +2876,10 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
     sleep:["magnesium","magnesium glycinate","melatonin","l-theanine","reishi","5-htp","inositol","ashwagandha","valerian root","gaba"],
   };
 
-  const generateDebrief=()=>{
+  const generateDebrief=(force=false)=>{
     setDebriefLoading(true);
     setDebriefExpanded(false);
+    if(force){try{localStorage.removeItem(DEBRIEF_CACHE_KEY);}catch{}}
     setTimeout(()=>{
       try{
         const activeSupps=supplements.filter(s=>!s.removed);
@@ -2961,6 +2981,7 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
         const recoStr=recommendations.length>0?("__RECO__"+JSON.stringify(recommendations)):"";
         setDebriefPoints(points);
         setDebriefText(points.join("||")+recoStr);
+        try{localStorage.setItem(DEBRIEF_CACHE_KEY,JSON.stringify({bucket:debriefBucket(),points,text:points.join("||")+recoStr}));}catch{}
       }catch(e){
         setDebriefPoints(["Something went wrong. Tap regenerate to try again."]);
         setDebriefText("error");
@@ -3254,11 +3275,11 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
               // Parse recommendations from debriefText
               const recoMatch=debriefText&&debriefText.includes("__RECO__")?JSON.parse(debriefText.split("__RECO__")[1]):[];
               return(
-              <div onClick={()=>setDebriefExpanded(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
-                <div style={{background:"#161718",border:"1px solid #2A2B2E",borderRadius:16,padding:"20px",width:"100%",maxWidth:480,maxHeight:"78vh",overflowY:"auto",boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}} onClick={e=>e.stopPropagation()}>
+              <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+                <div style={{background:"#161718",border:"1px solid #2A2B2E",borderRadius:16,padding:"20px",width:"100%",maxWidth:480,maxHeight:"78vh",overflowY:"auto",boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                     <p style={{color:"#E8A830",fontFamily:MM,fontSize:12,fontWeight:700,margin:0,letterSpacing:"0.5px"}}>WEEKLY DEBRIEF</p>
-                    <button onClick={()=>setDebriefExpanded(false)} style={{background:"transparent",border:"none",color:"#7A7D85",cursor:"pointer",fontSize:18,fontWeight:700,padding:0,lineHeight:1}}>✕</button>
+                    <button onClick={()=>setDebriefExpanded(false)} style={{background:"transparent",border:"1px solid #2A2B2E",color:"#7A7D85",cursor:"pointer",fontSize:14,fontWeight:700,padding:"4px 10px",lineHeight:1,borderRadius:7,fontFamily:MM}}>✕ CLOSE</button>
                   </div>
                   {debriefPoints.map((pt,i)=>(
                     <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:12,paddingBottom:12,borderBottom:i<debriefPoints.length-1?"1px solid #1C1D1F":"none"}}>
@@ -3309,7 +3330,7 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
 
             {/* Generate button */}
             <button
-              onClick={generateDebrief}
+              onClick={()=>generateDebrief(!!debriefText)}
               disabled={debriefLoading}
               style={{
                 width:"100%",padding:"12px 0",
@@ -3321,7 +3342,7 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
                 letterSpacing:"0.5px",transition:"all 0.2s"
               }}
             >
-              {debriefLoading?"GENERATING...":debriefText?"REGENERATE DEBRIEF ↻":"GENERATE WEEKLY DEBRIEF"}
+              {debriefLoading?"GENERATING...":debriefText?"REGENERATE ↻":"GENERATE WEEKLY DEBRIEF"}
             </button>
           </div>
         )}
@@ -3696,11 +3717,15 @@ function App(){
       // Low stock alerts — in-app fallback (fires when app is open)
       const critical=supplements.filter(s=>{const d=daysFromNow(calcRunOut(s));return d>=0&&d<=7;});
       if(critical.length>0){
-        const names=critical.map(s=>s.name).join(", ");
-        const msg=critical.length===1
-          ?`${critical[0].name} — approx ${Math.max(0,daysFromNow(calcRunOut(critical[0])))}d supply left. Time to reorder.`
-          :`${critical.length} supps running low: ${names}. Check your stack.`;
-        fireNotif("Suppstackd — Low stock",msg,800);
+        const todayKey=todayISO();
+        const notifiable=critical.filter(s=>{
+          try{const last=localStorage.getItem("reorder_notif_"+s.id);return last!==todayKey;}catch{return true;}
+        });
+        if(notifiable.length>0){
+          const s=notifiable[0];
+          fireNotif("Suppstackd — Low stock",`${s.name} — approx ${Math.max(0,daysFromNow(calcRunOut(s)))}d supply left. Time to reorder.`,800);
+          notifiable.forEach(s=>{try{localStorage.setItem("reorder_notif_"+s.id,todayKey);}catch{}});
+        }
       }
     }
     if(checkAndTrackActiveDay())setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
@@ -3727,8 +3752,10 @@ function App(){
     setShowAdd(false);setEditSupp(null);
   };
   const deleteSupp=id=>{
-    if(confirm("Remove this supplement? Your log history will be preserved."))
-      setSupplements(prev=>prev.map(s=>s.id===id?{...s,removed:true,removedAt:todayISO()}:s));
+    if(confirm("Delete this supplement? This cannot be undone.")){
+      setSupplements(prev=>prev.filter(s=>s.id!==id));
+      setLogs(prev=>prev.filter(l=>l.suppId!==id));
+    }
   };
   const saveLog=({taken,amount,notes,feel})=>{
     const t=today();const tISO=todayISO();
@@ -4011,15 +4038,16 @@ function App(){
           }
           <span>PROFILE</span>
         </button>
-        <button className="nav-btn" onClick={()=>supplements.length>0?setShowBatchLog(true):tryAdd(()=>setShowAdd(true))} style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:0,flex:"0 0 auto"}}>
-          <div style={{width:62,height:62,borderRadius:"50%",background:supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"#1C1D1F":"linear-gradient(135deg,#E8A830,#C88820)",border:supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"2px solid #3A3B3E":"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:supplements.length>0&&!supplements.every(s=>s.lastLogged===today())?"0 4px 20px rgba(232,168,48,0.35)":"none",transition:"all 0.2s",marginBottom:4}}>
-            {supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))
+        {(()=>{const _activeNav=supplements.filter(s=>(s.totalAmount-(s.consumed||0))>0&&!s.discontinued);const _allLogged=_activeNav.length>0&&_activeNav.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())));return(
+        <button className="nav-btn" onClick={()=>_activeNav.length>0?setShowBatchLog(true):tryAdd(()=>setShowAdd(true))} style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:0,flex:"0 0 auto"}}>
+          <div style={{width:62,height:62,borderRadius:"50%",background:_allLogged?"#1C1D1F":"linear-gradient(135deg,#E8A830,#C88820)",border:_allLogged?"2px solid #3A3B3E":"none",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:!_allLogged&&_activeNav.length>0?"0 4px 20px rgba(232,168,48,0.35)":"none",transition:"all 0.2s",marginBottom:4}}>
+            {_allLogged
               ?<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5BAD72" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               :<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111213" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             }
           </div>
-          <span style={{fontFamily:"'Space Mono',monospace",fontSize:"8px",letterSpacing:"0.8px",color:supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"#5BAD72":"#E8A830"}}>{supplements.length>0&&supplements.every(s=>logs.some(l=>l.suppId===s.id&&(l.date===todayISO()||toISODate(l.ts)===todayISO())))?"LOGGED":"LOG ALL"}</span>
-        </button>
+          <span style={{fontFamily:"'Space Mono',monospace",fontSize:"8px",letterSpacing:"0.8px",color:_allLogged?"#5BAD72":"#E8A830"}}>{_allLogged?"LOGGED":"LOG ALL"}</span>
+        </button>);})()}
         <button className="nav-btn" onClick={()=>setShowInsights(true)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{color:"#7A7D85"}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           <span>INSIGHTS</span>
@@ -4044,7 +4072,7 @@ function App(){
       {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
-      {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog}/>}
+      {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog} onDeleteSupp={(id)=>{deleteSupp(id);setSelectedDate(null);}}/>}
     </div>
   );
 }
