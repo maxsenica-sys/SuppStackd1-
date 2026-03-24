@@ -2605,7 +2605,7 @@ function UpgradeModal({onClose,limit,onUpgrade}){
         <div style={{display:"flex",gap:8,marginBottom:14}}>
           {[
             {id:"monthly",label:"MONTHLY",price:"A$3.99/mo",sub:""},
-            {id:"annual",label:"ANNUAL",price:"A$49.99/yr",sub:"SAVE 48%"},
+            {id:"annual",label:"ANNUAL",price:"A$39.99/yr",sub:"SAVE 17%"},
           ].map(p=>(
             <button key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{flex:1,padding:"10px 8px",borderRadius:9,border:selectedPlan===p.id?"1px solid #E8A830":"1px solid #2A2B2E",background:selectedPlan===p.id?"rgba(232,168,48,0.1)":"#1C1D1F",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
               <div style={{color:selectedPlan===p.id?"#E8A830":"#7A7D85",fontFamily:MM,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:2}}>{p.label}</div>
