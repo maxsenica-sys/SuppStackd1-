@@ -1,4 +1,4 @@
-const CACHE = 'suppstackd-sw-v3';
+const CACHE = 'suppstackd-sw-v4';
 const NOTIF_STORE = 'suppstackd_sw_notifs';
 
 // Listen for messages from the main app
@@ -13,20 +13,44 @@ self.addEventListener('message', e => {
 });
 
 // On SW activation, reload stored data and reschedule
+// Reschedule notifs on activate (notif data reload)
 self.addEventListener('activate', e => {
   e.waitUntil(
-    Promise.all([
-      self.clients.claim(),
-      caches.open(NOTIF_STORE).then(cache =>
-        cache.match('/__sw_data__').then(res => {
-          if (res) res.json().then(data => scheduleNotifs(data));
-        })
-      )
-    ])
+    caches.open(NOTIF_STORE).then(cache =>
+      cache.match('/__sw_data__').then(res => {
+        if (res) res.json().then(data => scheduleNotifs(data));
+      })
+    )
   );
 });
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll(['/']))
+  );
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(cache => cache.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+  }
+});
+
+// Purge old caches on activate
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE && k !== NOTIF_STORE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
 
 // Clear old timers map on each schedule call
 const timers = [];
