@@ -1198,7 +1198,7 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     // Use DPR-scaled coordinates for crisp rendering
     const S=SIZE*DPR;
     ctx.clearRect(0,0,S,S);
-    const iw=img.width*scale*DPR,ih=img.height*scale*DPR;
+    const iw=img.width*scale,ih=img.height*scale;
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,S/2-iw/2+offsetX*DPR,S/2-ih/2+offsetY*DPR,iw,ih);
     // Subtle dim only outside circle — image stays visible underneath
     ctx.save();
@@ -3457,11 +3457,11 @@ function InsightsModal({onClose,logs,supplements,isPro}){
                       >
                         <div style={{flex:1,minWidth:0}}>
                           <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:12,fontWeight:700,margin:"0 0 3px"}}>{e.name}</p>
-                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:10,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.timing?`Best taken: ${e.timing.window}`:(e.benefits[0].length>48?e.benefits[0].slice(0,e.benefits[0].lastIndexOf(" ",46))+"…":e.benefits[0])}</p>
+                          <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:10,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.timing?`Best taken: ${e.timing.window.split(' or ')[0].split(',')[0]}`:(e.benefits[0].length>48?e.benefits[0].slice(0,e.benefits[0].lastIndexOf(" ",46))+"…":e.benefits[0])}</p>
                         </div>
                         {e.timing&&(
                           <span style={{color:"#E8A830",fontFamily:MM,fontSize:11,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"3px 7px",whiteSpace:"nowrap",flexShrink:0}}>
-                            {e.timing.window.split(',')[0].split(' or ')[0].split(' and ')[0].replace('30–60','Pre-workout').replace('20–30','Pre-workout').replace('60–90','Pre-exercise').replace('2–3','Pre-exercise')}
+                            {e.timing.window.split(' or ')[0].split(',')[0]}
                           </span>
                         )}
                       </button>
@@ -3497,7 +3497,7 @@ function DailyCostModal({supplements,profile,onClose}){
   const totalAnnual=totalMonthly*12;
   const maxCost=items.length?items[0].dailyCost:1;
 
-  const noPrice=supplements.filter(s=>!s.price||!s.totalAmount);
+  const noPrice=supplements.filter(s=>!s.removed&&(s.totalAmount-(s.consumed||0))>0&&!s.discontinued&&(!s.price||!s.totalAmount));
 
   return(
     <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
