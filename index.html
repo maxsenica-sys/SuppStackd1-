@@ -402,12 +402,12 @@ const SUPP_TIMING={
   "whey isolate":{window:"Post-workout",tip:"Faster than concentrate — commonly taken immediately after training to support muscle repair."},
   "casein protein":{window:"Before bed",tip:"Slow-digesting protein that feeds muscles for hours. Research supports pre-sleep use for overnight recovery."},
   "plant protein":{window:"Post-workout or with meals",tip:"Works similarly to whey — take around training or spread throughout the day to hit protein targets."},
-  "bcaa":{window:"During or before training",tip:"Most useful during fasted training or long sessions. Research on BCAAs is mixed if overall protein intake is adequate."},
+  "bcaa":{window:"During training or just before",tip:"Most useful during fasted training or long sessions. Research on BCAAs is mixed if overall protein intake is adequate."},
   "eaa":{window:"Before or during training",tip:"More complete than BCAAs. Particularly useful during fasted workouts or when protein intake is low."},
   "caffeine":{window:"30–60 min before training",tip:"Research consistently shows a 3–6mg/kg dose taken 30–60 minutes before exercise improves performance. Avoid within 6 hours of sleep."},
   "caffeine anhydrous":{window:"30–60 min before training",tip:"Concentrated caffeine — same timing as regular caffeine but effects may onset faster. Dose carefully."},
   "l-theanine":{window:"With caffeine or before bed",tip:"Pairs well with caffeine to reduce jitteriness. On its own, supports relaxation before sleep."},
-  "beta-alanine":{window:"Pre-workout",tip:"Tingling is normal. Some research suggests taking with meals to reduce this. Daily use matters more than exact timing."},
+  "beta-alanine":{window:"Before training",tip:"Tingling is normal. Some research suggests taking with meals to reduce this. Daily use matters more than exact timing."},
   "l-citrulline":{window:"30–60 min before training",tip:"Research supports a 6–8g dose taken before training to improve blood flow and reduce fatigue."},
   "citrulline malate":{window:"30–60 min before training",tip:"Commonly used before training for pump and endurance. 8g is a frequently studied dose."},
   "pre-workout":{window:"20–30 min before training",tip:"Follow product directions. Most contain caffeine and should be avoided in the afternoon if sleep is a priority."},
@@ -432,19 +432,19 @@ const SUPP_TIMING={
   "coq10":{window:"With meals",tip:"Fat-soluble — absorption improves significantly with a meal. Ubiquinol form has better bioavailability than ubiquinone."},
   "turmeric":{window:"With meals containing fat",tip:"Curcumin is fat-soluble and poorly absorbed alone. Black pepper (piperine) increases absorption by up to 2000%."},
   "curcumin":{window:"With meals containing fat",tip:"Same as turmeric — fat and piperine are critical for absorption. A specialised formula (like Meriva) can also help."},
-  "alpha gpc":{window:"30–60 min before training, or morning",tip:"Fast-acting choline source that supports focus. Often taken 30–60 min before training or demanding cognitive work."},
+  "alpha gpc":{window:"30–60 min before training or morning",tip:"Fast-acting choline source that supports focus. Often taken 30–60 min before training or demanding cognitive work."},
   "l-glutamine":{window:"Post-workout or before bed",tip:"Post-workout or before sleep are common windows to support gut and muscle recovery."},
   "berberine":{window:"With meals",tip:"Take with or just before meals to help regulate blood sugar after eating. Spread across 2–3 doses per day."},
   "inositol":{window:"Anytime, often before bed",tip:"Commonly taken before sleep for its calming effects. Can be taken in split doses throughout the day."},
   "tongkat ali":{window:"Morning",tip:"Stimulating — most people prefer morning dosing. Research typically uses daily consistent dosing, often cycled."},
   "fadogia agrestis":{window:"Morning",tip:"Often cycled (8 weeks on, 4 weeks off as a common approach). Take with food. Still limited human research available."},
-  "cordyceps":{window:"Pre-workout or morning",tip:"Supports oxygen utilisation and energy. Pre-workout or morning timing aligns with its energising properties."},
+  "cordyceps":{window:"Before training or morning",tip:"Supports oxygen utilisation and energy. Pre-workout or morning timing aligns with its energising properties."},
   "reishi":{window:"Evening or before bed",tip:"Known for calming and immune effects. Evening use supports winding down and sleep quality."},
   "lions mane":{window:"Morning with food",tip:"Nootropic effects develop over weeks. Consistent daily use matters more than specific timing."},
   "electrolytes":{window:"During and after training",tip:"Most important during long or intense sessions and in hot conditions. Replenish post-training too."},
-  "sodium bicarbonate":{window:"60–90 min before high-intensity exercise",tip:"Research suggests 0.3g/kg body weight taken 60–90 min before high-intensity efforts. Can cause GI upset — test first."},
-  "beetroot powder":{window:"2–3 hours before exercise",tip:"Nitrate loading takes time — research suggests 2–3 hours before exercise for peak effect. 3–5 days of use builds up."},
-  "collagen peptides":{window:"Pre-workout or with vitamin C",tip:"Research suggests 15g taken with vitamin C before exercise that loads tendons and joints may support connective tissue synthesis."},
+  "sodium bicarbonate":{window:"60–90 min before intense effort",tip:"Research suggests 0.3g/kg body weight taken 60–90 min before high-intensity efforts. Can cause GI upset — test first."},
+  "beetroot powder":{window:"2–3 hours before training",tip:"Nitrate loading takes time — research suggests 2–3 hours before exercise for peak effect. 3–5 days of use builds up."},
+  "collagen peptides":{window:"Before training, with vitamin C",tip:"Research suggests 15g taken with vitamin C before exercise that loads tendons and joints may support connective tissue synthesis."},
   "hmb":{window:"Before training or with meals",tip:"Consistent daily use matters most. Some research supports pre-workout timing but split dosing throughout the day is also valid."},
   "cocoa powder":{window:"Before training or anytime",tip:"Flavanols in cocoa support blood flow and nitric oxide production. Natural theobromine provides a mild, sustained energy effect."},
   "cacao":{window:"Before training or morning",tip:"Raw cacao's flavanols support circulation and nitric oxide levels. Natural stimulant effect is gentler than caffeine."},
@@ -486,7 +486,8 @@ function lookupTiming(name){
   const n=name.toLowerCase().trim();
   if(SUPP_TIMING[n])return SUPP_TIMING[n];
   const keys=Object.keys(SUPP_TIMING);
-  for(const key of keys){if(n.includes(key)||key.includes(n))return SUPP_TIMING[key];}
+  // Only match if key is 7+ chars to prevent short keys giving nonsense combos
+  for(const key of keys){if(key.length>=7&&(n.includes(key)||key.includes(n)))return SUPP_TIMING[key];}
   const stopWords=new Set(["the","and","with","for","of","a","an","in","is","to"]);
   const nameWords=n.split(/\s+/).filter(w=>w.length>2&&!stopWords.has(w));
   let bestMatch=null,bestScore=0;
@@ -1047,10 +1048,10 @@ function DateLogModal({date,supplements,logs,onClose,onSaveLog,onEditLog,onDelet
                 </div>
               );}
               return(
-                <div key={i} style={{background:"#111213",border:"1px solid #2A2B2E",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div key={i} style={{background:log.taken?"#111213":"rgba(232,168,48,0.05)",border:log.taken?"1px solid #2A2B2E":"1px solid rgba(232,168,48,0.18)",borderLeft:log.taken?"1px solid #2A2B2E":"3px solid rgba(232,168,48,0.4)",borderRadius:9,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <p style={{margin:0,color:"#F0F0F0",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}{supp?.removed&&<span style={{color:"#4A4B4F",fontSize:9,fontFamily:"'Space Mono',monospace",marginLeft:6}}>[removed]</span>}</p>
-                    <p style={{margin:"2px 0 0",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount} ${supp?.unit||""} taken`:"Skipped"}{log.notes?` · ${log.notes}`:""}</p>
+                    <p style={{margin:0,color:log.taken?"#F0F0F0":"#C8A84B",fontWeight:700,fontSize:13}}>{supp?.name||"Unknown"}{supp?.removed&&<span style={{color:"#4A4B4F",fontSize:9,fontFamily:"'Space Mono',monospace",marginLeft:6}}>[removed]</span>}</p>
+                    <p style={{margin:"2px 0 0",color:log.taken?"#7A7D85":"rgba(200,168,75,0.7)",fontFamily:"'Space Mono',monospace",fontSize:10}}>{log.taken?`${log.amount} ${supp?.unit||""} taken`:"⚠ Skipped"}{log.notes?` · ${log.notes}`:""}</p>
                   </div>
                   <div style={{display:"flex",gap:6,flexShrink:0}}>
                     {supp&&!supp.removed&&<button onClick={()=>handleQuickLog(supp,log)} style={{background:"rgba(232,168,48,0.07)",border:"1px solid rgba(232,168,48,0.3)",borderRadius:7,padding:"4px 10px",color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer"}}>EDIT</button>}
@@ -1282,17 +1283,22 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
   const handleConfirm=()=>{
     const out=document.createElement("canvas");out.width=EXPORT_SIZE;out.height=EXPORT_SIZE;
     const ctx=out.getContext("2d");
-    ctx.beginPath();ctx.arc(EXPORT_SIZE/2,EXPORT_SIZE/2,EXPORT_SIZE/2,0,Math.PI*2);ctx.clip();
     const {offsetX,offsetY,scale:s}=stateRef.current;
     const img=imgRef.current;
-    // Map the circular viewport (SIZE px) back to source image coords
-    // Circle shows a SIZE/s region of the source image, centred on the pan offset
-    const srcW=SIZE/s;
-    const srcH=SIZE/s;
-    const srcX=img.width/2-srcW/2-offsetX/s;
-    const srcY=img.height/2-srcH/2-offsetY/s;
+    // Black background for letterboxed images
+    ctx.fillStyle="#0A0A0A";
+    ctx.fillRect(0,0,EXPORT_SIZE,EXPORT_SIZE);
+    // Compute source region (what's visible in the circle viewport)
+    const srcW=(SIZE*DPR)/s;
+    const srcH=(SIZE*DPR)/s;
+    const srcX=img.width/2-srcW/2-(offsetX*DPR)/s;
+    const srcY=img.height/2-srcH/2-(offsetY*DPR)/s;
+    // Fit the entire visible source into the export square (contain, not cover)
+    const fitScale=Math.min(EXPORT_SIZE/srcW,EXPORT_SIZE/srcH);
+    const dw=srcW*fitScale,dh=srcH*fitScale;
+    const dx=(EXPORT_SIZE-dw)/2,dy=(EXPORT_SIZE-dh)/2;
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(img,srcX,srcY,srcW,srcH,0,0,EXPORT_SIZE,EXPORT_SIZE);
+    ctx.drawImage(img,srcX,srcY,srcW,srcH,dx,dy,dw,dh);
     onConfirm(out.toDataURL("image/jpeg",0.97));
   };
 
@@ -1543,7 +1549,7 @@ function SupplementCard({supp,onLog,onEdit,onDelete,onView,logs}){
           </div>
           <div style={{display:"flex",gap:6,flexShrink:0}}>
             <button onClick={e=>{e.stopPropagation();const fresh={...supp,consumed:0,createdAt:todayISO()};onEdit(fresh);}} style={{padding:"5px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
-            <button onClick={e=>{e.stopPropagation();if(window.confirm("Delete "+supp.name+"? This cannot be undone."))onDelete(supp.id);}} style={{padding:"5px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>DELETE</button>
+            <button onClick={e=>{e.stopPropagation();onDelete(supp.id,true);}} style={{padding:"5px 10px",border:"1px solid #2A2B2E",background:"transparent",color:"#7A7D85",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>REMOVE</button>
           </div>
         </div>
       </div>
@@ -1884,9 +1890,9 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,onView,
   const logs=logsFromParent||load(LOG_KEY,[]);
   const isDep=s=>(s.totalAmount-(s.consumed||0))<=0||s.discontinued===true;
 
-  const visibleSupps=[...supplements].filter(s=>!s.removed);
+  const visibleSupps=[...supplements]; // show all including soft-deleted in history
   const activeSupps=historyFilter==="depleted"
-    ?visibleSupps.filter(isDep).sort((a,b)=>new Date(calcRunOut(a))-new Date(calcRunOut(b)))
+    ?visibleSupps.filter(s=>isDep(s)||s.removed).sort((a,b)=>new Date(calcRunOut(a))-new Date(calcRunOut(b)))
     :[
         ...visibleSupps.filter(s=>!isDep(s)).sort((a,b)=>{
           if(historyFilter==="date")return new Date(b.createdAt||0)-new Date(a.createdAt||0);
@@ -1944,7 +1950,7 @@ function SupplementHistory({supplements,onAddNew,onEdit,onReAdd,onDelete,onView,
                 </div>
                 <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
                   <button onClick={e=>{e.stopPropagation();onEdit&&onEdit({...s,consumed:0,createdAt:todayISO()});}} style={{padding:"4px 10px",border:"1px solid rgba(91,173,114,0.4)",background:"rgba(91,173,114,0.07)",color:"#5BAD72",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700,whiteSpace:"nowrap"}}>RE-ADD</button>
-                  <button onClick={e=>{e.stopPropagation();if(window.confirm("Remove "+s.name+" from history?"))onDelete&&onDelete(s.id);}} style={{padding:"4px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>REMOVE</button>
+                  <button onClick={e=>{e.stopPropagation();if(window.confirm("Delete "+s.name+" entirely? This removes all logs and cannot be undone."))onDelete&&onDelete(s.id);}} style={{padding:"4px 10px",border:"1px solid rgba(192,57,43,0.3)",background:"transparent",color:"#C0392B",borderRadius:6,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9,fontWeight:700}}>DELETE ENTIRELY</button>
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"nowrap",overflow:"hidden"}}>
@@ -2889,41 +2895,94 @@ function InsightsModal({onClose,logs,supplements,isPro}){
         const lowMetrics=metrics.filter(m=>m.v<4).sort((a,b)=>a.v-b.v);
         const weakestMetric=lowMetrics[0]||null;
         const allStrong=metrics.length>0&&metrics.every(m=>m.v>=4);
-        const points=[];
+        const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+                const points=[];
 
         // Point 1: This week consistency
-        if(daysLogged===7)points.push(`• Perfect week — all 7 days logged${streak>3?`, streak now at ${streak} days`:""}.`);
-        else if(daysLogged>=5)points.push(`• ${daysLogged}/7 days logged${streak>3?`, ${streak}-day streak`:""}. ${daysMissed===1?"One missed day — no big deal.":"A couple of gaps to close next week."}`);
-        else if(daysLogged>=3)points.push(`• ${daysLogged}/7 days logged — decent effort, ${daysMissed} gaps to close next week.`);
-        else points.push(`• ${daysLogged||"No"} day${daysLogged!==1?"s":""} logged this week. Getting the daily habit back will make a real difference.`);
+        if(daysLogged===7)points.push(pick([
+            `• Perfect week — all 7 days logged${streak>3?`, ${streak}-day streak and counting`:""}. That's the standard.`,
+            `• 7/7 this week${streak>3?` — ${streak}-day streak`:""}. Full consistency.`,
+            `• Clean sweep — every day logged${streak>3?`. Streak at ${streak} days`:". Keep it going"}.`,
+          ]));
+        else if(daysLogged>=5)points.push(pick([
+            `• ${daysLogged}/7 days logged${streak>3?`, ${streak}-day streak`:""}. ${daysMissed===1?"One miss — barely a dent.":"Two gaps this week — manageable."}`,
+            `• Strong week — ${daysLogged} of 7 days. ${daysMissed===1?"Miss one, move on.":"Close to perfect — tighten it up next week."}`,
+            `• ${daysLogged}/7 this week. ${daysMissed===1?"One slip won't break the trend.":"Nearly there — close those gaps next week."}`,
+          ]));
+        else if(daysLogged>=3)points.push(pick([
+            `• ${daysLogged}/7 days this week. Decent base, but ${daysMissed} days left on the table.`,
+            `• Logged ${daysLogged} of 7 days. Close those ${daysMissed} gaps and the trends will sharpen.`,
+            `• ${daysLogged}/7 — you showed up most days. ${daysMissed} more next week makes a real difference.`,
+          ]));
+        else points.push(pick([
+            `• ${daysLogged||"No"} day${daysLogged!==1?"s":""} logged this week. The habit isn't there yet — start with one day at a time.`,
+            `• Only ${daysLogged||0} logs this week. Consistency is the only lever that matters here.`,
+            `• ${daysLogged||0}/7 this week. Getting back on track starts with logging tomorrow, not next Monday.`,
+          ]));
 
         // Point 2: Feel scores — threshold is 4.0
         if(hasFeel){
           if(allStrong){
-            points.push(`• Feel scores are all at 4 or above${strongestMetric?` — ${strongestMetric.k} leading at ${strongestMetric.v}/5`:""}. Solid across the board.`);
+            points.push(pick([
+              `• Feel scores all at 4+${strongestMetric?` — ${strongestMetric.k} leading at ${strongestMetric.v}/5`:""}. Solid across the board.`,
+              `• Everything tracking above 4${strongestMetric?` — ${strongestMetric.k} is your strongest at ${strongestMetric.v}/5`:""}. Keep the habits that got you here.`,
+              `• All metrics above target${strongestMetric?` — ${strongestMetric.k} at ${strongestMetric.v}/5 is your standout`:""}. No weak spots this week.`,
+            ]));
           }else if(overallFeel>=3){
-            points.push(`• Feel scores are moderate${weakestMetric?` — ${weakestMetric.k} is your lowest at ${weakestMetric.v}/5, which is below the 4.0 target`:""}. There's room to push higher.`);
+            points.push(pick([
+              `• Feel is moderate${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is pulling the average down`:""}. Room to push higher.`,
+              `• Scores are okay but not optimal${weakestMetric?` — ${weakestMetric.k} is your lowest at ${weakestMetric.v}/5`:""}. That's the area to target.`,
+              `• Middle of the road${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is below 4.0`:""}. One tweak can shift this.`,
+            ]));
           }else{
-            points.push(`• Feel scores need attention${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is the main area to address`:""}. Consistent logging will help identify the pattern.`);
+            points.push(pick([
+              `• Feel scores are down${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 needs the most attention`:""}. Consistent logging will show the pattern.`,
+              `• Numbers need work${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is the priority`:""}. Start with sleep and recovery basics.`,
+              `• Low across the board${weakestMetric?` — ${weakestMetric.k} at ${weakestMetric.v}/5 is the main flag`:""}. Log daily and the picture will get clearer.`,
+            ]));
           }
         }else{
-          points.push(`• No feel scores logged yet — rate your energy, recovery, mood and sleep each day to unlock trend insights.`);
+          points.push(pick([
+            `• No feel scores yet — log energy, recovery, mood and sleep each day to unlock your trend data.`,
+            `• Feel tracking is empty — one extra tap per log unlocks all the insight features.`,
+            `• Score how you feel each day — takes seconds and makes every metric here meaningful.`,
+          ]));
         }
 
         // Point 3: Full stack vs partial
         if(fullAvg&&partialAvg&&parseFloat(fullAvg)>parseFloat(partialAvg)){
-          points.push(`• Full stack days average ${fullAvg}/5 vs ${partialAvg}/5 on partial days. That gap makes the case for staying consistent.`);
+          points.push(pick([
+            `• Full stack days average ${fullAvg}/5 vs ${partialAvg}/5 on partial days. That gap speaks for itself.`,
+            `• You feel ${(parseFloat(fullAvg)-parseFloat(partialAvg)).toFixed(1)} points better on full-stack days. The data backs it up.`,
+            `• Full stack: ${fullAvg}/5. Partial: ${partialAvg}/5. Skip less, feel more.`,
+          ]));
         }else if(timeLabel&&suppCount>0){
-          points.push(`• Most logs happening ${timeLabel.toLowerCase()}${suppCount>1?` across ${suppCount} supplements`:""}${timeLabel.toLowerCase().includes("morning")?" — a solid habit to lock in":""}.`);
+          points.push(pick([
+            `• Most logs happening ${timeLabel.toLowerCase()}${suppCount>1?` across ${suppCount} supplements`:""}. Solid routine forming.`,
+            `• You're most consistent ${timeLabel.toLowerCase()}${suppCount>1?` — ${suppCount} supplements in that window`:""}. Lean into it.`,
+            `• ${timeLabel} is your logging pattern${suppCount>1?` across ${suppCount} supplements`:""}. Consistency in timing helps absorption too.`,
+          ]));
         }
 
         // Point 4: 30-day score — only after 25+ days
         const firstLogTs=logs.length?Math.min(...logs.map(l=>{try{return new Date(l.date||l.ts).getTime();}catch{return Date.now();}})):Date.now();
         const daysSinceFirst=Math.floor((Date.now()-firstLogTs)/(1000*60*60*24));
         if(daysSinceFirst>=25){
-          if(adherencePct>=80)points.push(`• 30-day streak score: ${adherencePct}% — elite level. That consistency is what makes the insights here meaningful.`);
-          else if(adherencePct>=60)points.push(`• 30-day streak score: ${adherencePct}% — solid base. Push above 80% and the patterns will get sharper.`);
-          else points.push(`• 30-day streak score: ${adherencePct}% — room to build. Adding 2–3 more logging days per week will move this quickly.`);
+          if(adherencePct>=80)points.push(pick([
+              `• 30-day adherence: ${adherencePct}% — elite tier. That consistency is what makes supplement stacking actually work.`,
+              `• ${adherencePct}% over 30 days. Most people don't get close — it's showing in your scores.`,
+              `• 30-day score: ${adherencePct}% — top of the range. The trends are meaningful because of it.`,
+            ]));
+          else if(adherencePct>=60)points.push(pick([
+              `• 30-day score: ${adherencePct}% — solid foundation. Hit 80% and the insights here get sharper.`,
+              `• ${adherencePct}% over 30 days. You're in the zone — push above 80% for the full picture.`,
+              `• 30-day adherence at ${adherencePct}%. Good start — close the gaps and watch the trends move.`,
+            ]));
+          else points.push(pick([
+              `• 30-day score: ${adherencePct}% — there's real room to build. Two more days per week changes this fast.`,
+              `• ${adherencePct}% over 30 days. Logging more consistently is the biggest move you can make right now.`,
+              `• 30-day adherence: ${adherencePct}%. A streak of 5+ days this week will shift it.`,
+            ]));
         }
 
         // Point 5: Stack + metric suggestions — any metric under 4.0
@@ -2942,13 +3001,29 @@ function InsightsModal({onClose,logs,supplements,isPro}){
 
         // Point 6: Forward look — maintain if all strong, push if not
         if(allStrong&&hasFeel){
-          points.push(`• All scores at target. Keep doing what you're doing — and consider The Vault if you want to optimise further.`);
+          points.push(pick([
+            `• All scores at target. Keep doing what you're doing — check The Vault if you want to fine-tune further.`,
+            `• Everything tracking well. Maintenance mode — explore The Vault for the next edge.`,
+            `• Strong week across the board. Stay the course and use The Vault to find what you might be missing.`,
+          ]));
         }else if(daysLogged<5){
-          points.push(`• Next week: aim for 5+ logged days — small step, real impact on your trends.`);
+          points.push(pick([
+            `• Next week: aim for 5+ logged days. Small step, big impact on your trends.`,
+            `• Target 5 days next week — that's the threshold where patterns start to get useful.`,
+            `• Get to 5 days next week. That's it. One more day than this week.`,
+          ]));
         }else if(!hasFeel){
-          points.push(`• Start logging feel scores tomorrow — the single biggest unlock for meaningful insights here.`);
+          points.push(pick([
+            `• Log your feel scores tomorrow — it's the single biggest unlock in the app.`,
+            `• One extra tap per log: rate energy, recovery, mood, sleep. Everything builds from that.`,
+            `• Start feel tracking this week — the comparison data is where the real insights live.`,
+          ]));
         }else{
-          points.push(`• Keep building. The picture gets sharper every week you log consistently.`);
+          points.push(pick([
+            `• Keep building. The picture gets sharper every week you show up.`,
+            `• Consistency is compounding. Keep logging and let the data do its job.`,
+            `• You're in the right habits. Stack another solid week and the trends will keep improving.`,
+          ]));
         }
 
         // ── Recommendations section (expanded view only) ──────────────────
@@ -3663,20 +3738,29 @@ function App(){
         setTimeout(()=>window._scheduleSWNotifs(supplements,todayISO()),1500);
       }
       // Low stock alerts — in-app fallback (fires when app is open)
-      const critical=supplements.filter(s=>{const dep=(s.totalAmount-(s.consumed||0))<=0||s.discontinued===true;if(dep)return false;const d=daysFromNow(calcRunOut(s));return d>=1&&d<=7;});
-      if(critical.length>0){
-        // Only notify once per supplement per day — check lastReorderNotif in localStorage
-        const todayKey=todayISO();
-        const notifiable=critical.filter(s=>{
-          try{const last=localStorage.getItem("reorder_notif_"+s.id);return last!==todayKey;}catch{return true;}
+      // Low stock: fire once when ≤7 days remain, never repeat
+        const lowStock=supplements.filter(s=>{
+          if(s.removed||s.discontinued)return false;
+          const dep=(s.totalAmount-(s.consumed||0))<=0;if(dep)return false;
+          const d=daysFromNow(calcRunOut(s));return d>=1&&d<=7;
         });
-        if(notifiable.length>0){
-          // Fire one notification for the most critical supplement only
-          const s=notifiable[0];
-          fireNotif("Suppstackd — Low stock",`${s.name} — approx ${Math.max(0,daysFromNow(calcRunOut(s)))}d supply left. Time to reorder.`,800);
-          notifiable.forEach(s=>{try{localStorage.setItem("reorder_notif_"+s.id,todayKey);}catch{}});
+        const notifiableLow=lowStock.filter(s=>{try{return!localStorage.getItem("reorder_notif_done_"+s.id);}catch{return true;}});
+        if(notifiableLow.length>0){
+          const s=notifiableLow[0];
+          fireNotif("SUPPSTACKD — Low stock",`${s.name} — approx ${Math.max(1,daysFromNow(calcRunOut(s)))}d left. Time to reorder.`,800);
+          notifiableLow.forEach(s=>{try{localStorage.setItem("reorder_notif_done_"+s.id,"1");}catch{}});
         }
-      }
+        // Depleted: fire exactly once when hits 0, then never again
+        const justDepleted=supplements.filter(s=>{
+          if(s.removed||s.discontinued)return false;
+          const dep=(s.totalAmount-(s.consumed||0))<=0;if(!dep)return false;
+          try{return!localStorage.getItem("depleted_notif_done_"+s.id);}catch{return true;}
+        });
+        if(justDepleted.length>0){
+          const s=justDepleted[0];
+          fireNotif("SUPPSTACKD — Out of stock",`${s.name} has run out. Re-add when you restock.`,1200);
+          justDepleted.forEach(s=>{try{localStorage.setItem("depleted_notif_done_"+s.id,"1");}catch{}});
+        }
     }
     if(checkAndTrackActiveDay())setTimeout(()=>{setIsAutoFeedback(true);setShowFeedback(true);},2000);
     return()=>{if(notifTimer)clearTimeout(notifTimer);};
@@ -3694,10 +3778,15 @@ function App(){
     });
     setShowAdd(false);setEditSupp(null);
   };
-  const deleteSupp=id=>{
-    if(confirm("Delete this supplement? This cannot be undone.")){
-      setSupplements(prev=>prev.filter(s=>s.id!==id));
-      setLogs(prev=>prev.filter(l=>l.suppId!==id));
+  const deleteSupp=(id,softOnly=false)=>{
+    if(softOnly){
+      // Soft-delete: hide from MY STACK, keep in history
+      setSupplements(prev=>prev.map(s=>s.id===id?{...s,removed:true}:s));
+    } else {
+      if(confirm("Delete this supplement? This cannot be undone.")){
+        setSupplements(prev=>prev.filter(s=>s.id!==id));
+        setLogs(prev=>prev.filter(l=>l.suppId!==id));
+      }
     }
   };
   const saveLog=({taken,amount,notes,feel})=>{
@@ -3927,7 +4016,7 @@ function App(){
           <div style={{
             animation:slideDir?"tabSlide"+slideDir+" 0.28s cubic-bezier(0.4,0,0.2,1) forwards":undefined,
           }} onAnimationEnd={()=>setSlideDir(null)}>
-          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} onDelete={id=>{if(window.confirm("Permanently delete this supplement and all its logs?"))setSupplements(prev=>prev.filter(s=>s.id!==id));}} onView={s=>setViewSupp(s)} logs={logs} profile={profile}/>}
+          {tab==="history"&&<SupplementHistory supplements={supplements} onAddNew={()=>setShowAdd(true)} onEdit={s=>{setEditSupp(s);}} onReAdd={s=>{const fresh={...s,consumed:0,createdAt:todayISO()};setEditSupp(fresh);}} onDelete={id=>{setSupplements(prev=>prev.filter(s=>s.id!==id));setLogs(prev=>prev.filter(l=>l.suppId!==id));}} onView={s=>setViewSupp(s)} logs={logs} profile={profile}/>}
           {tab==="stack"&&<>
             {supplements.length===0&&(
               <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 28px",textAlign:"center",minHeight:320}}>
