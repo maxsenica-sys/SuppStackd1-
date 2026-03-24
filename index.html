@@ -1216,7 +1216,8 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const img=new Image();
     img.onload=()=>{
       imgRef.current=img;
-      const s=Math.min((SIZE*DPR)/img.width,(SIZE*DPR)/img.height);
+      // cover-fit: fill the circle at minimum zoom so no empty space
+      const s=Math.max((SIZE*DPR)/img.width,(SIZE*DPR)/img.height);
       stateRef.current.scale=s;
       stateRef.current.initScale=s;
       stateRef.current.offsetX=0;
@@ -1277,17 +1278,14 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
     const ctx=out.getContext("2d");
     const {offsetX,offsetY,scale:s}=stateRef.current;
     const img=imgRef.current;
-    ctx.fillStyle="#0A0A0A";
-    ctx.fillRect(0,0,EXPORT_SIZE,EXPORT_SIZE);
-    const srcW=(SIZE*DPR)/s;
-    const srcH=(SIZE*DPR)/s;
-    const srcX=img.width/2-srcW/2-(offsetX*DPR)/s;
-    const srcY=img.height/2-srcH/2-(offsetY*DPR)/s;
-    const fitScale=Math.min(EXPORT_SIZE/srcW,EXPORT_SIZE/srcH);
-    const dw=srcW*fitScale,dh=srcH*fitScale;
-    const dx=(EXPORT_SIZE-dw)/2,dy=(EXPORT_SIZE-dh)/2;
+    const visW=SIZE*DPR/s;
+    const visH=SIZE*DPR/s;
+    const cx=img.width/2 - (offsetX*DPR)/s;
+    const cy=img.height/2 - (offsetY*DPR)/s;
+    const srcX=cx-visW/2;
+    const srcY=cy-visH/2;
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(img,srcX,srcY,srcW,srcH,dx,dy,dw,dh);
+    ctx.drawImage(img,srcX,srcY,visW,visH,0,0,EXPORT_SIZE,EXPORT_SIZE);
     onConfirm(out.toDataURL("image/jpeg",0.97));
   };
 
@@ -1784,8 +1782,8 @@ function AddEditModal({supp,onClose,onSave,onDelete,onStopTaking,profile}){
         </div>
         <div className="flex gap-6">
           <div className="field flex-1"><span className="section-label">TOTAL ({form.unit}) *</span><input type="number" className={ic("totalAmount")} placeholder="eg. 1000" min="0" value={form.totalAmount} onChange={e=>set("totalAmount",e.target.value)} onBlur={()=>touch("totalAmount")}/>{showErr("totalAmount")&&<div className="err-msg">⚠ {errors.totalAmount}</div>}</div>
-          <div className="field flex-1"><span className="section-label">SERVING ({isKg?"g":form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder={isKg?"eg. 30":"eg. 25"} min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{isKg&&<p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:4}}>Enter serving in g (e.g. 30g per scoop)</p>}{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
-          <div className="field flex-1"><span className="section-label">/ DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="eg. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
+          <div className="field flex-1"><span className="section-label">SERVING SIZE ({isKg?"g":form.unit}) *</span><input type="number" className={ic("servingSize")} placeholder={isKg?"eg. 30":"eg. 25"} min="0" value={form.servingSize} onChange={e=>set("servingSize",e.target.value)} onBlur={()=>touch("servingSize")}/>{isKg&&<p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:4}}>Enter serving in g (e.g. 30g per scoop)</p>}{showErr("servingSize")&&<div className="err-msg">⚠ {errors.servingSize}</div>}</div>
+          <div className="field flex-1"><span className="section-label">DOSES/DAY *</span><input type="number" className={ic("servingsPerDay")} placeholder="eg. 1" min="0.5" step="0.5" value={form.servingsPerDay} onChange={e=>set("servingsPerDay",e.target.value)} onBlur={()=>touch("servingsPerDay")}/>{showErr("servingsPerDay")&&<div className="err-msg">⚠ {errors.servingsPerDay}</div>}</div>
         </div>
         <div className="field"><span className="section-label">PRICE PAID (OPTIONAL)</span><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:13}}>{getCurrencySymbol(profile?.currency||profile?.country)}</span><input type="number" className="inp" placeholder="e.g. 29.99" min="0" step="0.01" value={form.price||""} onChange={e=>set("price",e.target.value)}/></div></div>
         <div className="field">
@@ -2606,7 +2604,7 @@ function UpgradeModal({onClose,limit,onUpgrade}){
         </div>
         <div style={{display:"flex",gap:8,marginBottom:14}}>
           {[
-            {id:"monthly",label:"MONTHLY",price:"A$7.99/mo",sub:""},
+            {id:"monthly",label:"MONTHLY",price:"A$3.99/mo",sub:""},
             {id:"annual",label:"ANNUAL",price:"A$49.99/yr",sub:"SAVE 48%"},
           ].map(p=>(
             <button key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{flex:1,padding:"10px 8px",borderRadius:9,border:selectedPlan===p.id?"1px solid #E8A830":"1px solid #2A2B2E",background:selectedPlan===p.id?"rgba(232,168,48,0.1)":"#1C1D1F",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
@@ -2828,7 +2826,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
               {/* Pro banner */}
               {!isPro&&(
                 <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"clamp(9px,2vh,13px) clamp(12px,3vw,16px)"}}>
-                  <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,12px)",fontWeight:700,margin:"0 0 4px",letterSpacing:"0.5px"}}>SUPPSTACKD PRO — £2.99/mo</p>
+                  <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,12px)",fontWeight:700,margin:"0 0 4px",letterSpacing:"0.5px"}}>SUPPSTACKD PRO — A$3.99/mo</p>
                   <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(9px,2.2vw,11px)",margin:"0 0 clamp(7px,1.5vh,10px)",lineHeight:1.6}}>Unlimited supplements · Insights · Reorder reminders · Stack templates</p>
                   <button style={{width:"100%",padding:"clamp(7px,1.5vh,10px) 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
                 </div>
@@ -3639,7 +3637,7 @@ function InsightsModal({onClose,logs,supplements,isPro,onUpgrade}){
                               >
                                 <div style={{flex:1,minWidth:0}}>
                                   <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:12,fontWeight:700,margin:"0 0 3px"}}>{e.name}</p>
-                                  <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:10,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.benefits[0].slice(0,46)}{e.benefits[0].length>46?"…":""}</p>
+                                  <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:10,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.timing?`Best taken: ${e.timing.window}`:(e.benefits[0].length>48?e.benefits[0].slice(0,e.benefits[0].lastIndexOf(" ",46))+"…":e.benefits[0])}</p>
                                 </div>
                                 {e.timing&&(
                                   <span style={{color:"#E8A830",fontFamily:MM,fontSize:11,background:"rgba(232,168,48,0.08)",border:"1px solid rgba(232,168,48,0.18)",borderRadius:4,padding:"3px 7px",whiteSpace:"nowrap",flexShrink:0}}>
@@ -4312,7 +4310,7 @@ function App(){
       {showNotif&&<NotifPanel onClose={()=>setShowNotif(false)}/>}
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
-      {showShare&&<ShareCard supplements={supplements} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
+      {showShare&&<ShareCard supplements={supplements.filter(s=>!s.removed&&(s.totalAmount-(s.consumed||0))>0&&!s.discontinued)} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
       {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} supplements={supplements} logs={logs}/>}
       {showProTeaser&&<ProTeaserSheet
         onClose={()=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);}}
