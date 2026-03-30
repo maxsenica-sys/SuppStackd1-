@@ -223,8 +223,6 @@ const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
 const TRIAL_KEY="suppstackd_v1_trial";
 const TRIAL_DAYS=5;
 const GRACE_DAYS=2;
-const EMAIL_VERIFY_KEY="suppstackd_v1_email_verified";
-const LOOPS_API_KEY="9b317c478ed0ac5b735ceeef487848ec";
 const PRO_TEASER_KEY="suppstackd_v1_pro_teaser_shown";
 const PRO_TEASER_DAYS=4;
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
@@ -1315,231 +1313,115 @@ function ProfileOnboarding({onComplete}){
   const MM="'Space Mono',monospace";
   const BC="'Barlow Condensed',sans-serif";
   const [step,setStep]=useState(0);
-  const [profile,setProfile]=useState({name:"",email:"",age:"",currency:""});
+  const [form,setForm]=useState({name:"",email:"",age:"",currency:""});
   const [photoPreview,setPhotoPreview]=useState(null);
   const [cropSrc,setCropSrc]=useState(null);
   const [verifyCode,setVerifyCode]=useState("");
   const [enteredCode,setEnteredCode]=useState("");
   const [codeError,setCodeError]=useState("");
-  const [codeSent,setCodeSent]=useState(false);
   const [sendingCode,setSendingCode]=useState(false);
   const [verifying,setVerifying]=useState(false);
   const [codeExpiry,setCodeExpiry]=useState(null);
   const photoInputRef=useRef(null);
-  const set=(k,v)=>setProfile(p=>({...p,[k]:v}));
-  const step1Valid=profile.name.trim()&&profile.email.trim()&&profile.age.trim()&&profile.currency;
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const step1Valid=form.name.trim()&&form.email.trim()&&form.age.trim()&&form.currency;
   const isValidEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-  const sendVerificationCode=async()=>{
-    if(!isValidEmail(profile.email)){setCodeError("Please enter a valid email address.");return;}
+  const sendCode=async()=>{
+    if(!isValidEmail(form.email)){setCodeError("Please enter a valid email address.");return;}
     setSendingCode(true);setCodeError("");
     const code=String(Math.floor(100000+Math.random()*900000));
     setVerifyCode(code);
-    setCodeExpiry(Date.now()+10*60*1000); // 10 min expiry
+    setCodeExpiry(Date.now()+10*60*1000);
     try{
       await fetch("https://app.loops.so/api/v1/transactional",{
         method:"POST",
         headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
-        body:JSON.stringify({
-          transactionalId:"suppstackd-verify",
-          email:profile.email,
-          dataVariables:{code,name:profile.name||"there"}
-        })
+        body:JSON.stringify({transactionalId:"suppstackd-verify",email:form.email,dataVariables:{code,name:form.name||"there"}})
       });
-      setCodeSent(true);
       setStep(2);
-    }catch(e){
-      setCodeError("Failed to send code. Check your email and try again.");
-    }
+    }catch(e){setCodeError("Failed to send code. Please try again.");}
     setSendingCode(false);
   };
 
-  const verifyEmailCode=()=>{
+  const checkCode=()=>{
     setVerifying(true);setCodeError("");
-    if(Date.now()>codeExpiry){setCodeError("Code expired. Tap Resend to get a new one.");setVerifying(false);return;}
-    if(enteredCode.trim()===verifyCode){
-      setVerifying(false);
-      setStep(3); // move to photo step
-    }else{
-      setCodeError("Incorrect code. Please try again.");
-      setVerifying(false);
-    }
+    if(Date.now()>codeExpiry){setCodeError("Code expired. Tap Resend.");setVerifying(false);return;}
+    if(enteredCode.trim()===verifyCode){setVerifying(false);setStep(3);}
+    else{setCodeError("Incorrect code. Please try again.");setVerifying(false);}
   };
 
-  const finish=(photo)=>{
-    const finalProfile={...profile,photo:photo||photoPreview||null};
-    onComplete(finalProfile);
-  };
-
-  const steps=[
-    // Step 0 — Welcome
-    <div key={0} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 28px",textAlign:"center"}}>
-      <h1 style={{fontFamily:BC,fontSize:42,fontWeight:900,color:"#F0F0F0",marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.05}}>Welcome to<br/><span style={{color:"#E8A830"}}>SUPPSTACKD</span></h1>
-      <p style={{color:"#7A7D85",fontSize:13,fontFamily:MM,lineHeight:1.8,marginBottom:40}}>Let's set up your profile so we can personalise your experience.</p>
-      <button className="btn-primary" style={{width:"100%",padding:16,fontSize:14}} onClick={()=>setStep(1)}>LET'S GO →</button>
-    </div>,
-
-    // Step 1 — Profile details + email
-    <div key={1} style={{padding:"40px 28px",flex:1,overflowY:"auto"}}>
-      <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Who are you?</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:24,lineHeight:1.6}}>All fields required to continue.</p>
-      <div className="field"><span className="section-label">FULL NAME *</span><input className="inp" placeholder="Full name" value={profile.name} onChange={e=>set("name",e.target.value)}/></div>
-      <div className="field">
-        <span className="section-label">EMAIL ADDRESS *</span>
-        <input className="inp" type="email" placeholder="your@email.com" value={profile.email} onChange={e=>{set("email",e.target.value);setCodeError("");setCodeSent(false);}}/>
-        <p style={{color:"#7A7D85",fontSize:10,fontFamily:MM,marginTop:6,lineHeight:1.5}}>We'll send your weekly supplement debrief and low stock alerts here. A verification code will be sent to confirm.</p>
-      </div>
-      <div className="field"><span className="section-label">AGE *</span><input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/></div>
-      <div className="field"><span className="section-label">CURRENCY *</span><select className="inp" value={profile.currency||""} onChange={e=>set("currency",e.target.value)}><option value="">Select currency</option>{CURRENCY_OPTIONS.map(c=><option key={c.code} value={c.code}>{c.label}</option>)}</select></div>
-      {codeError&&<p style={{color:"#E05A5A",fontFamily:MM,fontSize:10,marginBottom:10}}>{codeError}</p>}
-      <button
-        className="btn-primary"
-        style={{width:"100%",padding:14,marginTop:8,opacity:step1Valid&&!sendingCode?1:0.4,cursor:step1Valid&&!sendingCode?"pointer":"not-allowed"}}
-        onClick={()=>step1Valid&&!sendingCode&&sendVerificationCode()}
-      >
-        {sendingCode?"SENDING CODE...":step1Valid?"SEND VERIFICATION CODE →":"FILL IN ALL FIELDS TO CONTINUE"}
-      </button>
-    </div>,
-
-    // Step 2 — Email verification
-    <div key={2} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-      <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Check your email</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:8,lineHeight:1.6}}>We sent a 6-digit code to</p>
-      <p style={{color:"#E8A830",fontSize:13,fontFamily:MM,marginBottom:24,fontWeight:700}}>{profile.email}</p>
-      <div className="field">
-        <span className="section-label">ENTER CODE *</span>
-        <input
-          className="inp"
-          type="number"
-          placeholder="000000"
-          value={enteredCode}
-          onChange={e=>setEnteredCode(e.target.value.slice(0,6))}
-          style={{textAlign:"center",fontSize:22,letterSpacing:"8px",fontFamily:MM}}
-        />
-      </div>
-      {codeError&&<p style={{color:"#E05A5A",fontFamily:MM,fontSize:10,marginBottom:10}}>{codeError}</p>}
-      <button
-        className="btn-primary"
-        style={{width:"100%",padding:14,marginBottom:12,opacity:enteredCode.length===6&&!verifying?1:0.4,cursor:enteredCode.length===6&&!verifying?"pointer":"not-allowed"}}
-        onClick={()=>enteredCode.length===6&&!verifying&&verifyEmailCode()}
-      >
-        {verifying?"VERIFYING...":"VERIFY EMAIL →"}
-      </button>
-      <button
-        style={{width:"100%",padding:10,background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:MM,fontSize:10,cursor:"pointer"}}
-        onClick={()=>{setCodeSent(false);setEnteredCode("");setCodeError("");setSendingCode(false);sendVerificationCode();}}
-      >
-        RESEND CODE
-      </button>
-      <button style={{width:"100%",padding:10,background:"transparent",border:"none",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",marginTop:8}} onClick={()=>setStep(1)}>
-        ← CHANGE EMAIL
-      </button>
-    </div>,
-
-    // Step 3 — Photo (optional)
-    <div key={3} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
-      <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6,alignSelf:"flex-start"}}>Add a photo</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:24,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
-      <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>setCropSrc(ev.target.result);reader.readAsDataURL(file);}}/>
-      {cropSrc?(
-        <div style={{width:"100%",textAlign:"center"}}>
-          <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,marginBottom:12}}>Crop your photo</p>
-          <button className="btn-primary" style={{width:"100%",padding:14,marginBottom:8}} onClick={()=>{setPhotoPreview(cropSrc);setCropSrc(null);}}>USE THIS PHOTO →</button>
-          <button style={{width:"100%",padding:10,background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:MM,fontSize:10,cursor:"pointer"}} onClick={()=>setCropSrc(null)}>CANCEL</button>
-        </div>
-      ):(
-        <>
-          {photoPreview?(
-            <div style={{width:100,height:100,borderRadius:"50%",overflow:"hidden",marginBottom:20,border:"2px solid #E8A830"}}>
-              <img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="preview"/>
-            </div>
-          ):(
-            <div onClick={()=>photoInputRef.current?.click()} style={{width:100,height:100,borderRadius:"50%",background:"#1C1D1F",border:"2px dashed #2A2B2E",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,cursor:"pointer"}}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4A4B4F" strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-            </div>
-          )}
-          <button onClick={()=>photoInputRef.current?.click()} style={{padding:"10px 24px",background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:9,color:"#F0F0F0",fontFamily:MM,fontSize:10,cursor:"pointer",marginBottom:20,letterSpacing:"0.5px"}}>
-            {photoPreview?"CHANGE PHOTO":"CHOOSE PHOTO"}
-          </button>
-          <button className="btn-primary" style={{width:"100%",padding:14}} onClick={()=>finish(photoPreview)}>
-            {photoPreview?"FINISH →":"SKIP FOR NOW →"}
-          </button>
-        </>
-      )}
-    </div>,
-  ];
+  const finish=(photo)=>onComplete({...form,photo:photo||photoPreview||null});
 
   return(
     <div style={{position:"fixed",inset:0,background:"#0A0A0A",zIndex:9999,display:"flex",flexDirection:"column",maxWidth:480,margin:"0 auto"}}>
       {step>0&&(
         <div style={{padding:"16px 20px 0",display:"flex",gap:6}}>
-          {[1,2,3].map(s=>(
-            <div key={s} style={{flex:1,height:3,borderRadius:2,background:step>=s?"#E8A830":"#1C1D1F",transition:"background 0.3s"}}/>
-          ))}
+          {[1,2,3].map(s=>(<div key={s} style={{flex:1,height:3,borderRadius:2,background:step>=s?"#E8A830":"#1C1D1F",transition:"background 0.3s"}}/>))}
         </div>
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        {steps[step]}
-      </div>
-    </div>
-  );
-}){
-  const [step,setStep]=useState(0);
-  const [profile,setProfile]=useState({name:"",email:"",age:"",currency:""});
-  const [photoPreview,setPhotoPreview]=useState(null);
-  const [cropSrc,setCropSrc]=useState(null);
-  const photoInputRef=useRef(null);
-  const set=(k,v)=>setProfile(p=>({...p,[k]:v}));
-  const step1Valid=profile.name.trim()&&profile.email.trim()&&profile.age.trim()&&profile.currency;
-  const finish=(photo)=>{save(PROFILE_KEY,{...profile,photo:photo||photoPreview||null,createdAt:new Date().toISOString()});onComplete({...profile,photo:photo||photoPreview||null});};
-  const handlePhoto=(e)=>{
-    const file=e.target.files?.[0];
-    if(!file)return;
-    const reader=new FileReader();
-    reader.onload=(ev)=>setCropSrc(ev.target.result);
-    reader.readAsDataURL(file);
-  };
-  const steps=[
-    <div key={0} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 28px",textAlign:"center"}}>
-      <h1 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:42,fontWeight:900,color:"#F0F0F0",marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.05}}>Welcome to<br/><span style={{color:"#E8A830"}}>SUPPSTACKD</span></h1>
-      <p style={{color:"#7A7D85",fontSize:13,fontFamily:"'Space Mono',monospace",lineHeight:1.8,marginBottom:40}}>Let's set up your profile so we can personalise your experience.</p>
-      <button className="btn-primary" style={{width:"100%",padding:16,fontSize:14}} onClick={()=>setStep(1)}>LET'S GO →</button>
-    </div>,
-    <div key={1} style={{padding:"40px 28px",flex:1,overflowY:"auto"}}>
-      <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Who are you?</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:24,lineHeight:1.6}}>All fields required to continue.</p>
-      <div className="field"><span className="section-label">FULL NAME *</span><input className="inp" placeholder="Full name" value={profile.name} onChange={e=>set("name",e.target.value)}/></div>
-      <div className="field"><span className="section-label">EMAIL ADDRESS *</span><input className="inp" type="email" placeholder="your@email.com" value={profile.email} onChange={e=>set("email",e.target.value)}/><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>For reorder reminders &amp; product recommendations.</p></div>
-      <div className="field"><span className="section-label">AGE *</span><input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/></div>
-      <div className="field"><span className="section-label">CURRENCY *</span><select className="inp" value={profile.currency||""} onChange={e=>set("currency",e.target.value)}><option value="">Select currency</option>{CURRENCY_OPTIONS.map(c=><option key={c.code} value={c.code}>{c.label}</option>)}</select><p style={{color:"#7A7D85",fontSize:10,fontFamily:"'Space Mono',monospace",marginTop:6}}>Used to show the right currency symbol.</p></div>
-      <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:step1Valid?1:0.4,cursor:step1Valid?"pointer":"not-allowed"}} onClick={()=>step1Valid&&setStep(2)}>{step1Valid?"NEXT →":"FILL IN ALL FIELDS TO CONTINUE"}</button>
-    </div>,
-    <div key={2} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
-      <h2 style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6,alignSelf:"flex-start"}}>Add a photo</h2>
-      <p style={{color:"#7A7D85",fontSize:12,fontFamily:"'Space Mono',monospace",marginBottom:24,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
-      <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhoto}/>
-      {cropSrc?(
-        <PhotoCropEditor src={cropSrc} onConfirm={(cropped)=>{setPhotoPreview(cropped);setCropSrc(null);}} onCancel={()=>setCropSrc(null)}/>
-      ):(
-        <>
-          <div onClick={()=>photoInputRef.current?.click()} style={{width:110,height:110,borderRadius:"50%",background:photoPreview?"transparent":"#1C1D1F",border:`2px dashed ${photoPreview?"#E8A830":"#3A3B3E"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,overflow:"hidden",transition:"border-color 0.2s"}}>
-            {photoPreview
-              ?<img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Profile"/>
-              :<div style={{textAlign:"center"}}><div style={{fontSize:28,marginBottom:4}}>📷</div><div style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:"0.5px"}}>TAP TO ADD</div></div>
-            }
+        {step===0&&(
+          <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 28px",textAlign:"center"}}>
+            <h1 style={{fontFamily:BC,fontSize:42,fontWeight:900,color:"#F0F0F0",marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.05}}>Welcome to<br/><span style={{color:"#E8A830"}}>SUPPSTACKD</span></h1>
+            <p style={{color:"#7A7D85",fontSize:13,fontFamily:MM,lineHeight:1.8,marginBottom:40}}>Let's set up your profile so we can personalise your experience.</p>
+            <button className="btn-primary" style={{width:"100%",padding:16,fontSize:14}} onClick={()=>setStep(1)}>LET'S GO →</button>
           </div>
-          {photoPreview&&<button onClick={()=>setPhotoPreview(null)} style={{background:"transparent",border:"none",color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:10,cursor:"pointer",marginBottom:16}}>Remove photo</button>}
-          <button className="btn-primary" style={{width:"100%",padding:14,marginTop:"auto"}} onClick={()=>finish(photoPreview)}>{profile.name.trim()?`LET'S GO, ${profile.name.trim().toUpperCase()}! →`:"CONTINUE"}</button>
-          <button className="btn-cancel" style={{width:"100%",padding:12,marginTop:10}} onClick={()=>finish(null)}>Skip photo</button>
-        </>
-      )}
-    </div>,
-  ];
-  const pct=step===0?0:step===1?50:100;
-  return(
-    <div className="onboard-screen">
-      <div className="onboard-progress"><div className="onboard-progress-fill" style={{width:`${pct}%`}}/></div>
-      <div style={{flex:1,display:"flex",flexDirection:"column",overflowY:"auto"}}>{steps[step]}</div>
+        )}
+        {step===1&&(
+          <div style={{padding:"40px 28px",flex:1,overflowY:"auto"}}>
+            <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Who are you?</h2>
+            <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:24,lineHeight:1.6}}>All fields required to continue.</p>
+            <div className="field"><span className="section-label">FULL NAME *</span><input className="inp" placeholder="Full name" value={form.name} onChange={e=>set("name",e.target.value)}/></div>
+            <div className="field">
+              <span className="section-label">EMAIL ADDRESS *</span>
+              <input className="inp" type="email" placeholder="your@email.com" value={form.email} onChange={e=>{set("email",e.target.value);setCodeError("");}}/>
+              <p style={{color:"#7A7D85",fontSize:10,fontFamily:MM,marginTop:6,lineHeight:1.5}}>We'll send your weekly debrief and low stock alerts here. Verification required.</p>
+            </div>
+            <div className="field"><span className="section-label">AGE *</span><input className="inp" type="number" placeholder="e.g. 24" value={form.age} onChange={e=>set("age",e.target.value)}/></div>
+            <div className="field"><span className="section-label">CURRENCY *</span><select className="inp" value={form.currency||""} onChange={e=>set("currency",e.target.value)}><option value="">Select currency</option>{CURRENCY_OPTIONS.map(c=><option key={c.code} value={c.code}>{c.label}</option>)}</select></div>
+            {codeError&&<p style={{color:"#E05A5A",fontFamily:MM,fontSize:10,marginBottom:10}}>{codeError}</p>}
+            <button className="btn-primary" style={{width:"100%",padding:14,marginTop:8,opacity:step1Valid&&!sendingCode?1:0.4,cursor:step1Valid&&!sendingCode?"pointer":"not-allowed"}} onClick={()=>step1Valid&&!sendingCode&&sendCode()}>
+              {sendingCode?"SENDING CODE...":step1Valid?"SEND VERIFICATION CODE →":"FILL IN ALL FIELDS TO CONTINUE"}
+            </button>
+          </div>
+        )}
+        {step===2&&(
+          <div style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+            <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Check your email</h2>
+            <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:8,lineHeight:1.6}}>We sent a 6-digit code to</p>
+            <p style={{color:"#E8A830",fontSize:13,fontFamily:MM,marginBottom:24,fontWeight:700}}>{form.email}</p>
+            <div className="field">
+              <span className="section-label">ENTER CODE *</span>
+              <input className="inp" type="number" placeholder="000000" value={enteredCode} onChange={e=>setEnteredCode(e.target.value.slice(0,6))} style={{textAlign:"center",fontSize:22,letterSpacing:"8px",fontFamily:MM}}/>
+            </div>
+            {codeError&&<p style={{color:"#E05A5A",fontFamily:MM,fontSize:10,marginBottom:10}}>{codeError}</p>}
+            <button className="btn-primary" style={{width:"100%",padding:14,marginBottom:12,opacity:enteredCode.length===6&&!verifying?1:0.4,cursor:enteredCode.length===6&&!verifying?"pointer":"not-allowed"}} onClick={()=>enteredCode.length===6&&!verifying&&checkCode()}>
+              {verifying?"VERIFYING...":"VERIFY EMAIL →"}
+            </button>
+            <button style={{width:"100%",padding:10,background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:MM,fontSize:10,cursor:"pointer",marginBottom:8}} onClick={()=>{setEnteredCode("");setCodeError("");sendCode();}}>RESEND CODE</button>
+            <button style={{width:"100%",padding:10,background:"transparent",border:"none",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer"}} onClick={()=>setStep(1)}>← CHANGE EMAIL</button>
+          </div>
+        )}
+        {step===3&&(
+          <div style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+            <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6,alignSelf:"flex-start"}}>Add a photo</h2>
+            <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:24,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
+            <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>setCropSrc(ev.target.result);reader.readAsDataURL(file);}}/>
+            {photoPreview?(
+              <div style={{width:100,height:100,borderRadius:"50%",overflow:"hidden",marginBottom:20,border:"2px solid #E8A830"}}>
+                <img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="preview"/>
+              </div>
+            ):(
+              <div onClick={()=>photoInputRef.current?.click()} style={{width:100,height:100,borderRadius:"50%",background:"#1C1D1F",border:"2px dashed #2A2B2E",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,cursor:"pointer"}}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4A4B4F" strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              </div>
+            )}
+            <button onClick={()=>photoInputRef.current?.click()} style={{padding:"10px 24px",background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:9,color:"#F0F0F0",fontFamily:MM,fontSize:10,cursor:"pointer",marginBottom:20,letterSpacing:"0.5px"}}>{photoPreview?"CHANGE PHOTO":"CHOOSE PHOTO"}</button>
+            <button className="btn-primary" style={{width:"100%",padding:14}} onClick={()=>finish(photoPreview)}>{photoPreview?"FINISH →":"SKIP FOR NOW →"}</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -2727,7 +2609,7 @@ function TrialWelcomeModal({onClose,onUpgrade}){
         </div>
         <p style={{color:"#5BAD72",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 6px"}}>YOUR PRO TRIAL HAS STARTED</p>
         <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:15,fontWeight:700,margin:"0 0 8px",lineHeight:1.3}}>5 DAYS OF FULL PRO ACCESS</h2>
-        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>Everything Pro has to offer — free for 5 days.<br/>After day 5 you'll have a short grace window,<br/>then a subscription is required to continue.</p>
+        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>Everything Pro has to offer — free for 5 days.<br/>After day 5 a subscription is required to continue.</p>
         <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
           {["Unlimited supplement tracking","Feel score trends & insights","Full Vault — 100+ research profiles","Weekly Debrief — your week, summarised","Cost-per-dose tracking"].map((text,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E",textAlign:"left"}}>
@@ -2765,13 +2647,7 @@ function TrialLockoutModal({onUpgrade,trialDays}){
   const [selectedPlan,setSelectedPlan]=React.useState("annual");
   const [loading,setLoading]=React.useState(false);
   const [showDecline,setShowDecline]=React.useState(false);
-
-  const handleUpgrade=async()=>{
-    setLoading(true);
-    await onUpgrade(selectedPlan);
-    setLoading(false);
-  };
-
+  const handleUpgrade=async()=>{setLoading(true);await onUpgrade(selectedPlan);setLoading(false);};
   if(showDecline){
     return(
       <div className="overlay" style={{zIndex:10001}}>
@@ -2781,7 +2657,7 @@ function TrialLockoutModal({onUpgrade,trialDays}){
           <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
             {["Your entire supplement stack","All logged history & feel scores","Cost tracking — see what you really spend","Weekly Debrief & insights","Run-out predictions & low stock alerts"].map((text,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E",textAlign:"left"}}>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{flexShrink:0}}><line x1="2" y1="2" x2="8" y2="8" stroke="#E05A5A" strokeWidth="2"/><line x1="8" y1="2" x2="2" y2="8" stroke="#E05A5A" strokeWidth="2"/></svg>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><line x1="2" y1="2" x2="8" y2="8" stroke="#E05A5A" strokeWidth="2"/><line x1="8" y1="2" x2="2" y2="8" stroke="#E05A5A" strokeWidth="2"/></svg>
                 <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,letterSpacing:"0.2px"}}>{text}</span>
               </div>
             ))}
@@ -2792,7 +2668,6 @@ function TrialLockoutModal({onUpgrade,trialDays}){
       </div>
     );
   }
-
   return(
     <div className="overlay" style={{zIndex:10001}}>
       <div className="modal-box" style={{padding:"24px 20px",textAlign:"center",overflowY:"auto",maxHeight:"92vh"}}>
@@ -2814,9 +2689,7 @@ function TrialLockoutModal({onUpgrade,trialDays}){
         <button onClick={handleUpgrade} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:loading?"#2A2B2E":"#E8A830",color:loading?"#7A7D85":"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:loading?"not-allowed":"pointer",marginBottom:8,transition:"all 0.2s"}}>
           {loading?"CONNECTING...":"UPGRADE NOW — KEEP MY STACK"}
         </button>
-        <button onClick={()=>setShowDecline(true)} style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid #2A2B2E",background:"transparent",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",letterSpacing:"0.3px"}}>
-          I don't want to keep my data
-        </button>
+        <button onClick={()=>setShowDecline(true)} style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid #2A2B2E",background:"transparent",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",letterSpacing:"0.3px"}}>I don't want to keep my data</button>
       </div>
     </div>
   );
@@ -4198,45 +4071,7 @@ function App(){
     }
   };
 
-  
-  // ── Trial init — only fires after profile created, never for Pro users ──────
-  useEffect(()=>{
-    if(!profile) return; // wait for profile creation first
-    if(isPro) return;
-    if(stripeData && stripeData.customerId) return;
-    if(profile.plan === 'pro') return;
-
-    const now = Date.now();
-    const today = new Date().toISOString().slice(0,10);
-    let trial = load(TRIAL_KEY, null);
-
-    if(!trial){
-      trial = { startDate: today, startTs: now };
-      save(TRIAL_KEY, trial);
-      setTrialState(trial);
-      setShowTrialWelcome(true);
-      if(navigator.serviceWorker && navigator.serviceWorker.controller){
-        navigator.serviceWorker.controller.postMessage({
-          type: 'SCHEDULE_TRIAL_NOTIFS',
-          payload: { startTs: now }
-        });
-      }
-      return;
-    }
-    setTrialState(trial);
-    const daysPassed = Math.floor((now - trial.startTs) / (1000*60*60*24));
-    if(daysPassed > TRIAL_DAYS + GRACE_DAYS){
-      setShowTrialLockout(true);
-    }
-  },[profile, isPro, stripeData]);
-
-  const trialDaysPassed = trialState ? Math.floor((Date.now()-trialState.startTs)/(1000*60*60*24)) : 999;
-  const isTrialActive = !isPro && !!trialState && trialDaysPassed < TRIAL_DAYS;
-  const isInGrace = !isPro && !!trialState && trialDaysPassed >= TRIAL_DAYS && trialDaysPassed <= TRIAL_DAYS+GRACE_DAYS;
-  const isLockedOut = !isPro && !!trialState && trialDaysPassed > TRIAL_DAYS+GRACE_DAYS;
-  const effectiveIsPro = isPro || isTrialActive;
-
-// ── Pro teaser trigger ────────────────────────────────────────────────────
+  // ── Pro teaser trigger ────────────────────────────────────────────────────
   useEffect(()=>{
     if(isPro)return; // already pro — never show
     const alreadyShown=load(PRO_TEASER_KEY,false);
@@ -4301,21 +4136,7 @@ function App(){
     return()=>{if(notifTimer)clearTimeout(notifTimer);};
   },[]);
 
-  if(!profile)return<ProfileOnboarding onComplete={p=>{
-    const prof={...p,createdAt:new Date().toISOString(),emailVerified:true};
-    setProfile(prof);
-    save(PROFILE_KEY,prof);
-    // Add to Loops free list
-    fetch("https://app.loops.so/api/v1/contacts/create",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
-      body:JSON.stringify({email:p.email,firstName:p.name,userGroup:"Free",source:"app-signup"})
-    }).catch(()=>{});
-    if(p.email&&typeof posthog!=="undefined"){
-      posthog.identify(p.email,{name:p.name,email:p.email,plan:"free"});
-      posthog.capture("signed_up",{name:p.name,email:p.email});
-    }
-  }}/>; 
+  if(!profile)return<ProfileOnboarding onComplete={p=>{const prof={...p,createdAt:new Date().toISOString(),emailVerified:true};setProfile(prof);save(PROFILE_KEY,prof);fetch("https://app.loops.so/api/v1/contacts/create",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},body:JSON.stringify({email:p.email,firstName:p.name,userGroup:"Free",source:"app-signup"})}).catch(()=>{});if(p.email&&typeof posthog!=="undefined"){posthog.identify(p.email,{name:p.name,email:p.email,plan:"free"});posthog.capture("signed_up",{name:p.name,email:p.email});}}}/>; 
 
   const addOrUpdate=s=>{
     const ns={...s,type:normalizeType(s.type)};
@@ -4413,6 +4234,10 @@ function App(){
   const updateProfile=(updated)=>{setProfile(updated);save(PROFILE_KEY,updated);};
 
   const isPro=profile?.plan==="pro"||DEV_PRO_MODE;
+  // Early effectiveIsPro for feature gates — full trial logic computed below
+  const _trialTs=trialState?.startTs;
+  const _trialDays=_trialTs?Math.floor((Date.now()-_trialTs)/(1000*60*60*24)):999;
+  const effectiveIsPro=isPro||(!isPro&&!!trialState&&_trialDays<TRIAL_DAYS);
   // Central gate — call this before opening any add/re-add flow
   const tryAdd=(callback)=>{
     if(!effectiveIsPro&&supplements.filter(s=>!s.removed&&!s.discontinued).length>=FREE_SUPPLEMENT_LIMIT){
@@ -4439,6 +4264,36 @@ function App(){
   const isDepletedSupp=s=>(s.totalAmount-(s.consumed||0)<=0)||s.discontinued===true;
   const displaySupps=supplements.filter(s=>!s.removed).filter(s=>{if(filter==="urgent")return daysFromNow(calcRunOut(s))<=14&&!isDepletedSupp(s);if(filter==="stocked")return daysFromNow(calcRunOut(s))>14;return true;}).sort((a,b)=>{const ad=isDepletedSupp(a),bd=isDepletedSupp(b);if(ad&&!bd)return 1;if(!ad&&bd)return-1;if(sortBy==="runout")return daysFromNow(calcRunOut(a))-daysFromNow(calcRunOut(b));if(sortBy==="type")return(a.type||"z").localeCompare(b.type||"z")||a.name.localeCompare(b.name);return a.name.localeCompare(b.name);});
   const closeFeedback=()=>{setShowFeedback(false);setIsAutoFeedback(false);};
+
+  // ── Trial init — fires after profile created, never for Pro users ────────────
+  useEffect(()=>{
+    if(!profile) return;
+    if(isPro) return;
+    if(stripeData && stripeData.customerId) return;
+    if(profile.plan === 'pro') return;
+    const now=Date.now();
+    const today=new Date().toISOString().slice(0,10);
+    let trial=load(TRIAL_KEY,null);
+    if(!trial){
+      trial={startDate:today,startTs:now};
+      save(TRIAL_KEY,trial);
+      setTrialState(trial);
+      setShowTrialWelcome(true);
+      if(navigator.serviceWorker&&navigator.serviceWorker.controller){
+        navigator.serviceWorker.controller.postMessage({type:'SCHEDULE_TRIAL_NOTIFS',payload:{startTs:now}});
+      }
+      return;
+    }
+    setTrialState(trial);
+    const daysPassed=Math.floor((now-trial.startTs)/(1000*60*60*24));
+    if(daysPassed>TRIAL_DAYS+GRACE_DAYS) setShowTrialLockout(true);
+  },[profile,isPro,stripeData]);
+
+  const trialDaysPassed=trialState?Math.floor((Date.now()-trialState.startTs)/(1000*60*60*24)):999;
+  const isTrialActive=!isPro&&!!trialState&&trialDaysPassed<TRIAL_DAYS;
+  const isInGrace=!isPro&&!!trialState&&trialDaysPassed>=TRIAL_DAYS&&trialDaysPassed<=TRIAL_DAYS+GRACE_DAYS;
+  const isLockedOut=!isPro&&!!trialState&&trialDaysPassed>TRIAL_DAYS+GRACE_DAYS;
+
 
   return(
     <div id="root" className="visible">
@@ -4658,7 +4513,7 @@ function App(){
       />}
       {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
       {!isPro&&showTrialWelcome&&<TrialWelcomeModal onClose={()=>setShowTrialWelcome(false)} onUpgrade={launchCheckout}/>}
-      {!isPro&&(showTrialLockout||isLockedOut)&&<TrialLockoutModal onUpgrade={launchCheckout} trialDays={TRIAL_DAYS} />}
+      {!isPro&&(showTrialLockout||isLockedOut)&&<TrialLockoutModal onUpgrade={launchCheckout} trialDays={TRIAL_DAYS}/>}
       {!isPro&&isInGrace&&<TrialGraceBanner daysLeft={TRIAL_DAYS+GRACE_DAYS-trialDaysPassed} onUpgrade={()=>setShowUpgrade(true)}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
