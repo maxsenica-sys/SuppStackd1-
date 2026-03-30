@@ -220,9 +220,6 @@ const DEV_PRO_MODE=false;
 const FREE_SUPPLEMENT_LIMIT=2;
 const STRIPE_PK="pk_test_51SsruuLqLTr81KltF0rvU20vqmhd2WcCJA3UcPXrajcCmT1MVf6miAq4vbpsEZYIetCU9WAr9TnnRQwZKolpIXzd00kwpcEuhp";
 const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
-const TRIAL_KEY="suppstackd_v1_trial";
-const TRIAL_DAYS=5;
-const GRACE_DAYS=2;
 const PRO_TEASER_KEY="suppstackd_v1_pro_teaser_shown";
 const PRO_TEASER_DAYS=4;
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
@@ -2541,135 +2538,6 @@ function ProTeaserSheet({onClose,onUpgrade,daysOnApp}){
   );
 }
 
-
-// ── TrialWelcomeModal ─────────────────────────────────────────────────────────
-function TrialWelcomeModal({onClose,onUpgrade}){
-  const MM="'Space Mono',monospace";
-  return(
-    <div className="overlay" style={{zIndex:10000}}>
-      <div className="modal-box" style={{padding:"24px 20px",textAlign:"center"}}>
-        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(91,173,114,0.12)",border:"1px solid rgba(91,173,114,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5BAD72" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        </div>
-        <p style={{color:"#5BAD72",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 6px"}}>YOUR PRO TRIAL HAS STARTED</p>
-        <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:15,fontWeight:700,margin:"0 0 8px",lineHeight:1.3}}>5 DAYS OF FULL PRO ACCESS</h2>
-        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>
-          Explore everything Pro has to offer — free for 5 days.<br/>
-          After day 5 you'll have a 2-day window on the free tier,<br/>
-          then a Pro subscription is required to continue.
-        </p>
-        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-          {["Unlimited supplement tracking","Feel score trends & insights","Full Vault — 100+ research profiles","Weekly Debrief — your week, summarised","Cost-per-dose tracking"].map((text,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E",textAlign:"left"}}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{flexShrink:0}}><polygon points="2,1 9,5 2,9" fill="#5BAD72"/></svg>
-              <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,letterSpacing:"0.2px"}}>{text}</span>
-            </div>
-          ))}
-        </div>
-        <button onClick={onClose} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:"#5BAD72",color:"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:"pointer",marginBottom:8}}>
-          LET'S GO
-        </button>
-        <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,letterSpacing:"0.3px"}}>Auto-upgrade to Pro on day 5. Cancel anytime.</p>
-      </div>
-    </div>
-  );
-}
-
-// ── TrialGraceBanner ──────────────────────────────────────────────────────────
-function TrialGraceBanner({daysLeft,onUpgrade}){
-  const MM="'Space Mono',monospace";
-  return(
-    <div style={{position:"fixed",bottom:72,left:0,right:0,zIndex:500,padding:"0 12px",pointerEvents:"none"}}>
-      <div style={{background:"rgba(232,168,48,0.12)",border:"1px solid rgba(232,168,48,0.35)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",pointerEvents:"all"}}>
-        <div>
-          <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,letterSpacing:"0.8px",margin:0}}>TRIAL ENDED</p>
-          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,margin:"2px 0 0",letterSpacing:"0.3px"}}>{daysLeft} day{daysLeft!==1?"s":""} left on free tier</p>
-        </div>
-        <button onClick={onUpgrade} style={{background:"#E8A830",color:"#0A0A0A",border:"none",borderRadius:7,padding:"7px 12px",fontFamily:MM,fontSize:9,fontWeight:700,letterSpacing:"0.5px",cursor:"pointer"}}>
-          UPGRADE
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── TrialLockoutModal ─────────────────────────────────────────────────────────
-function TrialLockoutModal({onUpgrade,trialDays,showDeclineConfirm,setShowDeclineConfirm}){
-  const MM="'Space Mono',monospace";
-  const [selectedPlan,setSelectedPlan]=React.useState("annual");
-  const [loading,setLoading]=React.useState(false);
-
-  const handleUpgrade=async()=>{
-    setLoading(true);
-    await onUpgrade(selectedPlan);
-    setLoading(false);
-  };
-
-  if(showDeclineConfirm){
-    return(
-      <div className="overlay" style={{zIndex:10001}}>
-        <div className="modal-box" style={{padding:"24px 20px",textAlign:"center"}}>
-          <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 8px"}}>ARE YOU SURE?</p>
-          <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:14,fontWeight:700,margin:"0 0 12px",lineHeight:1.3}}>YOU'LL LOSE ACCESS TO:</h2>
-          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-            {[
-              "Your entire supplement stack",
-              "All logged history & feel scores",
-              "Cost tracking — see what you really spend",
-              "Weekly Debrief & insights",
-              "Run-out predictions & low stock alerts",
-            ].map((text,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E",textAlign:"left"}}>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{flexShrink:0}}><line x1="2" y1="2" x2="8" y2="8" stroke="#E05A5A" strokeWidth="2"/><line x1="8" y1="2" x2="2" y2="8" stroke="#E05A5A" strokeWidth="2"/></svg>
-                <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,letterSpacing:"0.2px"}}>{text}</span>
-              </div>
-            ))}
-          </div>
-          <button onClick={()=>setShowDeclineConfirm(false)} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:"#5BAD72",color:"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:"pointer",marginBottom:8}}>
-            KEEP MY ACCESS
-          </button>
-          <button onClick={()=>{}} style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid #2A2B2E",background:"transparent",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",letterSpacing:"0.3px"}}>
-            YES, LOSE MY DATA
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return(
-    <div className="overlay" style={{zIndex:10001}}>
-      <div className="modal-box" style={{padding:"24px 20px",textAlign:"center",overflowY:"auto",maxHeight:"92vh"}}>
-        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(224,90,90,0.12)",border:"1px solid rgba(224,90,90,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05A5A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <p style={{color:"#E05A5A",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 6px"}}>YOUR TRIAL HAS ENDED</p>
-        <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:15,fontWeight:700,margin:"0 0 8px",lineHeight:1.3}}>UPGRADE TO KEEP YOUR STACK</h2>
-        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>
-          Your {trialDays}-day trial is over.<br/>Upgrade now to keep all your data and full access.
-        </p>
-        <div style={{display:"flex",gap:8,marginBottom:14}}>
-          {[
-            {id:"monthly",label:"MONTHLY",price:"A$2.99/mo",sub:""},
-            {id:"annual",label:"ANNUAL",price:"A$29.99/yr",sub:"BEST VALUE"},
-          ].map(p=>(
-            <button key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{flex:1,padding:"10px 8px",borderRadius:9,border:selectedPlan===p.id?"1px solid #E8A830":"1px solid #2A2B2E",background:selectedPlan===p.id?"rgba(232,168,48,0.1)":"#1C1D1F",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
-              <div style={{color:selectedPlan===p.id?"#E8A830":"#7A7D85",fontFamily:MM,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:2}}>{p.label}</div>
-              <div style={{color:selectedPlan===p.id?"#F0F0F0":"#4A4B4F",fontFamily:MM,fontSize:11,fontWeight:700}}>{p.price}</div>
-              {p.sub&&<div style={{color:"#5BAD72",fontFamily:MM,fontSize:8,marginTop:2,letterSpacing:"0.5px"}}>{p.sub}</div>}
-            </button>
-          ))}
-        </div>
-        <button onClick={handleUpgrade} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:loading?"#2A2B2E":"#E8A830",color:loading?"#7A7D85":"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:loading?"not-allowed":"pointer",marginBottom:8,transition:"all 0.2s"}}>
-          {loading?"CONNECTING...":"UPGRADE NOW — KEEP MY STACK"}
-        </button>
-        <button onClick={()=>setShowDeclineConfirm(true)} style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid #2A2B2E",background:"transparent",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",letterSpacing:"0.3px"}}>
-          I don't want to keep my data
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── UpgradeModal ──────────────────────────────────────────────────────────────
 function UpgradeModal({onClose,limit,onUpgrade}){
   const handleExportFull=()=>{
@@ -3934,10 +3802,6 @@ function App(){
   const [showProTeaser,setShowProTeaser]=useState(false);
   const [stripeData,setStripeData]=useState(()=>load(STRIPE_CUSTOMER_KEY,null));
   const [stripeVerified,setStripeVerified]=useState(false);
-  const [trialState,setTrialState]=useState(()=>load(TRIAL_KEY,null));
-  const [showTrialWelcome,setShowTrialWelcome]=useState(false);
-  const [showTrialLockout,setShowTrialLockout]=useState(false);
-  const [showTrialDeclineConfirm,setShowTrialDeclineConfirm]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -4014,53 +3878,7 @@ function App(){
     else{setStripeVerified(true);}
   },[]);
 
-  
-  // ── Trial logic ──────────────────────────────────────────────────────────────
-  useEffect(()=>{
-    // Skip trial logic for verified Pro users or anyone with Stripe data
-    // This prevents existing Pro users from being caught in trial flow
-    if(isPro) return;
-    if(stripeData && stripeData.customerId) return;
-    if(profile && profile.plan === 'pro') return;
-
-    const now = Date.now();
-    const today = new Date().toISOString().slice(0,10);
-    let trial = load(TRIAL_KEY, null);
-
-    // First time ever — init trial
-    if(!trial){
-      trial = { startDate: today, startTs: now, notified: {} };
-      save(TRIAL_KEY, trial);
-      setTrialState(trial);
-      setShowTrialWelcome(true);
-      // Schedule trial notifications via SW
-      if(navigator.serviceWorker && navigator.serviceWorker.controller){
-        navigator.serviceWorker.controller.postMessage({
-          type: 'SCHEDULE_TRIAL_NOTIFS',
-          payload: { startTs: now }
-        });
-      }
-      return;
-    }
-
-    setTrialState(trial);
-
-    const daysPassed = Math.floor((now - trial.startTs) / (1000*60*60*24));
-
-    // Day 8+ — full lockout
-    if(daysPassed >= TRIAL_DAYS + GRACE_DAYS + 1){
-      setShowTrialLockout(true);
-    }
-  },[isPro, stripeData, profile]);
-
-  // Trial-aware isPro — during days 1-5 treat as Pro for feature access
-  const trialDaysPassed = trialState ? Math.floor((Date.now() - trialState.startTs) / (1000*60*60*24)) : 999;
-  const isTrialActive = !isPro && trialState && trialDaysPassed < TRIAL_DAYS;
-  const isInGrace = !isPro && trialState && trialDaysPassed >= TRIAL_DAYS && trialDaysPassed <= TRIAL_DAYS + GRACE_DAYS;
-  const isLockedOut = !isPro && trialState && trialDaysPassed > TRIAL_DAYS + GRACE_DAYS;
-  const effectiveIsPro = isPro || isTrialActive;
-
-// ── Stripe checkout launcher ───────────────────────────────────────────────
+  // ── Stripe checkout launcher ───────────────────────────────────────────────
   const launchCheckout=async(plan="monthly",attempt=1)=>{
     if(typeof posthog!=="undefined")posthog.capture("upgrade_clicked",{plan});
     try{
@@ -4258,7 +4076,7 @@ function App(){
   const isPro=profile?.plan==="pro"||DEV_PRO_MODE;
   // Central gate — call this before opening any add/re-add flow
   const tryAdd=(callback)=>{
-    if(!effectiveIsPro&&supplements.filter(s=>!s.removed&&!s.discontinued).length>=FREE_SUPPLEMENT_LIMIT){
+    if(!isPro&&supplements.filter(s=>!s.removed&&!s.discontinued).length>=FREE_SUPPLEMENT_LIMIT){
       setShowUpgrade(true);
       if(typeof posthog!=="undefined")posthog.capture("upgrade_modal_shown",{trigger:"supplement_limit"});
       return;
@@ -4493,17 +4311,14 @@ function App(){
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements.filter(s=>!s.removed&&(s.totalAmount-(s.consumed||0))>0&&!s.discontinued)} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
-      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={effectiveIsPro} onUpgrade={launchCheckout} supplements={supplements} logs={logs}/>}
+      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={isPro} onUpgrade={launchCheckout} supplements={supplements} logs={logs}/>}
       {showProTeaser&&<ProTeaserSheet
         onClose={()=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);}}
         onUpgrade={(plan)=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);launchCheckout(plan);}}
         daysOnApp={profile?.createdAt?Math.floor((Date.now()-new Date(profile.createdAt).getTime())/(1000*60*60*24)):0}
       />}
       {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
-      {!isPro&&showTrialWelcome&&<TrialWelcomeModal onClose={()=>setShowTrialWelcome(false)} onUpgrade={launchCheckout}/>}
-      {!isPro&&(showTrialLockout||isLockedOut)&&<TrialLockoutModal onUpgrade={launchCheckout} trialDays={TRIAL_DAYS} showDeclineConfirm={showTrialDeclineConfirm} setShowDeclineConfirm={setShowTrialDeclineConfirm}/>}
-      {!isPro&&isInGrace&&!showTrialLockout&&<TrialGraceBanner daysLeft={TRIAL_DAYS+GRACE_DAYS-trialDaysPassed} onUpgrade={()=>setShowUpgrade(true)}/>}
-      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={effectiveIsPro} onUpgrade={launchCheckout}/>}
+      {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog} onDeleteSupp={(id)=>{deleteSupp(id);setSelectedDate(null);}}/>}
     </div>
