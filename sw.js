@@ -10,7 +10,78 @@ self.addEventListener('message', e => {
     });
     scheduleNotifs(e.data.payload);
   }
+}
+
+// ── Trial notification scheduler ─────────────────────────────────────────────
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SCHEDULE_TRIAL_NOTIFS') {
+    const { startTs } = e.data.payload;
+    scheduleTrialNotifs(startTs);
+    // Persist so we can reschedule on SW restart
+    caches.open(NOTIF_STORE).then(cache => {
+      cache.put('/__sw_trial__', new Response(JSON.stringify({ startTs })));
+    });
+  }
 });
+
+function scheduleTrialNotifs(startTs) {
+  const now = Date.now();
+  const DAY = 1000 * 60 * 60 * 24;
+
+  const notifications = [
+    {
+      delay: 0,
+      title: 'SUPPSTACKD Pro Trial Started',
+      body: 'You have 5 days of full Pro access. Auto-upgrades on day 5.',
+      tag: 'trial-start'
+    },
+    {
+      delay: 3 * DAY,
+      title: 'Trial ends in 2 days',
+      body: "Don't lose your stack data. Upgrade to keep full access.",
+      tag: 'trial-day3'
+    },
+    {
+      delay: 4 * DAY,
+      title: 'Last day of your trial',
+      body: 'Your trial ends tomorrow. Upgrade now to keep everything.',
+      tag: 'trial-day4'
+    },
+    {
+      delay: 5 * DAY,
+      title: 'Your trial has ended',
+      body: 'Upgrade to Pro to keep your full stack and all your data.',
+      tag: 'trial-end'
+    },
+  ];
+
+  notifications.forEach(n => {
+    const fireAt = startTs + n.delay;
+    const wait = fireAt - now;
+    if (wait > 0) {
+      setTimeout(() => {
+        self.registration.showNotification(n.title, {
+          body: n.body,
+          tag: n.tag,
+          silent: false,
+          requireInteraction: n.tag === 'trial-end'
+        });
+      }, wait);
+    }
+  });
+}
+
+// On activate, restore trial notifications
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.open(NOTIF_STORE).then(cache =>
+      cache.match('/__sw_trial__').then(res => {
+        if (res) res.json().then(d => scheduleTrialNotifs(d.startTs));
+      })
+    )
+  );
+});
+);
 
 // On SW activation, reload stored data and reschedule
 // Reschedule notifs on activate (notif data reload)
