@@ -1,4 +1,4 @@
-const CACHE = 'suppstackd-sw-v4';
+const CACHE = 'suppstackd-sw-v5';
 const NOTIF_STORE = 'suppstackd_sw_notifs';
 
 // Listen for messages from the main app
