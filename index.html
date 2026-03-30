@@ -2960,7 +2960,7 @@ function ProfileModal({profile,onClose,onUpdate,isPro,supplements,logs}){
                 <div style={{background:"rgba(232,168,48,0.06)",border:"1px solid rgba(232,168,48,0.25)",borderRadius:10,padding:"clamp(9px,2vh,13px) clamp(12px,3vw,16px)"}}>
                   <p style={{color:"#E8A830",fontFamily:"'Space Mono',monospace",fontSize:"clamp(10px,2.5vw,12px)",fontWeight:700,margin:"0 0 4px",letterSpacing:"0.5px"}}>SUPPSTACKD PRO — A$2.99/mo</p>
                   <p style={{color:"#7A7D85",fontFamily:"'Space Mono',monospace",fontSize:"clamp(9px,2.2vw,11px)",margin:"0 0 clamp(7px,1.5vh,10px)",lineHeight:1.6}}>Unlimited supplements · Insights · Reorder reminders · Stack templates</p>
-                  <button style={{width:"100%",padding:"clamp(7px,1.5vh,10px) 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
+                  <button onClick={()=>onUpgrade&&onUpgrade("monthly")} style={{width:"100%",padding:"clamp(7px,1.5vh,10px) 0",background:"linear-gradient(135deg,#E8A830,#C88820)",border:"none",borderRadius:8,color:"#111213",fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(10px,2.5vw,12px)",cursor:"pointer",letterSpacing:"0.5px"}}>UPGRADE TO PRO →</button>
                 </div>
               )}
 
@@ -4017,8 +4017,11 @@ function App(){
   
   // ── Trial logic ──────────────────────────────────────────────────────────────
   useEffect(()=>{
-    // Skip trial logic for Pro users
+    // Skip trial logic for verified Pro users or anyone with Stripe data
+    // This prevents existing Pro users from being caught in trial flow
     if(isPro) return;
+    if(stripeData && stripeData.customerId) return;
+    if(profile && profile.plan === 'pro') return;
 
     const now = Date.now();
     const today = new Date().toISOString().slice(0,10);
@@ -4048,7 +4051,7 @@ function App(){
     if(daysPassed >= TRIAL_DAYS + GRACE_DAYS + 1){
       setShowTrialLockout(true);
     }
-  },[isPro]);
+  },[isPro, stripeData, profile]);
 
   // Trial-aware isPro — during days 1-5 treat as Pro for feature access
   const trialDaysPassed = trialState ? Math.floor((Date.now() - trialState.startTs) / (1000*60*60*24)) : 999;
@@ -4490,16 +4493,16 @@ function App(){
       {showFeedback&&<FeedbackModal onClose={closeFeedback} isAutoPrompt={isAutoFeedback}/>}
       {showInbox&&<FeedbackInbox onClose={()=>setShowInbox(false)}/>}
       {showShare&&<ShareCard supplements={supplements.filter(s=>!s.removed&&(s.totalAmount-(s.consumed||0))>0&&!s.discontinued)} profile={profile} logs={logs} onClose={()=>setShowShare(false)}/>}
-      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={effectiveIsPro} supplements={supplements} logs={logs}/>}
+      {showProfile&&<ProfileModal profile={profile} onClose={()=>setShowProfile(false)} onUpdate={updateProfile} isPro={effectiveIsPro} onUpgrade={launchCheckout} supplements={supplements} logs={logs}/>}
       {showProTeaser&&<ProTeaserSheet
         onClose={()=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);}}
         onUpgrade={(plan)=>{save(PRO_TEASER_KEY,true);setShowProTeaser(false);launchCheckout(plan);}}
         daysOnApp={profile?.createdAt?Math.floor((Date.now()-new Date(profile.createdAt).getTime())/(1000*60*60*24)):0}
       />}
       {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
-      {showTrialWelcome&&<TrialWelcomeModal onClose={()=>setShowTrialWelcome(false)} onUpgrade={launchCheckout}/>}
-      {(showTrialLockout||isLockedOut)&&<TrialLockoutModal onUpgrade={launchCheckout} trialDays={TRIAL_DAYS} showDeclineConfirm={showTrialDeclineConfirm} setShowDeclineConfirm={setShowTrialDeclineConfirm}/>}
-      {isInGrace&&!showTrialLockout&&<TrialGraceBanner daysLeft={TRIAL_DAYS+GRACE_DAYS-trialDaysPassed} onUpgrade={()=>setShowUpgrade(true)}/>}
+      {!isPro&&showTrialWelcome&&<TrialWelcomeModal onClose={()=>setShowTrialWelcome(false)} onUpgrade={launchCheckout}/>}
+      {!isPro&&(showTrialLockout||isLockedOut)&&<TrialLockoutModal onUpgrade={launchCheckout} trialDays={TRIAL_DAYS} showDeclineConfirm={showTrialDeclineConfirm} setShowDeclineConfirm={setShowTrialDeclineConfirm}/>}
+      {!isPro&&isInGrace&&!showTrialLockout&&<TrialGraceBanner daysLeft={TRIAL_DAYS+GRACE_DAYS-trialDaysPassed} onUpgrade={()=>setShowUpgrade(true)}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={effectiveIsPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog} onDeleteSupp={(id)=>{deleteSupp(id);setSelectedDate(null);}}/>}
