@@ -220,6 +220,11 @@ const DEV_PRO_MODE=false;
 const FREE_SUPPLEMENT_LIMIT=2;
 const STRIPE_PK="pk_test_51SsruuLqLTr81KltF0rvU20vqmhd2WcCJA3UcPXrajcCmT1MVf6miAq4vbpsEZYIetCU9WAr9TnnRQwZKolpIXzd00kwpcEuhp";
 const STRIPE_CUSTOMER_KEY="suppstackd_v1_stripe";
+const TRIAL_KEY="suppstackd_v1_trial";
+const TRIAL_DAYS=5;
+const GRACE_DAYS=2;
+const EMAIL_VERIFY_KEY="suppstackd_v1_email_verified";
+const LOOPS_API_KEY="9b317c478ed0ac5b735ceeef487848ec";
 const PRO_TEASER_KEY="suppstackd_v1_pro_teaser_shown";
 const PRO_TEASER_DAYS=4;
 const CURRENCIES={"GB":"£","US":"$","EU":"€","AU":"A$","CA":"C$","NZ":"NZ$","IN":"₹","JP":"¥","CH":"CHF","SE":"kr","NO":"kr","DK":"kr","PL":"zł","BR":"R$","MX":"$","ZA":"R","AE":"AED","SG":"S$","HK":"HK$","TR":"₺","KR":"₩","CN":"¥","Other":"$"};
@@ -1307,6 +1312,178 @@ function PhotoCropEditor({src,onConfirm,onCancel}){
 
 // ── ProfileOnboarding ─────────────────────────────────────────────────────────
 function ProfileOnboarding({onComplete}){
+  const MM="'Space Mono',monospace";
+  const BC="'Barlow Condensed',sans-serif";
+  const [step,setStep]=useState(0);
+  const [profile,setProfile]=useState({name:"",email:"",age:"",currency:""});
+  const [photoPreview,setPhotoPreview]=useState(null);
+  const [cropSrc,setCropSrc]=useState(null);
+  const [verifyCode,setVerifyCode]=useState("");
+  const [enteredCode,setEnteredCode]=useState("");
+  const [codeError,setCodeError]=useState("");
+  const [codeSent,setCodeSent]=useState(false);
+  const [sendingCode,setSendingCode]=useState(false);
+  const [verifying,setVerifying]=useState(false);
+  const [codeExpiry,setCodeExpiry]=useState(null);
+  const photoInputRef=useRef(null);
+  const set=(k,v)=>setProfile(p=>({...p,[k]:v}));
+  const step1Valid=profile.name.trim()&&profile.email.trim()&&profile.age.trim()&&profile.currency;
+  const isValidEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  const sendVerificationCode=async()=>{
+    if(!isValidEmail(profile.email)){setCodeError("Please enter a valid email address.");return;}
+    setSendingCode(true);setCodeError("");
+    const code=String(Math.floor(100000+Math.random()*900000));
+    setVerifyCode(code);
+    setCodeExpiry(Date.now()+10*60*1000); // 10 min expiry
+    try{
+      await fetch("https://app.loops.so/api/v1/transactional",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
+        body:JSON.stringify({
+          transactionalId:"suppstackd-verify",
+          email:profile.email,
+          dataVariables:{code,name:profile.name||"there"}
+        })
+      });
+      setCodeSent(true);
+      setStep(2);
+    }catch(e){
+      setCodeError("Failed to send code. Check your email and try again.");
+    }
+    setSendingCode(false);
+  };
+
+  const verifyEmailCode=()=>{
+    setVerifying(true);setCodeError("");
+    if(Date.now()>codeExpiry){setCodeError("Code expired. Tap Resend to get a new one.");setVerifying(false);return;}
+    if(enteredCode.trim()===verifyCode){
+      setVerifying(false);
+      setStep(3); // move to photo step
+    }else{
+      setCodeError("Incorrect code. Please try again.");
+      setVerifying(false);
+    }
+  };
+
+  const finish=(photo)=>{
+    const finalProfile={...profile,photo:photo||photoPreview||null};
+    onComplete(finalProfile);
+  };
+
+  const steps=[
+    // Step 0 — Welcome
+    <div key={0} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 28px",textAlign:"center"}}>
+      <h1 style={{fontFamily:BC,fontSize:42,fontWeight:900,color:"#F0F0F0",marginBottom:12,letterSpacing:"-0.5px",lineHeight:1.05}}>Welcome to<br/><span style={{color:"#E8A830"}}>SUPPSTACKD</span></h1>
+      <p style={{color:"#7A7D85",fontSize:13,fontFamily:MM,lineHeight:1.8,marginBottom:40}}>Let's set up your profile so we can personalise your experience.</p>
+      <button className="btn-primary" style={{width:"100%",padding:16,fontSize:14}} onClick={()=>setStep(1)}>LET'S GO →</button>
+    </div>,
+
+    // Step 1 — Profile details + email
+    <div key={1} style={{padding:"40px 28px",flex:1,overflowY:"auto"}}>
+      <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Who are you?</h2>
+      <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:24,lineHeight:1.6}}>All fields required to continue.</p>
+      <div className="field"><span className="section-label">FULL NAME *</span><input className="inp" placeholder="Full name" value={profile.name} onChange={e=>set("name",e.target.value)}/></div>
+      <div className="field">
+        <span className="section-label">EMAIL ADDRESS *</span>
+        <input className="inp" type="email" placeholder="your@email.com" value={profile.email} onChange={e=>{set("email",e.target.value);setCodeError("");setCodeSent(false);}}/>
+        <p style={{color:"#7A7D85",fontSize:10,fontFamily:MM,marginTop:6,lineHeight:1.5}}>We'll send your weekly supplement debrief and low stock alerts here. A verification code will be sent to confirm.</p>
+      </div>
+      <div className="field"><span className="section-label">AGE *</span><input className="inp" type="number" placeholder="e.g. 24" value={profile.age} onChange={e=>set("age",e.target.value)}/></div>
+      <div className="field"><span className="section-label">CURRENCY *</span><select className="inp" value={profile.currency||""} onChange={e=>set("currency",e.target.value)}><option value="">Select currency</option>{CURRENCY_OPTIONS.map(c=><option key={c.code} value={c.code}>{c.label}</option>)}</select></div>
+      {codeError&&<p style={{color:"#E05A5A",fontFamily:MM,fontSize:10,marginBottom:10}}>{codeError}</p>}
+      <button
+        className="btn-primary"
+        style={{width:"100%",padding:14,marginTop:8,opacity:step1Valid&&!sendingCode?1:0.4,cursor:step1Valid&&!sendingCode?"pointer":"not-allowed"}}
+        onClick={()=>step1Valid&&!sendingCode&&sendVerificationCode()}
+      >
+        {sendingCode?"SENDING CODE...":step1Valid?"SEND VERIFICATION CODE →":"FILL IN ALL FIELDS TO CONTINUE"}
+      </button>
+    </div>,
+
+    // Step 2 — Email verification
+    <div key={2} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+      <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6}}>Check your email</h2>
+      <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:8,lineHeight:1.6}}>We sent a 6-digit code to</p>
+      <p style={{color:"#E8A830",fontSize:13,fontFamily:MM,marginBottom:24,fontWeight:700}}>{profile.email}</p>
+      <div className="field">
+        <span className="section-label">ENTER CODE *</span>
+        <input
+          className="inp"
+          type="number"
+          placeholder="000000"
+          value={enteredCode}
+          onChange={e=>setEnteredCode(e.target.value.slice(0,6))}
+          style={{textAlign:"center",fontSize:22,letterSpacing:"8px",fontFamily:MM}}
+        />
+      </div>
+      {codeError&&<p style={{color:"#E05A5A",fontFamily:MM,fontSize:10,marginBottom:10}}>{codeError}</p>}
+      <button
+        className="btn-primary"
+        style={{width:"100%",padding:14,marginBottom:12,opacity:enteredCode.length===6&&!verifying?1:0.4,cursor:enteredCode.length===6&&!verifying?"pointer":"not-allowed"}}
+        onClick={()=>enteredCode.length===6&&!verifying&&verifyEmailCode()}
+      >
+        {verifying?"VERIFYING...":"VERIFY EMAIL →"}
+      </button>
+      <button
+        style={{width:"100%",padding:10,background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:MM,fontSize:10,cursor:"pointer"}}
+        onClick={()=>{setCodeSent(false);setEnteredCode("");setCodeError("");setSendingCode(false);sendVerificationCode();}}
+      >
+        RESEND CODE
+      </button>
+      <button style={{width:"100%",padding:10,background:"transparent",border:"none",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",marginTop:8}} onClick={()=>setStep(1)}>
+        ← CHANGE EMAIL
+      </button>
+    </div>,
+
+    // Step 3 — Photo (optional)
+    <div key={3} style={{padding:"40px 28px",flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <h2 style={{fontFamily:BC,fontSize:30,fontWeight:900,color:"#F0F0F0",marginBottom:6,alignSelf:"flex-start"}}>Add a photo</h2>
+      <p style={{color:"#7A7D85",fontSize:12,fontFamily:MM,marginBottom:24,lineHeight:1.6,alignSelf:"flex-start"}}>Optional — shows on your profile and share card.</p>
+      <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>setCropSrc(ev.target.result);reader.readAsDataURL(file);}}/>
+      {cropSrc?(
+        <div style={{width:"100%",textAlign:"center"}}>
+          <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,marginBottom:12}}>Crop your photo</p>
+          <button className="btn-primary" style={{width:"100%",padding:14,marginBottom:8}} onClick={()=>{setPhotoPreview(cropSrc);setCropSrc(null);}}>USE THIS PHOTO →</button>
+          <button style={{width:"100%",padding:10,background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#7A7D85",fontFamily:MM,fontSize:10,cursor:"pointer"}} onClick={()=>setCropSrc(null)}>CANCEL</button>
+        </div>
+      ):(
+        <>
+          {photoPreview?(
+            <div style={{width:100,height:100,borderRadius:"50%",overflow:"hidden",marginBottom:20,border:"2px solid #E8A830"}}>
+              <img src={photoPreview} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="preview"/>
+            </div>
+          ):(
+            <div onClick={()=>photoInputRef.current?.click()} style={{width:100,height:100,borderRadius:"50%",background:"#1C1D1F",border:"2px dashed #2A2B2E",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20,cursor:"pointer"}}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4A4B4F" strokeWidth="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </div>
+          )}
+          <button onClick={()=>photoInputRef.current?.click()} style={{padding:"10px 24px",background:"#1C1D1F",border:"1px solid #2A2B2E",borderRadius:9,color:"#F0F0F0",fontFamily:MM,fontSize:10,cursor:"pointer",marginBottom:20,letterSpacing:"0.5px"}}>
+            {photoPreview?"CHANGE PHOTO":"CHOOSE PHOTO"}
+          </button>
+          <button className="btn-primary" style={{width:"100%",padding:14}} onClick={()=>finish(photoPreview)}>
+            {photoPreview?"FINISH →":"SKIP FOR NOW →"}
+          </button>
+        </>
+      )}
+    </div>,
+  ];
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#0A0A0A",zIndex:9999,display:"flex",flexDirection:"column",maxWidth:480,margin:"0 auto"}}>
+      {step>0&&(
+        <div style={{padding:"16px 20px 0",display:"flex",gap:6}}>
+          {[1,2,3].map(s=>(
+            <div key={s} style={{flex:1,height:3,borderRadius:2,background:step>=s?"#E8A830":"#1C1D1F",transition:"background 0.3s"}}/>
+          ))}
+        </div>
+      )}
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        {steps[step]}
+      </div>
+    </div>
+  );
+}){
   const [step,setStep]=useState(0);
   const [profile,setProfile]=useState({name:"",email:"",age:"",currency:""});
   const [photoPreview,setPhotoPreview]=useState(null);
@@ -2532,6 +2709,113 @@ function ProTeaserSheet({onClose,onUpgrade,daysOnApp}){
           style={{width:"100%",padding:"10px 0",background:"transparent",border:"1px solid #2A2B2E",borderRadius:9,color:"#4A4B4F",fontFamily:MM,fontSize:11,cursor:"pointer",letterSpacing:"0.3px"}}
         >
           NOT NOW
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+// ── TrialWelcomeModal ─────────────────────────────────────────────────────────
+function TrialWelcomeModal({onClose,onUpgrade}){
+  const MM="'Space Mono',monospace";
+  return(
+    <div className="overlay" style={{zIndex:10000}}>
+      <div className="modal-box" style={{padding:"24px 20px",textAlign:"center"}}>
+        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(91,173,114,0.12)",border:"1px solid rgba(91,173,114,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5BAD72" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <p style={{color:"#5BAD72",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 6px"}}>YOUR PRO TRIAL HAS STARTED</p>
+        <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:15,fontWeight:700,margin:"0 0 8px",lineHeight:1.3}}>5 DAYS OF FULL PRO ACCESS</h2>
+        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>Everything Pro has to offer — free for 5 days.<br/>After day 5 you'll have a short grace window,<br/>then a subscription is required to continue.</p>
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+          {["Unlimited supplement tracking","Feel score trends & insights","Full Vault — 100+ research profiles","Weekly Debrief — your week, summarised","Cost-per-dose tracking"].map((text,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E",textAlign:"left"}}>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{flexShrink:0}}><polygon points="2,1 9,5 2,9" fill="#5BAD72"/></svg>
+              <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,letterSpacing:"0.2px"}}>{text}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:"#5BAD72",color:"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:"pointer",marginBottom:8}}>LET'S GO</button>
+        <p style={{color:"#4A4B4F",fontFamily:MM,fontSize:9,letterSpacing:"0.3px"}}>Cancel anytime. A$2.99/mo or A$29.99/yr after trial.</p>
+      </div>
+    </div>
+  );
+}
+
+// ── TrialGraceBanner ──────────────────────────────────────────────────────────
+function TrialGraceBanner({daysLeft,onUpgrade}){
+  const MM="'Space Mono',monospace";
+  return(
+    <div style={{position:"fixed",bottom:72,left:0,right:0,zIndex:500,padding:"0 12px",pointerEvents:"none"}}>
+      <div style={{background:"rgba(232,168,48,0.12)",border:"1px solid rgba(232,168,48,0.35)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",pointerEvents:"all"}}>
+        <div>
+          <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,letterSpacing:"0.8px",margin:0}}>TRIAL ENDED</p>
+          <p style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,margin:"2px 0 0",letterSpacing:"0.3px"}}>{daysLeft} day{daysLeft!==1?"s":""} left on free tier</p>
+        </div>
+        <button onClick={onUpgrade} style={{background:"#E8A830",color:"#0A0A0A",border:"none",borderRadius:7,padding:"7px 12px",fontFamily:MM,fontSize:9,fontWeight:700,letterSpacing:"0.5px",cursor:"pointer"}}>UPGRADE</button>
+      </div>
+    </div>
+  );
+}
+
+// ── TrialLockoutModal ─────────────────────────────────────────────────────────
+function TrialLockoutModal({onUpgrade,trialDays}){
+  const MM="'Space Mono',monospace";
+  const [selectedPlan,setSelectedPlan]=React.useState("annual");
+  const [loading,setLoading]=React.useState(false);
+  const [showDecline,setShowDecline]=React.useState(false);
+
+  const handleUpgrade=async()=>{
+    setLoading(true);
+    await onUpgrade(selectedPlan);
+    setLoading(false);
+  };
+
+  if(showDecline){
+    return(
+      <div className="overlay" style={{zIndex:10001}}>
+        <div className="modal-box" style={{padding:"24px 20px",textAlign:"center"}}>
+          <p style={{color:"#E8A830",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 8px"}}>ARE YOU SURE?</p>
+          <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:14,fontWeight:700,margin:"0 0 12px",lineHeight:1.3}}>YOU'LL LOSE ACCESS TO:</h2>
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+            {["Your entire supplement stack","All logged history & feel scores","Cost tracking — see what you really spend","Weekly Debrief & insights","Run-out predictions & low stock alerts"].map((text,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#1C1D1F",borderRadius:8,border:"1px solid #2A2B2E",textAlign:"left"}}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{flexShrink:0}}><line x1="2" y1="2" x2="8" y2="8" stroke="#E05A5A" strokeWidth="2"/><line x1="8" y1="2" x2="2" y2="8" stroke="#E05A5A" strokeWidth="2"/></svg>
+                <span style={{color:"#F0F0F0",fontFamily:MM,fontSize:10,letterSpacing:"0.2px"}}>{text}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={()=>setShowDecline(false)} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:"#5BAD72",color:"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:"pointer",marginBottom:8}}>KEEP MY ACCESS</button>
+          <button onClick={()=>{}} style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid #2A2B2E",background:"transparent",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",letterSpacing:"0.3px"}}>YES, LOSE MY DATA</button>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div className="overlay" style={{zIndex:10001}}>
+      <div className="modal-box" style={{padding:"24px 20px",textAlign:"center",overflowY:"auto",maxHeight:"92vh"}}>
+        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(224,90,90,0.12)",border:"1px solid rgba(224,90,90,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05A5A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <p style={{color:"#E05A5A",fontFamily:MM,fontSize:9,letterSpacing:"1.2px",margin:"0 0 6px"}}>YOUR TRIAL HAS ENDED</p>
+        <h2 style={{color:"#F0F0F0",fontFamily:MM,fontSize:15,fontWeight:700,margin:"0 0 8px",lineHeight:1.3}}>UPGRADE TO KEEP YOUR STACK</h2>
+        <p style={{color:"#7A7D85",fontFamily:MM,fontSize:10,margin:"0 0 16px",lineHeight:1.65}}>Your {trialDays}-day trial is over.<br/>Upgrade now to keep all your data and full access.</p>
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          {[{id:"monthly",label:"MONTHLY",price:"A$2.99/mo",sub:""},{id:"annual",label:"ANNUAL",price:"A$29.99/yr",sub:"BEST VALUE"}].map(p=>(
+            <button key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{flex:1,padding:"10px 8px",borderRadius:9,border:selectedPlan===p.id?"1px solid #E8A830":"1px solid #2A2B2E",background:selectedPlan===p.id?"rgba(232,168,48,0.1)":"#1C1D1F",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
+              <div style={{color:selectedPlan===p.id?"#E8A830":"#7A7D85",fontFamily:MM,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:2}}>{p.label}</div>
+              <div style={{color:selectedPlan===p.id?"#F0F0F0":"#4A4B4F",fontFamily:MM,fontSize:11,fontWeight:700}}>{p.price}</div>
+              {p.sub&&<div style={{color:"#5BAD72",fontFamily:MM,fontSize:8,marginTop:2,letterSpacing:"0.5px"}}>{p.sub}</div>}
+            </button>
+          ))}
+        </div>
+        <button onClick={handleUpgrade} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:9,border:"none",background:loading?"#2A2B2E":"#E8A830",color:loading?"#7A7D85":"#0A0A0A",fontFamily:MM,fontSize:11,fontWeight:700,letterSpacing:"0.8px",cursor:loading?"not-allowed":"pointer",marginBottom:8,transition:"all 0.2s"}}>
+          {loading?"CONNECTING...":"UPGRADE NOW — KEEP MY STACK"}
+        </button>
+        <button onClick={()=>setShowDecline(true)} style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid #2A2B2E",background:"transparent",color:"#4A4B4F",fontFamily:MM,fontSize:9,cursor:"pointer",letterSpacing:"0.3px"}}>
+          I don't want to keep my data
         </button>
       </div>
     </div>
@@ -3802,6 +4086,9 @@ function App(){
   const [showProTeaser,setShowProTeaser]=useState(false);
   const [stripeData,setStripeData]=useState(()=>load(STRIPE_CUSTOMER_KEY,null));
   const [stripeVerified,setStripeVerified]=useState(false);
+  const [trialState,setTrialState]=useState(()=>load(TRIAL_KEY,null));
+  const [showTrialWelcome,setShowTrialWelcome]=useState(false);
+  const [showTrialLockout,setShowTrialLockout]=useState(false);
   const [editSupp,setEditSupp]=useState(null);
   const [logSupp,setLogSupp]=useState(null);
   const [showNotif,setShowNotif]=useState(false);
@@ -3911,7 +4198,45 @@ function App(){
     }
   };
 
-  // ── Pro teaser trigger ────────────────────────────────────────────────────
+  
+  // ── Trial init — only fires after profile created, never for Pro users ──────
+  useEffect(()=>{
+    if(!profile) return; // wait for profile creation first
+    if(isPro) return;
+    if(stripeData && stripeData.customerId) return;
+    if(profile.plan === 'pro') return;
+
+    const now = Date.now();
+    const today = new Date().toISOString().slice(0,10);
+    let trial = load(TRIAL_KEY, null);
+
+    if(!trial){
+      trial = { startDate: today, startTs: now };
+      save(TRIAL_KEY, trial);
+      setTrialState(trial);
+      setShowTrialWelcome(true);
+      if(navigator.serviceWorker && navigator.serviceWorker.controller){
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SCHEDULE_TRIAL_NOTIFS',
+          payload: { startTs: now }
+        });
+      }
+      return;
+    }
+    setTrialState(trial);
+    const daysPassed = Math.floor((now - trial.startTs) / (1000*60*60*24));
+    if(daysPassed > TRIAL_DAYS + GRACE_DAYS){
+      setShowTrialLockout(true);
+    }
+  },[profile, isPro, stripeData]);
+
+  const trialDaysPassed = trialState ? Math.floor((Date.now()-trialState.startTs)/(1000*60*60*24)) : 999;
+  const isTrialActive = !isPro && !!trialState && trialDaysPassed < TRIAL_DAYS;
+  const isInGrace = !isPro && !!trialState && trialDaysPassed >= TRIAL_DAYS && trialDaysPassed <= TRIAL_DAYS+GRACE_DAYS;
+  const isLockedOut = !isPro && !!trialState && trialDaysPassed > TRIAL_DAYS+GRACE_DAYS;
+  const effectiveIsPro = isPro || isTrialActive;
+
+// ── Pro teaser trigger ────────────────────────────────────────────────────
   useEffect(()=>{
     if(isPro)return; // already pro — never show
     const alreadyShown=load(PRO_TEASER_KEY,false);
@@ -3976,7 +4301,21 @@ function App(){
     return()=>{if(notifTimer)clearTimeout(notifTimer);};
   },[]);
 
-  if(!profile)return<ProfileOnboarding onComplete={p=>{setProfile(p);save(PROFILE_KEY,{...p,createdAt:new Date().toISOString()});if(p.email){if(typeof posthog!=="undefined"){posthog.identify(p.email,{name:p.name,email:p.email,plan:"free"});posthog.capture("signed_up",{name:p.name,email:p.email});}if(typeof window.loopsTrack!=="undefined")window.loopsTrack(p.email,p.name,"signed_up");}}}/>; 
+  if(!profile)return<ProfileOnboarding onComplete={p=>{
+    const prof={...p,createdAt:new Date().toISOString(),emailVerified:true};
+    setProfile(prof);
+    save(PROFILE_KEY,prof);
+    // Add to Loops free list
+    fetch("https://app.loops.so/api/v1/contacts/create",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer 9b317c478ed0ac5b735ceeef487848ec"},
+      body:JSON.stringify({email:p.email,firstName:p.name,userGroup:"Free",source:"app-signup"})
+    }).catch(()=>{});
+    if(p.email&&typeof posthog!=="undefined"){
+      posthog.identify(p.email,{name:p.name,email:p.email,plan:"free"});
+      posthog.capture("signed_up",{name:p.name,email:p.email});
+    }
+  }}/>; 
 
   const addOrUpdate=s=>{
     const ns={...s,type:normalizeType(s.type)};
@@ -4076,7 +4415,7 @@ function App(){
   const isPro=profile?.plan==="pro"||DEV_PRO_MODE;
   // Central gate — call this before opening any add/re-add flow
   const tryAdd=(callback)=>{
-    if(!isPro&&supplements.filter(s=>!s.removed&&!s.discontinued).length>=FREE_SUPPLEMENT_LIMIT){
+    if(!effectiveIsPro&&supplements.filter(s=>!s.removed&&!s.discontinued).length>=FREE_SUPPLEMENT_LIMIT){
       setShowUpgrade(true);
       if(typeof posthog!=="undefined")posthog.capture("upgrade_modal_shown",{trigger:"supplement_limit"});
       return;
@@ -4318,6 +4657,9 @@ function App(){
         daysOnApp={profile?.createdAt?Math.floor((Date.now()-new Date(profile.createdAt).getTime())/(1000*60*60*24)):0}
       />}
       {showUpgrade&&<UpgradeModal onClose={()=>setShowUpgrade(false)} limit={FREE_SUPPLEMENT_LIMIT} onUpgrade={launchCheckout}/>}
+      {!isPro&&showTrialWelcome&&<TrialWelcomeModal onClose={()=>setShowTrialWelcome(false)} onUpgrade={launchCheckout}/>}
+      {!isPro&&(showTrialLockout||isLockedOut)&&<TrialLockoutModal onUpgrade={launchCheckout} trialDays={TRIAL_DAYS} />}
+      {!isPro&&isInGrace&&<TrialGraceBanner daysLeft={TRIAL_DAYS+GRACE_DAYS-trialDaysPassed} onUpgrade={()=>setShowUpgrade(true)}/>}
       {showInsights&&<InsightsModal onClose={()=>setShowInsights(false)} logs={logs} supplements={supplements} isPro={isPro} onUpgrade={launchCheckout}/>}
       {viewSupp&&(()=>{const _vdep=(viewSupp.totalAmount-(viewSupp.consumed||0))<=0||viewSupp.discontinued===true;return(<SupplementDetailSheet supp={viewSupp} logs={logs} profile={profile} readOnly={_vdep} onClose={()=>setViewSupp(null)} onEdit={_vdep?null:()=>{setEditSupp(viewSupp);setViewSupp(null);}} onReAdd={_vdep?()=>tryAdd(()=>{const fresh={...viewSupp,consumed:0,discontinued:false,discontinuedAt:null,createdAt:todayISO()};setViewSupp(null);setEditSupp(fresh);}):null}/>);})()}
       {selectedDate&&<DateLogModal date={selectedDate} supplements={supplements} logs={logs} onClose={()=>setSelectedDate(null)} onSaveLog={saveBackdatedLog} onEditLog={editBackdatedLog} onDeleteLog={deleteLog} onDeleteSupp={(id)=>{deleteSupp(id);setSelectedDate(null);}}/>}
