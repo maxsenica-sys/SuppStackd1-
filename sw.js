@@ -3,11 +3,42 @@ const NOTIF_STORE = 'suppstackd_sw_notifs';
 
 // Listen for messages from the main app
 self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SCHEDULE_TRIAL_NOTIFS') {
+    const { startTs } = e.data.payload;
+    scheduleTrialNotifs(startTs);
+    caches.open(NOTIF_STORE).then(cache => {
+      cache.put('/__sw_trial__', new Response(JSON.stringify({ startTs })));
+    });
+  }
   if (e.data && e.data.type === 'SCHEDULE_NOTIFS') {
     // Store supplement data in cache storage for later use
     caches.open(NOTIF_STORE).then(cache => {
       cache.put('/__sw_data__', new Response(JSON.stringify(e.data.payload)));
     });
+
+// ── Trial notification scheduler ─────────────────────────────────────────────
+function scheduleTrialNotifs(startTs) {
+  const DAY = 1000 * 60 * 60 * 24;
+  const now = Date.now();
+  const notifs = [
+    { delay: 0,      title: 'SUPPSTACKD Pro Trial Started', body: 'You have 5 days of full Pro access. Explore everything free.', tag: 'trial-start' },
+    { delay: 3*DAY,  title: 'Trial ends in 2 days', body: "Don't lose your stack data — upgrade to keep full access.", tag: 'trial-day3' },
+    { delay: 4*DAY,  title: 'Last day of your trial', body: 'Your trial ends tomorrow. Upgrade now to keep everything.', tag: 'trial-day4' },
+    { delay: 5*DAY,  title: 'Your trial has ended', body: 'Upgrade to Pro to keep your full stack and all your data.', tag: 'trial-end', requireInteraction: true },
+  ];
+  notifs.forEach(n => {
+    const wait = (startTs + n.delay) - now;
+    if (wait > 0) {
+      setTimeout(() => {
+        self.registration.showNotification(n.title, {
+          body: n.body, tag: n.tag, silent: false,
+          requireInteraction: !!n.requireInteraction
+        });
+      }, wait);
+    }
+  });
+}
+
     scheduleNotifs(e.data.payload);
   }
 });
